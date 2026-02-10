@@ -1,0 +1,274 @@
+<?php
+
+declare(strict_types=1);
+
+namespace GesagtGetan\NeosMcp\Tests\Unit\Service;
+
+use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
+use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
+use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
+use Neos\ContentRepository\Core\Feature\NodeCreation\Command\CreateNodeAggregateWithNode;
+use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperties;
+use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValue;
+use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
+use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
+use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
+use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
+use Neos\ContentRepository\Core\NodeType\NodeTypeName;
+use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Nodes;
+use Neos\ContentRepository\Core\Projection\ContentGraph\NodeTags;
+use Neos\ContentRepository\Core\Projection\ContentGraph\PropertyCollection;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Timestamps;
+use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
+use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\MockObject\MockObject;
+use Symfony\Component\Serializer\Serializer;
+
+class NodeWriteServiceTest extends UnitTestCase
+{
+    private NodeWriteService $subject;
+    private ContentRepositoryFacade&MockObject $contentRepository;
+    private PropertyConverter $propertyConverter;
+
+    /** @var list<object> */
+    private array $handledCommands = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->handledCommands = [];
+
+        $this->contentRepository->method('handle')->willReturnCallback(
+            function (object $command): void {
+                $this->handledCommands[] = $command;
+            },
+        );
+
+        $dsp = DimensionSpacePoint::fromArray(['language' => 'de']);
+        $this->contentRepository->method('getDimensionSpacePoints')
+            ->willReturn(new DimensionSpacePointSet([$dsp]));
+
+        $serializer = $this->getMockBuilder(Serializer::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $serializer->method('denormalize')->willReturnCallback(
+            static fn (mixed $data): mixed => $data,
+        );
+        $this->propertyConverter = new PropertyConverter($serializer);
+
+        $this->subject = new NodeWriteService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function createNodeCallsHandleWithCreateCommand(): void
+    {
+        $result = $this->subject->createNode(
+            'parent-id',
+            'Vendor:Content.Text',
+            ['text' => 'Hello'],
+        );
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $this->handledCommands[0]);
+        self::assertTrue($result['success']);
+        self::assertNotEmpty($result['nodeAggregateId']);
+    }
+
+    /**
+     * @test
+     */
+    public function createNodeReturnsGeneratedAggregateId(): void
+    {
+        $result = $this->subject->createNode('parent-id', 'Vendor:Content.Text', []);
+
+        self::assertArrayHasKey('nodeAggregateId', $result);
+        self::assertNotEmpty($result['nodeAggregateId']);
+        self::assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/',
+            $result['nodeAggregateId'],
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function setNodePropertiesCallsHandleWithSetCommand(): void
+    {
+        $result = $this->subject->setNodeProperties(
+            'node-id',
+            ['title' => 'Updated Title'],
+        );
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result['nodeAggregateId']);
+        self::assertTrue($result['success']);
+    }
+
+    /**
+     * @test
+     */
+    public function moveNodeCallsHandleWithMoveCommand(): void
+    {
+        $result = $this->subject->moveNode('node-id', 'new-parent-id');
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(MoveNodeAggregate::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result['nodeAggregateId']);
+        self::assertSame('new-parent-id', $result['newParentNodeAggregateId']);
+        self::assertTrue($result['success']);
+    }
+
+    /**
+     * @test
+     */
+    public function removeNodeCallsHandleWithRemoveCommand(): void
+    {
+        $result = $this->subject->removeNode('node-id');
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(RemoveNodeAggregate::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result['nodeAggregateId']);
+        self::assertTrue($result['success']);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplacePropertyDryRunDoesNotCallHandle(): void
+    {
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $matchingNode = $this->createStubNodeWithProperties(
+            'matching-node',
+            'Vendor:Content.Text',
+            ['title' => 'Old Title'],
+        );
+
+        $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$matchingNode]));
+
+        $this->handledCommands = [];
+
+        $result = $this->subject->findAndReplaceProperty(
+            'Vendor:Content.Text',
+            'title',
+            'Old',
+            'New',
+            dryRun: true,
+        );
+
+        self::assertSame(1, $result['affectedNodes']);
+        self::assertTrue($result['dryRun']);
+        self::assertCount(0, $this->handledCommands);
+        self::assertSame('Old Title', $result['matches'][0]['oldValue']);
+        self::assertSame('New Title', $result['matches'][0]['newValue']);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplacePropertyAppliesReplacements(): void
+    {
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $node1 = $this->createStubNodeWithProperties('node-1', 'Vendor:Content.Text', ['text' => 'Hello World']);
+        $node2 = $this->createStubNodeWithProperties('node-2', 'Vendor:Content.Text', ['text' => 'No match']);
+
+        $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node1, $node2]));
+
+        $this->handledCommands = [];
+
+        $result = $this->subject->findAndReplaceProperty(
+            'Vendor:Content.Text',
+            'text',
+            'Hello',
+            'Hi',
+            dryRun: false,
+        );
+
+        self::assertSame(1, $result['affectedNodes']);
+        self::assertFalse($result['dryRun']);
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
+    }
+
+    private function createStubNode(string $aggregateId, string $nodeTypeName): Node
+    {
+        return Node::create(
+            ContentRepositoryId::fromString('default'),
+            WorkspaceName::fromString('test-workspace'),
+            DimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateId::fromString($aggregateId),
+            OriginDimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateClassification::CLASSIFICATION_REGULAR,
+            NodeTypeName::fromString($nodeTypeName),
+            new PropertyCollection(
+                SerializedPropertyValues::createEmpty(),
+                $this->propertyConverter,
+            ),
+            null,
+            NodeTags::createEmpty(),
+            Timestamps::create(new \DateTimeImmutable(), new \DateTimeImmutable(), null, null),
+            VisibilityConstraints::createEmpty(),
+        );
+    }
+
+    /**
+     * @param array<string, string> $propertyValues
+     */
+    private function createStubNodeWithProperties(
+        string $aggregateId,
+        string $nodeTypeName,
+        array $propertyValues,
+    ): Node {
+        $serializedValues = [];
+        foreach ($propertyValues as $name => $value) {
+            $serializedValues[$name] = SerializedPropertyValue::create($value, 'string');
+        }
+
+        return Node::create(
+            ContentRepositoryId::fromString('default'),
+            WorkspaceName::fromString('test-workspace'),
+            DimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateId::fromString($aggregateId),
+            OriginDimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateClassification::CLASSIFICATION_REGULAR,
+            NodeTypeName::fromString($nodeTypeName),
+            new PropertyCollection(
+                SerializedPropertyValues::fromArray($serializedValues),
+                $this->propertyConverter,
+            ),
+            null,
+            NodeTags::createEmpty(),
+            Timestamps::create(new \DateTimeImmutable(), new \DateTimeImmutable(), null, null),
+            VisibilityConstraints::createEmpty(),
+        );
+    }
+}

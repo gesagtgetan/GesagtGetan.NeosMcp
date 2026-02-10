@@ -1,0 +1,25 @@
+{
+  "name": "gesagtgetan/neos-mcp",
+  "description": "MCP (Model Context Protocol) server for Neos Content Repository — gives LLMs structured access to content",
+  "type": "neos-package",
+  "require": {
+    "php": "^8.3",
+    "neos/neos": "^9.0",
+    "php-mcp/server": "^3.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "GesagtGetan\\NeosMcp\\": "Classes/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "GesagtGetan\\NeosMcp\\Tests\\": "Tests/"
+    }
+  },
+  "extra": {
+    "neos": {
+      "package-key": "GesagtGetan.NeosMcp"
+    }
+  }
+}

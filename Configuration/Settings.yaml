@@ -1,0 +1,5 @@
+GesagtGetan:
+  NeosMcp:
+    contentRepositoryId: 'default'
+    workspaceName: 'llm-review'
+    workspaceBaseWorkspaceName: 'live'

@@ -1,0 +1,22 @@
+'GesagtGetan.NeosMcp:Testing.Site':
+  superTypes:
+    'Neos.Neos:Site': true
+
+'GesagtGetan.NeosMcp:Testing.Document':
+  superTypes:
+    'Neos.Neos:Document': true
+  childNodes:
+    main:
+      type: 'Neos.Neos:ContentCollection'
+  properties:
+    title:
+      type: string
+    text:
+      type: string
+
+'GesagtGetan.NeosMcp:Testing.Content.Text':
+  superTypes:
+    'Neos.Neos:Content': true
+  properties:
+    text:
+      type: string

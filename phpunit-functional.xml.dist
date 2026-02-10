@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!--
+  Functional test config for this package.
+
+  Flow ships its own FunctionalTests.xml in Build/BuildEssentials/PhpUnit/, but that
+  config uses the PHPUnit 9 schema while this project runs PHPUnit 10. The schema
+  mismatch causes deprecation warnings and broken <exclude> handling (each test
+  executes twice due to overlapping testsuite globs with symlinked packages).
+
+  This config avoids both issues by using the PHPUnit 10 schema and scanning only
+  this package's functional tests.
+
+  Usage:
+    bin/phpunit -c Packages/Application/GesagtGetan.NeosMcp/phpunit-functional.xml.dist
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="../../Build/BuildEssentials/PhpUnit/FunctionalTestBootstrap.php" beStrictAboutChangesToGlobalState="true" beStrictAboutOutputDuringTests="true">
+  <testsuites>
+    <testsuite name="functional">
+      <directory>Tests/Functional</directory>
+      <!-- PHPUnit 10 warns about abstract classes found during directory scanning,
+           and treats warnings as exit code 1. Exclude the base class explicitly. -->
+      <exclude>Tests/Functional/AbstractFunctionalTest.php</exclude>
+    </testsuite>
+  </testsuites>
+  <php>
+    <ini name="date.timezone" value="Europe/Vienna"/>
+    <env name="FLOW_REWRITEURLS" value="1"/>
+  </php>
+  <source>
+    <include>
+      <directory>Classes</directory>
+    </include>
+  </source>
+</phpunit>

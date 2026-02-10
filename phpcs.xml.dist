@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<ruleset
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    name="GesagtGetan.NeosMcp"
+    xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/squizlabs/PHP_CodeSniffer/3.6.2/phpcs.xsd"
+>
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="exclude" value="Generic.Files.LineLength"/>
+    <arg value="ps"/>
+
+    <rule ref="PSR12"/>
+
+    <file>Classes</file>
+    <file>Tests</file>
+</ruleset>

@@ -1,0 +1,17 @@
+parameters:
+  level: max
+
+  paths:
+    - Classes
+    - Tests
+
+  scanDirectories:
+    - ../../Packages/Framework/Neos.Flow/Tests
+
+  checkTooWideReturnTypesInProtectedAndPublicMethods: true
+  treatPhpDocTypesAsCertain: false
+
+includes:
+  - ../../Packages/Libraries/phpstan/phpstan-phpunit/extension.neon
+  - ../../Packages/Libraries/phpstan/phpstan-phpunit/rules.neon
+  - ../../Packages/Libraries/phpstan/phpstan-strict-rules/rules.neon
