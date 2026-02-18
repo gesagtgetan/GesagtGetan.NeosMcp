@@ -18,6 +18,7 @@ use Neos\Neos\Domain\Model\WorkspaceRoleAssignment;
 use Neos\Neos\Domain\Model\WorkspaceRoleAssignments;
 use Neos\Neos\Domain\Model\WorkspaceTitle;
 use Neos\Neos\Domain\Service\WorkspaceService;
+use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
@@ -34,6 +35,9 @@ class McpCommandController extends CommandController
 
     #[Flow\Inject]
     protected SecurityContext $securityContext;
+
+    #[Flow\Inject]
+    protected RedirectStorageInterface $redirectStorage;
 
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
@@ -97,7 +101,7 @@ class McpCommandController extends CommandController
         }
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName);
+        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->redirectStorage);
 
         $container = new BasicContainer();
         $container->set(McpToolProvider::class, $toolProvider);

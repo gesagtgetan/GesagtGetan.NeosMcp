@@ -17,6 +17,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
+use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class McpToolProviderTest extends UnitTestCase
@@ -53,6 +54,7 @@ class McpToolProviderTest extends UnitTestCase
         $this->subject = new McpToolProvider(
             $this->contentRepository,
             WorkspaceName::fromString('test-workspace'),
+            $this->createMock(RedirectStorageInterface::class),
         );
     }
 

@@ -5,6 +5,7 @@
   "require": {
     "php": "^8.3",
     "neos/neos": "^9.0",
+    "neos/redirecthandler": "*",
     "php-mcp/server": "^3.3"
   },
   "autoload": {

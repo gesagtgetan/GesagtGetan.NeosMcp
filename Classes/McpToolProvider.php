@@ -7,8 +7,10 @@ namespace GesagtGetan\NeosMcp;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use GesagtGetan\NeosMcp\Service\RedirectService;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Schema\ToolAnnotations;
 use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Attributes\Schema;
@@ -19,14 +21,17 @@ final readonly class McpToolProvider
     private NodeTypeService $nodeTypeService;
     private NodeReadService $nodeReadService;
     private NodeWriteService $nodeWriteService;
+    private RedirectService $redirectService;
 
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
+        RedirectStorageInterface $redirectStorage,
     ) {
         $this->nodeTypeService = new NodeTypeService($this->contentRepository);
         $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName);
         $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName);
+        $this->redirectService = new RedirectService($redirectStorage);
     }
 
     // ── Read Tools ──────────────────────────────────────────────────
@@ -314,5 +319,72 @@ final readonly class McpToolProvider
             'workspaceName' => $this->workspaceName->value,
             'success' => true,
         ];
+    }
+
+    // ── Redirect Tools ──────────────────────────────────────────────
+
+    /**
+     * List HTTP redirects. Optionally filter by host and/or substring match on source/target paths.
+     *
+     * @param string|null $host Filter by host (null = all hosts)
+     * @param string|null $match Substring filter on source/target URI paths (case-insensitive)
+     * @param int $limit Maximum number of results (default: 100)
+     *
+     * @return list<array{sourceUriPath: string, targetUriPath: string, statusCode: int, host: ?string, creator: ?string, comment: ?string, type: string, hitCounter: int}>
+     */
+    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    public function listRedirects(?string $host = null, ?string $match = null, int $limit = 100): array
+    {
+        return $this->redirectService->listRedirects($host, $match, $limit);
+    }
+
+    /**
+     * Get a single HTTP redirect by its source URI path and optional host.
+     *
+     * @param string $sourceUriPath The source URI path (e.g. "old/page")
+     * @param string|null $host Filter by host (null = host-independent redirect)
+     *
+     * @return array{sourceUriPath: string, targetUriPath: string, statusCode: int, host: ?string, creator: ?string, comment: ?string, type: string, hitCounter: int}|null
+     */
+    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    public function getRedirect(string $sourceUriPath, ?string $host = null): ?array
+    {
+        return $this->redirectService->getRedirect($sourceUriPath, $host);
+    }
+
+    /**
+     * Create an HTTP redirect. Useful after renaming a page's URI segment.
+     *
+     * @param string $sourceUriPath The source URI path to redirect from (e.g. "old/page")
+     * @param string $targetUriPath The target URI path to redirect to (e.g. "new/page")
+     * @param int $statusCode HTTP status code (default: 301)
+     * @param string|null $host Restrict redirect to a specific host (null = all hosts)
+     * @param string|null $comment Optional comment describing why the redirect was created
+     *
+     * @return array{sourceUriPath: string, targetUriPath: string, statusCode: int, host: ?string, success: true}
+     */
+    #[McpTool]
+    public function createRedirect(
+        string $sourceUriPath,
+        string $targetUriPath,
+        int $statusCode = 301,
+        ?string $host = null,
+        ?string $comment = null,
+    ): array {
+        return $this->redirectService->createRedirect($sourceUriPath, $targetUriPath, $statusCode, $host, $comment);
+    }
+
+    /**
+     * Remove an HTTP redirect by its source URI path and optional host.
+     *
+     * @param string $sourceUriPath The source URI path of the redirect to remove
+     * @param string|null $host Host filter (null = host-independent redirect)
+     *
+     * @return array{sourceUriPath: string, host: ?string, success: true}
+     */
+    #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
+    public function removeRedirect(string $sourceUriPath, ?string $host = null): array
+    {
+        return $this->redirectService->removeRedirect($sourceUriPath, $host);
     }
 }
