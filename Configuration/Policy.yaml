@@ -1,0 +1,15 @@
+privilegeTargets:
+
+  'Neos\Flow\Security\Authorization\Privilege\Method\MethodPrivilege':
+
+    'GesagtGetan.NeosMcp:HttpTransportAccess':
+      label: Public access to the MCP HTTP transport endpoint
+      matcher: 'method(GesagtGetan\NeosMcp\Controller\McpHttpController->handleAction())'
+
+roles:
+
+  'Neos.Flow:Everybody':
+    privileges:
+      -
+        privilegeTarget: 'GesagtGetan.NeosMcp:HttpTransportAccess'
+        permission: GRANT

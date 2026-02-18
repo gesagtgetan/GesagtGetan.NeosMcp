@@ -1,5 +1,15 @@
+Neos:
+  Flow:
+    mvc:
+      routes:
+        GesagtGetan.NeosMcp:
+          position: start
+
 GesagtGetan:
   NeosMcp:
     contentRepositoryId: 'default'
     workspaceName: 'llm-review'
     workspaceBaseWorkspaceName: 'live'
+    httpTransport:
+      enabled: false
+      bearerToken: null

@@ -1,0 +1,9 @@
+-
+  name: 'MCP HTTP Transport'
+  uriPattern: 'neos/mcp'
+  httpMethods: ['POST']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@controller': 'McpHttp'
+    '@action': 'handle'
+    '@format': 'json'

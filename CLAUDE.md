@@ -6,9 +6,8 @@ Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `Distr
 
 ## Open TODOs
 
-- **HTTP transport** — Add HTTP/SSE adapter so the MCP server can be consumed by remote clients (chatbots, web apps). Stdio only works when the client spawns the server as a child process (local tools like Claude Code). For production integration, the server needs an HTTP endpoint. Investigate whether `php-mcp/server` already supports HTTP/SSE or if a custom adapter is needed.
 - **Image support via MCP** — Two features:
-  1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can *see* the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
+  1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
 
 ## Commands
@@ -79,6 +78,7 @@ Format: `PREFIX: Imperative summary` (no period, English, no em dashes).
 ## Required Dev Dependencies (provided by host project)
 
 The package ships config files but not the tools. The host project must have:
+
 - `phpunit/phpunit` ^10.5
 - `phpstan/phpstan` with `phpstan-phpunit` and `phpstan-strict-rules`
 - `squizlabs/php_codesniffer`
