@@ -63,7 +63,18 @@ Uses modern PHP 8.x: `final readonly class`, constructor promotion, attributes (
 
 ## Commit Messages
 
-Format: `PREFIX: Imperative summary` (no period, English, no em dashes). Prefixes: `FEATURE`, `BUGFIX`, `REFACTOR`, `TOOL`, `INITIAL`, `TASK`.
+Format: `PREFIX: Imperative summary` (no period, English, no em dashes).
+
+- `STATIC` — auto-generated CSS/JS/image files only
+- `FEATURE` — new functionality or behavior changes (not bugfixes)
+- `BUGFIX` — fixes to existing functionality
+- `REFACTOR` — no behavior change (code style, type fixes, linter fixes, comment improvements, docblocks)
+- `MERGE` — merge commits
+- `DOCS` — documentation files (README, CLAUDE.md, etc.), not docblocks in source
+- `TOOL` — Makefiles, deployer, JS build systems
+- `TEST` — test-only commits (prefer bundling with FEATURE/BUGFIX)
+- `UPGRADE` — composer/node dependency upgrades
+- `INITIAL` — first commit in a new repository only
 
 ## Required Dev Dependencies (provided by host project)
 
