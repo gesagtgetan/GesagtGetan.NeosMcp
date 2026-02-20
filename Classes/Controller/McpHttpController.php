@@ -69,7 +69,7 @@ class McpHttpController extends ActionController
         $httpRequest = $this->request->getHttpRequest();
         $authHeader = $httpRequest->getHeaderLine('Authorization');
 
-        if ($authHeader !== 'Bearer ' . $bearerToken) {
+        if (!hash_equals('Bearer ' . $bearerToken, $authHeader)) {
             return $this->jsonResponse(401, ['error' => 'Unauthorized']);
         }
 
