@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Controller;
 
+use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GuzzleHttp\Psr7\Response;
@@ -139,7 +140,7 @@ class McpHttpController extends ActionController
 
         $builder = Server::make()
             ->withContainer($container)
-            ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
+            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev');
 
         foreach ((new \ReflectionClass(McpToolProvider::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->getAttributes(McpTool::class) !== []) {
