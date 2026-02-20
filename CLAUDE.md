@@ -6,6 +6,8 @@ Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `Distr
 
 ## Open TODOs
 
+- **Proper PSR-3 logging** — Integrate the GesagtGetan logging package so that logs (including exception traces) are forwarded to 3rd-party services like Datadog.
+- **Reconsider URI path prefix** — The HTTP transport currently uses `/neos/mcp`, but the `/neos/` namespace is reserved for Neos backend routes. Consider moving to a dedicated path (e.g., `/api/mcp`) to avoid conflicts with Neos internals.
 - **Image support via MCP** — Two features:
   1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
