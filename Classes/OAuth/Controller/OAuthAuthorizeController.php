@@ -12,7 +12,6 @@ use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
-use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -36,9 +35,6 @@ class OAuthAuthorizeController extends ActionController
 
     #[Flow\Inject]
     protected SessionInterface $session;
-
-    #[Flow\Inject]
-    protected PersistenceManagerInterface $persistenceManager;
 
     /**
      * GET /neos/mcp?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
@@ -76,13 +72,12 @@ class OAuthAuthorizeController extends ActionController
 
         $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
 
-        // Auto-grant for the configured client.
-        if ($authRequest->getClient()->getIdentifier() === $this->oauthServerFactory->getConfiguredClientId()) {
-            return $this->completeAuthorization($server, $authRequest, true);
-        }
+        $isAutoGrant = $authRequest->getClient()->getIdentifier() === $this->oauthServerFactory->getConfiguredClientId();
 
-        // Show consent screen.
-        return $this->renderConsentScreen($authRequest, $account->getAccountIdentifier());
+        // Render consent screen (or auto-submitting form for auto-grant).
+        // Authorization always completes via POST to /neos/mcp/grant because Flow
+        // blocks database writes during GET requests ("safe request" protection).
+        return $this->renderConsentScreen($authRequest, $account->getAccountIdentifier(), $isAutoGrant);
     }
 
     /**
@@ -148,16 +143,10 @@ class OAuthAuthorizeController extends ActionController
         $authRequest->setAuthorizationApproved($approved);
 
         try {
-            $response = $server->completeAuthorizationRequest($authRequest, new Response());
+            return $server->completeAuthorizationRequest($authRequest, new Response());
         } catch (OAuthServerException $e) {
             return $e->generateHttpResponse(new Response());
         }
-
-        // OAuth authorization creates an auth code during a GET (browser redirect).
-        // Flow blocks implicit persistence during "safe requests", so persist explicitly.
-        $this->persistenceManager->persistAll();
-
-        return $response;
     }
 
     private function generateCsrfToken(): string
@@ -180,7 +169,7 @@ class OAuthAuthorizeController extends ActionController
         return hash_equals($stored, $submitted);
     }
 
-    private function renderConsentScreen(AuthorizationRequest $authRequest, string $accountIdentifier): ResponseInterface
+    private function renderConsentScreen(AuthorizationRequest $authRequest, string $accountIdentifier, bool $autoGrant = false): ResponseInterface
     {
         $clientName = htmlspecialchars($authRequest->getClient()->getName(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $escapedAccount = htmlspecialchars($accountIdentifier, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -212,6 +201,12 @@ class OAuthAuthorizeController extends ActionController
             $hiddenFields .= '<input type="hidden" name="' . $name . '" value="' . $escapedValue . '">';
         }
 
+        $autoSubmitScript = $autoGrant
+            ? '<script>document.getElementById("consent-form").submit();</script>'
+            : '';
+        $formStyle = $autoGrant ? ' style="display:none"' : '';
+        $loadingMessage = $autoGrant ? '<p>Authorizing, please wait…</p>' : '';
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -232,17 +227,22 @@ class OAuthAuthorizeController extends ActionController
     </style>
 </head>
 <body>
-    <h1>Authorize <span class="client-name">{$clientName}</span></h1>
-    <p class="account">Signed in as {$escapedAccount}</p>
-    <p>This application is requesting access to:</p>
-    <div class="scopes">{$scopeDisplay}</div>
-    <form method="POST" action="/neos/mcp/grant">
+    {$loadingMessage}
+    <div{$formStyle}>
+        <h1>Authorize <span class="client-name">{$clientName}</span></h1>
+        <p class="account">Signed in as {$escapedAccount}</p>
+        <p>This application is requesting access to:</p>
+        <div class="scopes">{$scopeDisplay}</div>
+    </div>
+    <form id="consent-form" method="POST" action="/neos/mcp/grant"{$formStyle}>
         {$hiddenFields}
-        <div class="actions">
+        <input type="hidden" name="approve" value="1">
+        <div class="actions"{$formStyle}>
             <button type="submit" name="approve" value="1" class="approve">Authorize</button>
             <button type="submit" name="approve" value="0" class="deny">Deny</button>
         </div>
     </form>
+    {$autoSubmitScript}
 </body>
 </html>
 HTML;
@@ -255,7 +255,7 @@ HTML;
                 'X-Frame-Options' => 'DENY',
                 'X-Content-Type-Options' => 'nosniff',
                 'Referrer-Policy' => 'no-referrer',
-                'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+                'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-ancestors 'none'",
             ],
             body: $html,
         );
