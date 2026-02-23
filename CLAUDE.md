@@ -48,7 +48,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 
 | Layer | Classes | Notes |
 |-------|---------|-------|
-| Entities | `OAuthClient`, `OAuthAuthCode`, `OAuthRefreshToken` (Flow entities), `OAuthAccessToken` (in-memory, JWT), `OAuthScope`, `OAuthUser` (value objects) | Value objects use `#[Flow\Proxy(false)]`; DB entities are proxied by Flow |
+| Entities | `OAuthClient`, `OAuthAuthCode`, `OAuthRefreshToken` (Flow entities), `OAuthAccessToken` (in-memory, JWT), `OAuthScope`, `OAuthUser` (value objects) | All use `#[Flow\Proxy(false)]`; DB entities have explicit `@ORM\Id` since Flow doesn't inject PK on unproxied classes |
 | Repositories | `OAuthClientRepository`, `OAuthAuthCodeRepository`, `OAuthRefreshTokenRepository` (Flow repos), `OAuthAccessTokenRepository` (no-op), `OAuthScopeRepository` (hardcoded "mcp") | Implement league's repository interfaces |
 | Service | `OAuthServerFactory` — creates league's `AuthorizationServer` + `ResourceServer`, auto-generates RSA keys | Keys stored in `Data/Persistent/GesagtGetan.NeosMcp/` |
 | Controllers | `OAuthMetadataController` (.well-known), `OAuthAuthorizeController` (consent), `OAuthTokenController` (token exchange) | All under `OAuth\Controller` subpackage |
@@ -69,7 +69,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 - **SQLite is not supported** — the CR's DoctrineDbal adapter uses MySQL-specific SQL (`INSERT IGNORE`).
 - **Node hierarchy in tests** — Neos enforces Sites → Site → Document. Tests must create a `Neos.Neos:Sites` root, then a `Testing.Site` (extends `Neos.Neos:Site`), then documents under the site.
 - **Dimension space points** — use `resolveDefaultDimensionSpacePoint()` from the facade, not `DimensionSpacePoint::createWithoutDimensions()`. The empty `[]` DSP is invalid when dimensions are configured.
-- **Run `doctrine:validate` after ORM entity changes** — `#[Flow\Proxy(false)]` prevents Flow from injecting the auto-generated primary key. Only use it on non-persisted value objects, never on DB-backed `@Flow\Entity` classes.
+- **Run `doctrine:validate` after ORM entity changes** — `#[Flow\Proxy(false)]` prevents Flow from injecting the auto-generated primary key. DB entities with `Proxy(false)` need an explicit `@ORM\Id` property. `Proxy(false)` is required on entities with named constructor parameters because Flow's proxy constructor uses `func_get_args()` which breaks named argument calls.
 
 ## Coding Philosophy
 

@@ -20,8 +20,18 @@ use Neos\Flow\Annotations as Flow;
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_auth_code")
  */
+#[Flow\Proxy(false)]
 class OAuthAuthCode implements AuthCodeEntityInterface
 {
+    /**
+     * @ORM\Id
+     *
+     * @ORM\GeneratedValue(strategy="UUID")
+     *
+     * @ORM\Column(name="persistence_object_identifier", length=40)
+     */
+    protected string $Persistence_Object_Identifier = '';
+
     /** @ORM\Column(length=128, unique=true) */
     protected string $code = '';
 
