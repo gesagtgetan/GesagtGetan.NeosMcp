@@ -17,7 +17,7 @@ use Neos\Flow\Persistence\Repository;
  */
 class OAuthAuthCodeRepository extends Repository implements AuthCodeRepositoryInterface
 {
-    protected $entityClassName = OAuthAuthCode::class;
+    public const ENTITY_CLASSNAME = OAuthAuthCode::class;
 
     public function getNewAuthCode(): AuthCodeEntityInterface
     {

@@ -17,7 +17,7 @@ use Neos\Flow\Persistence\Repository;
  */
 class OAuthRefreshTokenRepository extends Repository implements RefreshTokenRepositoryInterface
 {
-    protected $entityClassName = OAuthRefreshToken::class;
+    public const ENTITY_CLASSNAME = OAuthRefreshToken::class;
 
     public function getNewRefreshToken(): RefreshTokenEntityInterface
     {
