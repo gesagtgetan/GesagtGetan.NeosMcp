@@ -50,6 +50,7 @@ class OAuthRefreshToken implements RefreshTokenEntityInterface
     /** @ORM\Column(type="boolean") */
     protected bool $revoked = false;
 
+    /** @Flow\Transient */
     private ?AccessTokenEntityInterface $accessTokenEntity = null;
 
     public function __construct()
