@@ -8,6 +8,10 @@ Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `Distr
 
 - **Proper PSR-3 logging** — Integrate the GesagtGetan logging package so that logs (including exception traces) are forwarded to 3rd-party services like Datadog.
 - **Reconsider URI path prefix** — The HTTP transport currently uses `/neos/mcp`, but the `/neos/` namespace is reserved for Neos backend routes. Consider moving to a dedicated path (e.g., `/api/mcp`) to avoid conflicts with Neos internals.
+- **Use authenticated Neos session for CR writes** — Currently the MCP server bypasses Flow's security context via `withoutAuthorizationChecks()` and writes directly to the shared workspace. Now that OAuth is backed by real Neos sessions, use the authenticated user's security context to create and edit nodes in the Content Repository, respecting their actual permissions.
+- **OAuth token cleanup command** — Add a CLI command (e.g., `./flow oauth:cleanup`) to delete expired and revoked auth codes and refresh tokens from the database. Run periodically via cron.
+- **Upgrade to league/oauth2-server ^9** — Currently pinned to ^8.5 due to `lcobucci/jwt` version conflict with `flownative/openidconnect-client` (requires ^4.1). Once Flownative supports `lcobucci/jwt ^5`, upgrade to league v9 (changes: `__toString()` → `toString()`, `CryptKey` → `CryptKeyInterface`).
+- **ChatGPT connector support** — The goal is to serve both Claude and ChatGPT from the same endpoints. Adding ChatGPT requires: (1) extend `corsAllowedOrigins` with ChatGPT's origin(s), (2) add ChatGPT's callback URL to `client.knownRedirectUris`.
 - **Image support via MCP** — Two features:
   1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
@@ -34,6 +38,25 @@ Functional tests need a reachable MySQL/MariaDB test database (see host project'
 - `McpCommandController` — CLI entry points: `./flow mcp:server` (stdio transport) and `./flow mcp:setup` (creates shared workspace with Neos UI metadata via `WorkspaceService::createSharedWorkspace`)
 - `NodeReadService` / `NodeWriteService` / `NodeTypeService` — domain logic, stateless
 - MCP tool parameters `properties` and `dimensionSpacePoint` are native objects (with `#[Schema]` attributes), not JSON strings.
+
+### OAuth 2.0 Authorization Server (`Classes/OAuth/`)
+
+Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization code grant with PKCE for Claude's remote MCP connector requirements.
+
+**Flow**: Claude discovers endpoints via `.well-known` metadata → user authorizes in browser (Neos session) → Claude exchanges auth code for JWT access token → JWT validated on each MCP request. Client is pre-registered via Settings.yaml (no Dynamic Client Registration).
+
+| Layer | Classes | Notes |
+|-------|---------|-------|
+| Entities | `OAuthClient`, `OAuthAuthCode`, `OAuthRefreshToken` (Flow entities), `OAuthAccessToken` (in-memory, JWT), `OAuthScope`, `OAuthUser` (value objects) | Entities use `#[Flow\Proxy(false)]` since league instantiates them directly |
+| Repositories | `OAuthClientRepository`, `OAuthAuthCodeRepository`, `OAuthRefreshTokenRepository` (Flow repos), `OAuthAccessTokenRepository` (no-op), `OAuthScopeRepository` (hardcoded "mcp") | Implement league's repository interfaces |
+| Service | `OAuthServerFactory` — creates league's `AuthorizationServer` + `ResourceServer`, auto-generates RSA keys | Keys stored in `Data/Persistent/GesagtGetan.NeosMcp/` |
+| Controllers | `OAuthMetadataController` (.well-known), `OAuthAuthorizeController` (consent), `OAuthTokenController` (token exchange) | All under `OAuth\Controller` subpackage |
+
+**Configuration** (`Settings.yaml`): `GesagtGetan.NeosMcp.oauth.enabled` (default false), `.issuer`, `.client.id`, `.client.secret`, `.client.knownRedirectUris`, `.corsAllowedOrigins`, `.accessTokenLifetime`.
+
+**Security** (`Policy.yaml`): `McpUser` role (extends `AbstractEditor`) required for authorization endpoint. All other OAuth endpoints are public (Everybody).
+
+**Staging basic auth** (`Web/.htaccess`): The proserverXXXX or getan.at domains require HTTP basic auth. OAuth/MCP routes are exempted via `SetEnvIf` + `Allow from env=OAUTH_PUBLIC` so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/neos/mcp` without basic auth credentials. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
 
 ## Testing Gotchas
 

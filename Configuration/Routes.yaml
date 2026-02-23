@@ -1,4 +1,78 @@
 -
+  name: 'OAuth Protected Resource Metadata'
+  uriPattern: '.well-known/oauth-protected-resource'
+  httpMethods: ['GET']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthMetadata'
+    '@action': 'protectedResource'
+    '@format': 'json'
+
+-
+  name: 'OAuth Authorization Server Metadata'
+  uriPattern: '.well-known/oauth-authorization-server'
+  httpMethods: ['GET']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthMetadata'
+    '@action': 'authorizationServer'
+    '@format': 'json'
+
+-
+  name: 'OAuth Token Preflight'
+  uriPattern: 'oauth/token'
+  httpMethods: ['OPTIONS']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthToken'
+    '@action': 'preflight'
+    '@format': 'json'
+
+-
+  name: 'OAuth Token'
+  uriPattern: 'oauth/token'
+  httpMethods: ['POST']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthToken'
+    '@action': 'token'
+    '@format': 'json'
+
+-
+  name: 'OAuth Authorize'
+  uriPattern: 'neos/mcp'
+  httpMethods: ['GET']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthAuthorize'
+    '@action': 'authorize'
+
+-
+  name: 'OAuth Grant (consent form)'
+  uriPattern: 'neos/mcp/grant'
+  httpMethods: ['POST']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@subpackage': 'OAuth'
+    '@controller': 'OAuthAuthorize'
+    '@action': 'grant'
+
+-
+  name: 'MCP HTTP Transport Preflight'
+  uriPattern: 'neos/mcp'
+  httpMethods: ['OPTIONS']
+  defaults:
+    '@package': 'GesagtGetan.NeosMcp'
+    '@controller': 'McpHttp'
+    '@action': 'preflight'
+    '@format': 'json'
+
+-
   name: 'MCP HTTP Transport'
   uriPattern: 'neos/mcp'
   httpMethods: ['POST']

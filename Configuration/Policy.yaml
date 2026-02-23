@@ -4,12 +4,37 @@ privilegeTargets:
 
     'GesagtGetan.NeosMcp:HttpTransportAccess':
       label: Public access to the MCP HTTP transport endpoint
-      matcher: 'method(GesagtGetan\NeosMcp\Controller\McpHttpController->handleAction())'
+      matcher: 'method(GesagtGetan\NeosMcp\Controller\McpHttpController->(handleAction|preflightAction)())'
+
+    'GesagtGetan.NeosMcp:OAuthMetadataAccess':
+      label: Public access to OAuth discovery endpoints
+      matcher: 'method(GesagtGetan\NeosMcp\OAuth\Controller\OAuthMetadataController->(protectedResourceAction|authorizationServerAction)())'
+
+    'GesagtGetan.NeosMcp:OAuthTokenAccess':
+      label: Public access to OAuth token endpoint
+      matcher: 'method(GesagtGetan\NeosMcp\OAuth\Controller\OAuthTokenController->(tokenAction|preflightAction)())'
+
+    'GesagtGetan.NeosMcp:OAuthAuthorizeAccess':
+      label: Access to OAuth authorization and consent endpoints
+      matcher: 'method(GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController->(authorizeAction|grantAction)())'
 
 roles:
+
+  'GesagtGetan.NeosMcp:McpUser':
+    parentRoles: ['Neos.Neos:AbstractEditor']
+    privileges:
+      -
+        privilegeTarget: 'GesagtGetan.NeosMcp:OAuthAuthorizeAccess'
+        permission: GRANT
 
   'Neos.Flow:Everybody':
     privileges:
       -
         privilegeTarget: 'GesagtGetan.NeosMcp:HttpTransportAccess'
+        permission: GRANT
+      -
+        privilegeTarget: 'GesagtGetan.NeosMcp:OAuthMetadataAccess'
+        permission: GRANT
+      -
+        privilegeTarget: 'GesagtGetan.NeosMcp:OAuthTokenAccess'
         permission: GRANT

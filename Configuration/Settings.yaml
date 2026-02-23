@@ -4,12 +4,34 @@ Neos:
       routes:
         GesagtGetan.NeosMcp:
           position: start
+    security:
+      authentication:
+        providers:
+          'GesagtGetan.SingleSignOn:Backend':
+            requestPatterns:
+              'GesagtGetan.NeosMcp:OAuthAuthorize':
+                pattern: 'ControllerObjectName'
+                patternOptions:
+                  controllerObjectNamePattern: 'GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController'
 
 GesagtGetan:
   NeosMcp:
     contentRepositoryId: 'default'
     workspaceName: 'llm-review'
     workspaceBaseWorkspaceName: 'live'
-    httpTransport:
+    oauth:
       enabled: false
-      bearerToken: null
+      issuer: null
+      client:
+        id: null
+        secret: null
+        knownRedirectUris:
+          - 'https://claude.ai/api/mcp/auth_callback'
+          - 'https://claude.com/api/mcp/auth_callback'
+      accessTokenLifetime: 3600
+      refreshTokenLifetime: 2592000
+      authorizationCodeLifetime: 600
+      privateKeyFile: 'oauth-private.key'
+      publicKeyFile: 'oauth-public.key'
+      encryptionKeyFile: 'oauth-encryption.key'
+      corsAllowedOrigins: ['https://claude.ai', 'https://claude.com']
