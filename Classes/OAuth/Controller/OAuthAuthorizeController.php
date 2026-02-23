@@ -12,6 +12,7 @@ use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
+use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -35,6 +36,9 @@ class OAuthAuthorizeController extends ActionController
 
     #[Flow\Inject]
     protected SessionInterface $session;
+
+    #[Flow\Inject]
+    protected PersistenceManagerInterface $persistenceManager;
 
     /**
      * GET /neos/mcp?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
@@ -144,10 +148,16 @@ class OAuthAuthorizeController extends ActionController
         $authRequest->setAuthorizationApproved($approved);
 
         try {
-            return $server->completeAuthorizationRequest($authRequest, new Response());
+            $response = $server->completeAuthorizationRequest($authRequest, new Response());
         } catch (OAuthServerException $e) {
             return $e->generateHttpResponse(new Response());
         }
+
+        // OAuth authorization creates an auth code during a GET (browser redirect).
+        // Flow blocks implicit persistence during "safe requests", so persist explicitly.
+        $this->persistenceManager->persistAll();
+
+        return $response;
     }
 
     private function generateCsrfToken(): string
