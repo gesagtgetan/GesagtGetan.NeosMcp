@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\Command;
 
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
+use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
@@ -38,6 +39,9 @@ class McpCommandController extends CommandController
 
     #[Flow\Inject]
     protected RedirectStorageInterface $redirectStorage;
+
+    #[Flow\Inject]
+    protected OAuthServerFactory $oauthServerFactory;
 
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
@@ -81,6 +85,18 @@ class McpCommandController extends CommandController
         );
 
         $this->outputLine('Created shared workspace "%s".', [$workspaceName->value]);
+
+        $this->ensureOAuthClient();
+    }
+
+    private function ensureOAuthClient(): void
+    {
+        if (!$this->oauthServerFactory->isEnabled()) {
+            return;
+        }
+
+        $this->oauthServerFactory->ensureClient();
+        $this->outputLine('OAuth client ensured.');
     }
 
     /**

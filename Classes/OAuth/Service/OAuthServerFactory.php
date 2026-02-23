@@ -121,8 +121,6 @@ class OAuthServerFactory
 
     public function createAuthorizationServer(): AuthorizationServer
     {
-        $this->ensureClient();
-
         $privateKey = new CryptKey($this->ensurePrivateKey(), null, false);
         $encryptionKey = $this->ensureEncryptionKey();
 
