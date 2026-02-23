@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Utility\Algorithms;
 
 /**
  * Refresh token — long-lived, persisted, rotated on use.
@@ -16,8 +17,18 @@ use Neos\Flow\Annotations as Flow;
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_refresh_token")
  */
+#[Flow\Proxy(false)]
 class OAuthRefreshToken implements RefreshTokenEntityInterface
 {
+    /**
+     * @ORM\Id
+     *
+     * @ORM\GeneratedValue(strategy="NONE")
+     *
+     * @ORM\Column(name="persistence_object_identifier", length=40)
+     */
+    protected string $Persistence_Object_Identifier;
+
     /** @ORM\Column(length=128, unique=true) */
     protected string $token = '';
 
@@ -43,6 +54,7 @@ class OAuthRefreshToken implements RefreshTokenEntityInterface
 
     public function __construct()
     {
+        $this->Persistence_Object_Identifier = Algorithms::generateUUID();
         $this->expiresAt = new \DateTimeImmutable();
     }
 

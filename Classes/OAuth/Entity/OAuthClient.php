@@ -7,6 +7,7 @@ namespace GesagtGetan\NeosMcp\OAuth\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Utility\Algorithms;
 
 /**
  * Pre-registered OAuth client. Created from Settings.yaml on first use.
@@ -15,8 +16,18 @@ use Neos\Flow\Annotations as Flow;
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_client")
  */
+#[Flow\Proxy(false)]
 class OAuthClient implements ClientEntityInterface
 {
+    /**
+     * @ORM\Id
+     *
+     * @ORM\GeneratedValue(strategy="NONE")
+     *
+     * @ORM\Column(name="persistence_object_identifier", length=40)
+     */
+    protected string $Persistence_Object_Identifier;
+
     /** @ORM\Column(length=255, unique=true) */
     protected string $clientId;
 
@@ -62,6 +73,7 @@ class OAuthClient implements ClientEntityInterface
         bool $isConfidential = false,
         ?string $clientSecret = null,
     ) {
+        $this->Persistence_Object_Identifier = Algorithms::generateUUID();
         $this->clientId = $clientId;
         $this->clientName = $clientName;
         $this->redirectUris = $redirectUris;

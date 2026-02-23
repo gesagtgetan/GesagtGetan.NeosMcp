@@ -9,6 +9,7 @@ use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Utility\Algorithms;
 
 /**
  * Authorization code — short-lived, persisted for single-use validation.
@@ -20,8 +21,18 @@ use Neos\Flow\Annotations as Flow;
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_auth_code")
  */
+#[Flow\Proxy(false)]
 class OAuthAuthCode implements AuthCodeEntityInterface
 {
+    /**
+     * @ORM\Id
+     *
+     * @ORM\GeneratedValue(strategy="NONE")
+     *
+     * @ORM\Column(name="persistence_object_identifier", length=40)
+     */
+    protected string $Persistence_Object_Identifier;
+
     /** @ORM\Column(length=128, unique=true) */
     protected string $code = '';
 
@@ -50,6 +61,7 @@ class OAuthAuthCode implements AuthCodeEntityInterface
 
     public function __construct()
     {
+        $this->Persistence_Object_Identifier = Algorithms::generateUUID();
         $this->expiresAt = new \DateTimeImmutable();
     }
 
