@@ -48,6 +48,10 @@ class OAuthAuthorizeController extends ActionController
             return $this->jsonResponse(404, ['error' => 'Not found']);
         }
 
+        if (!$this->oauthServerFactory->isClientRegistered()) {
+            return $this->jsonResponse(500, ['error' => 'OAuth client not registered. Run ./flow mcp:setup first.']);
+        }
+
         $account = $this->securityContext->getAccount();
         if ($account === null) {
             return $this->jsonResponse(401, ['error' => 'Authentication required']);
