@@ -87,6 +87,17 @@ class OAuthServerFactory
         return $this->settings['client']['id'] ?? throw new \RuntimeException('GesagtGetan.NeosMcp.oauth.client.id must be configured', 1740000011);
     }
 
+    public function isClientRegistered(): bool
+    {
+        $clientId = $this->settings['client']['id'] ?? null;
+
+        if ($clientId === null || $clientId === '') {
+            return false;
+        }
+
+        return $this->clientRepository->findOneByClientId($clientId) !== null;
+    }
+
     /**
      * Ensures the configured OAuth client exists in the database.
      * Creates it on first call, no-ops on subsequent calls.
