@@ -15,8 +15,18 @@ use Neos\Flow\Annotations as Flow;
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_client")
  */
+#[Flow\Proxy(false)]
 class OAuthClient implements ClientEntityInterface
 {
+    /**
+     * @ORM\Id
+     *
+     * @ORM\GeneratedValue(strategy="UUID")
+     *
+     * @ORM\Column(name="persistence_object_identifier", length=40)
+     */
+    protected string $Persistence_Object_Identifier = '';
+
     /** @ORM\Column(length=255, unique=true) */
     protected string $clientId;
 
