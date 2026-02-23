@@ -33,6 +33,45 @@ This starts a stdio-based MCP server. The server requires the review workspace t
 }
 ```
 
+## HTTP Transport (OAuth)
+
+The package also exposes the MCP server over HTTP at `POST /neos/mcp`, secured with OAuth 2.0 (authorization code grant + PKCE). This is used by Claude.ai's remote MCP connector and ChatGPT.
+
+### Setup
+
+1. Generate client credentials:
+   ```bash
+   openssl rand -hex 16   # client_id
+   openssl rand -hex 32   # client_secret
+   ```
+
+2. Configure `Configuration/Production/Settings.yaml`:
+   ```yaml
+   GesagtGetan:
+     NeosMcp:
+       oauth:
+         enabled: true
+         issuer: 'https://your-domain.com'
+         client:
+           id: '<generated client_id>'
+           secret: '<generated client_secret>'
+   ```
+
+3. Store the same client_id and client_secret in your password manager. Enter them in the Claude.ai connector's Advanced settings.
+
+4. Run the database migration to create the OAuth tables:
+   ```bash
+   ./flow doctrine:migrate
+   ```
+
+5. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
+
+6. Add `Data/Persistent/GesagtGetan.NeosMcp/` to Deployer's `shared_dirs` so the auto-generated RSA keys persist across deployments.
+
+### Staging basic auth
+
+The proserverXXXX or getan.at domains require HTTP basic auth via `Web/.htaccess`. The OAuth/MCP routes (`/.well-known/oauth-*`, `/oauth/token`, `/neos/mcp`) are exempted so Claude can reach them without basic auth credentials. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+
 ## Configuration
 
 In `Settings.yaml`:
