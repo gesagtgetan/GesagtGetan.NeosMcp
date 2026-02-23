@@ -49,12 +49,16 @@ class OAuthAuthorizeController extends ActionController
         }
 
         if (!$this->oauthServerFactory->isClientRegistered()) {
-            return $this->jsonResponse(500, ['error' => 'OAuth client not registered. Run ./flow mcp:setup first.']);
+            return $this->htmlErrorResponse(500, 'OAuth Client Not Registered', 'The OAuth client has not been set up yet. An administrator needs to run <code>./flow mcp:setup</code> on the server.');
         }
 
         $account = $this->securityContext->getAccount();
         if ($account === null) {
-            return $this->jsonResponse(401, ['error' => 'Authentication required']);
+            return $this->loginRequiredResponse();
+        }
+
+        if (!$this->securityContext->hasRole('GesagtGetan.NeosMcp:McpUser')) {
+            return $this->htmlErrorResponse(403, 'Insufficient Permissions', 'Your Neos account does not have the <code>GesagtGetan.NeosMcp:McpUser</code> role required to authorize MCP applications.');
         }
 
         $httpRequest = $this->request->getHttpRequest();
@@ -262,6 +266,68 @@ HTML;
                 'X-Content-Type-Options' => 'nosniff',
                 'Referrer-Policy' => 'no-referrer',
                 'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-ancestors 'none'",
+            ],
+            body: $html,
+        );
+    }
+
+    private function loginRequiredResponse(): ResponseInterface
+    {
+        $currentUrl = htmlspecialchars(
+            (string) $this->request->getHttpRequest()->getUri(),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8',
+        );
+
+        return $this->htmlErrorResponse(
+            401,
+            'Neos Login Required',
+            <<<BODY
+            <p>You need to be logged into the Neos backend before authorizing this application.</p>
+            <div class="hint">
+                <p><strong>Steps:</strong></p>
+                <ol>
+                    <li>Open the <a href="/neos/" target="_blank">Neos backend</a> and log in.</li>
+                    <li>Come back and <a href="{$currentUrl}">retry the authorization</a>.</li>
+                </ol>
+            </div>
+            BODY,
+        );
+    }
+
+    private function htmlErrorResponse(int $statusCode, string $title, string $body): ResponseInterface
+    {
+        $escapedTitle = htmlspecialchars($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $html = <<<HTML
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{$escapedTitle}</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 480px; margin: 80px auto; padding: 0 20px; color: #1a1a1a; }
+                h1 { font-size: 1.5rem; }
+                .hint { background: #f5f5f5; padding: 12px 16px; border-radius: 6px; margin: 16px 0; font-size: 0.95rem; }
+                a { color: #0066cc; }
+                code { background: #eee; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+            </style>
+        </head>
+        <body>
+            <h1>{$escapedTitle}</h1>
+            {$body}
+        </body>
+        </html>
+        HTML;
+
+        return new Response(
+            status: $statusCode,
+            headers: [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store',
+                'X-Frame-Options' => 'DENY',
+                'X-Content-Type-Options' => 'nosniff',
             ],
             body: $html,
         );
