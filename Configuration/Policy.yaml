@@ -21,6 +21,8 @@ privilegeTargets:
 roles:
 
   'GesagtGetan.NeosMcp:McpUser':
+    label: MCP User
+    description: 'Allows authorizing MCP applications (e.g. Claude) via OAuth to access the Content Repository. Without this role, the OAuth authorization screen shows an "Insufficient Permissions" error.'
     parentRoles: ['Neos.Neos:AbstractEditor']
     privileges:
       -
