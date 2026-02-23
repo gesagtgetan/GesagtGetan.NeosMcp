@@ -66,25 +66,23 @@ class McpCommandController extends CommandController
 
         if ($contentRepository->findWorkspaceByName($workspaceName) !== null) {
             $this->outputLine('Workspace "%s" already exists.', [$workspaceName->value]);
-
-            return;
-        }
-
-        $this->workspaceService->createSharedWorkspace(
-            $crId,
-            $workspaceName,
-            new WorkspaceTitle('LLM Review'),
-            new WorkspaceDescription('Review workspace for MCP-generated content changes'),
-            WorkspaceName::fromString($this->workspaceBaseWorkspaceName),
-            WorkspaceRoleAssignments::create(
-                WorkspaceRoleAssignment::createForGroup(
-                    'Neos.Neos:AbstractEditor',
-                    WorkspaceRole::COLLABORATOR,
+        } else {
+            $this->workspaceService->createSharedWorkspace(
+                $crId,
+                $workspaceName,
+                new WorkspaceTitle('LLM Review'),
+                new WorkspaceDescription('Review workspace for MCP-generated content changes'),
+                WorkspaceName::fromString($this->workspaceBaseWorkspaceName),
+                WorkspaceRoleAssignments::create(
+                    WorkspaceRoleAssignment::createForGroup(
+                        'Neos.Neos:AbstractEditor',
+                        WorkspaceRole::COLLABORATOR,
+                    ),
                 ),
-            ),
-        );
+            );
 
-        $this->outputLine('Created shared workspace "%s".', [$workspaceName->value]);
+            $this->outputLine('Created shared workspace "%s".', [$workspaceName->value]);
+        }
 
         $this->ensureOAuthClient();
     }
