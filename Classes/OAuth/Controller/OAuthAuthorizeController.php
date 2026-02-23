@@ -184,8 +184,10 @@ class OAuthAuthorizeController extends ActionController
         ));
 
         $csrfToken = $this->generateCsrfToken();
+        $flowCsrfToken = $this->securityContext->getCsrfProtectionToken();
 
         $hiddenFields = '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrfToken, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">';
+        $hiddenFields .= '<input type="hidden" name="__csrfToken" value="' . htmlspecialchars($flowCsrfToken, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">';
         $params = [
             'response_type' => $authRequest->getGrantTypeId() === 'authorization_code' ? 'code' : '',
             'client_id' => $authRequest->getClient()->getIdentifier(),
