@@ -49,7 +49,7 @@ class OAuthServerFactory
     #[Flow\Inject]
     protected Environment $environment;
 
-    /** @var array{enabled?: bool, issuer?: string|null, client?: array{id?: string|null, secret?: string|null, knownRedirectUris?: list<string>}, accessTokenLifetime?: int, refreshTokenLifetime?: int, authorizationCodeLifetime?: int, privateKeyFile?: string, publicKeyFile?: string, encryptionKeyFile?: string, corsAllowedOrigins?: list<string>} */
+    /** @var array{enabled?: bool, issuer?: string|null, client?: array{id?: string|null, secret?: string|null, knownRedirectUris?: array<string>}, accessTokenLifetime?: int, refreshTokenLifetime?: int, authorizationCodeLifetime?: int, privateKeyFile?: string, publicKeyFile?: string, encryptionKeyFile?: string, corsAllowedOrigins?: array<string>} */
     #[Flow\InjectConfiguration(path: 'oauth', package: 'GesagtGetan.NeosMcp')]
     protected array $settings;
 

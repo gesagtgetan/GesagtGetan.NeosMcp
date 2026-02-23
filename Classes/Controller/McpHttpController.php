@@ -73,13 +73,14 @@ class McpHttpController extends ActionController
         }
 
         $httpRequest = $this->request->getHttpRequest();
+        $body = (string) $httpRequest->getBody();
 
         // Validate JWT bearer token via league's ResourceServer.
         $psrRequest = new ServerRequest(
             method: 'POST',
             uri: (string) $httpRequest->getUri(),
             headers: $httpRequest->getHeaders(),
-            body: (string) $httpRequest->getBody(),
+            body: $body,
             serverParams: $_SERVER,
         );
 
@@ -90,8 +91,6 @@ class McpHttpController extends ActionController
         } catch (OAuthServerException) {
             return $this->unauthorizedResponse();
         }
-
-        $body = (string) $httpRequest->getBody();
 
         try {
             $message = Parser::parseRequestMessage($body);
