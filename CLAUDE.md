@@ -12,6 +12,7 @@ Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `Distr
 - **OAuth token cleanup command** — Add a CLI command (e.g., `./flow oauth:cleanup`) to delete expired and revoked auth codes and refresh tokens from the database. Run periodically via cron.
 - **Upgrade to league/oauth2-server ^9** — Currently pinned to ^8.5 due to `lcobucci/jwt` version conflict with `flownative/openidconnect-client` (requires ^4.1). Once Flownative supports `lcobucci/jwt ^5`, upgrade to league v9 (changes: `__toString()` → `toString()`, `CryptKey` → `CryptKeyInterface`).
 - **ChatGPT connector support** — The goal is to serve both Claude and ChatGPT from the same endpoints. Adding ChatGPT requires: (1) extend `corsAllowedOrigins` with ChatGPT's origin(s), (2) add ChatGPT's callback URL to `client.knownRedirectUris`.
+- **CircleCI integration** — Add `.circleci/config.yml` to the repo. Two jobs: (1) static analysis + unit tests (`just check` + `just test-unit`, no DB needed), (2) functional tests (`just test-functional`, needs MariaDB service, full Flow bootstrap with `doctrine:migrate` + `cr:setup`). Dev dependencies (phpunit, phpstan, etc.) are provided by the host project, so CI needs a minimal Neos/Flow checkout. Reference the host project's CircleCI config for the Flow bootstrap pattern.
 - **Image support via MCP** — Two features:
   1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
@@ -56,7 +57,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 
 **Security** (`Policy.yaml`): `McpUser` role (extends `AbstractEditor`) required for authorization endpoint. All other OAuth endpoints are public (Everybody).
 
-**Staging basic auth** (`Web/.htaccess`): The proserverXXXX or getan.at domains require HTTP basic auth. OAuth/MCP routes are exempted via `SetEnvIf` + `Allow from env=OAUTH_PUBLIC` so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/neos/mcp` without basic auth credentials. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+**Staging basic auth** (`Web/.htaccess`): The proserverXXXX or getan.at domains require HTTP basic auth. OAuth/MCP routes are exempted via a `%{THE_REQUEST}` exclusion in the `<If>` condition so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/neos/mcp` without basic auth credentials. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
 
 ## Testing Gotchas
 

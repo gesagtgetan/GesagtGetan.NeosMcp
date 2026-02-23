@@ -68,9 +68,7 @@ The package also exposes the MCP server over HTTP at `POST /neos/mcp`, secured w
 
 6. Add `Data/Persistent/GesagtGetan.NeosMcp/` to Deployer's `shared_dirs` so the auto-generated RSA keys persist across deployments.
 
-### Staging basic auth
-
-The proserverXXXX or getan.at domains require HTTP basic auth via `Web/.htaccess`. The OAuth/MCP routes (`/.well-known/oauth-*`, `/oauth/token`, `/neos/mcp`) are exempted so Claude can reach them without basic auth credentials. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/neos/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. For example, the proserverXXXX or getan.at staging domains use a `%{THE_REQUEST}` exclusion in `Web/.htaccess` to bypass basic auth for these paths. The authorization endpoint (`GET /neos/mcp`) is also exempted but requires a Neos session, so there is no security gap.
 
 ## Configuration
 
