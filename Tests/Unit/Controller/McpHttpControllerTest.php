@@ -7,7 +7,10 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\Controller;
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Controller\McpHttpController;
 use GesagtGetan\NeosMcp\McpToolProvider;
+use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\ServerRequest;
+use League\OAuth2\Server\Exception\OAuthServerException;
+use League\OAuth2\Server\ResourceServer;
 use Neos\ContentRepository\Core\Dimension\ContentDimensionSourceInterface;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
@@ -24,10 +27,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 
 class McpHttpControllerTest extends UnitTestCase
 {
-    private const BEARER_TOKEN = 'test-secret-token';
-
     private McpHttpController $subject;
     private SecurityContext&MockObject $securityContext;
+    private OAuthServerFactory&MockObject $oauthServerFactory;
+    private ResourceServer&MockObject $resourceServer;
 
     protected function setUp(): void
     {
@@ -39,8 +42,15 @@ class McpHttpControllerTest extends UnitTestCase
             static fn (\Closure $callback): mixed => $callback(),
         );
 
+        $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
+        $this->oauthServerFactory->method('isEnabled')->willReturn(true);
+        $this->oauthServerFactory->method('getIssuer')->willReturn('https://example.com');
+
+        $this->resourceServer = $this->createMock(ResourceServer::class);
+        $this->oauthServerFactory->method('createResourceServer')->willReturn($this->resourceServer);
+
         $this->inject($this->subject, 'securityContext', $this->securityContext);
-        $this->inject($this->subject, 'httpTransportSettings', ['enabled' => true, 'bearerToken' => self::BEARER_TOKEN]);
+        $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
     }
 
     /**
@@ -48,8 +58,10 @@ class McpHttpControllerTest extends UnitTestCase
      */
     public function disabledEndpointReturns404(): void
     {
-        $this->inject($this->subject, 'httpTransportSettings', ['enabled' => false, 'bearerToken' => self::BEARER_TOKEN]);
-        $this->injectRequest('{}', 'Bearer ' . self::BEARER_TOKEN);
+        $factory = $this->createMock(OAuthServerFactory::class);
+        $factory->method('isEnabled')->willReturn(false);
+        $this->inject($this->subject, 'oauthServerFactory', $factory);
+        $this->injectRequest('{}', 'Bearer some-jwt');
 
         $response = $this->subject->handleAction();
 
@@ -61,40 +73,21 @@ class McpHttpControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function nullBearerTokenReturns404(): void
+    public function failedJwtValidationReturns401WithDiscoveryHeader(): void
     {
-        $this->inject($this->subject, 'httpTransportSettings', ['enabled' => true, 'bearerToken' => null]);
-        $this->injectRequest('{}', 'Bearer some-token');
-
-        $response = $this->subject->handleAction();
-
-        self::assertSame(404, $response->getStatusCode());
-    }
-
-    /**
-     * @test
-     */
-    public function missingAuthorizationHeaderReturns401(): void
-    {
-        $this->injectRequest('{}', '');
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willThrowException(OAuthServerException::accessDenied('token validation failed'));
+        $this->injectRequest('{}', 'Bearer invalid-jwt');
 
         $response = $this->subject->handleAction();
 
         self::assertSame(401, $response->getStatusCode());
         $body = $this->decodeJsonBody((string) $response->getBody());
         self::assertSame('Unauthorized', $body['error']);
-    }
-
-    /**
-     * @test
-     */
-    public function wrongBearerTokenReturns401(): void
-    {
-        $this->injectRequest('{}', 'Bearer wrong-token');
-
-        $response = $this->subject->handleAction();
-
-        self::assertSame(401, $response->getStatusCode());
+        self::assertSame(
+            'Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
+            $response->getHeaderLine('WWW-Authenticate'),
+        );
     }
 
     /**
@@ -102,7 +95,9 @@ class McpHttpControllerTest extends UnitTestCase
      */
     public function invalidJsonReturns400WithParseError(): void
     {
-        $this->injectRequest('not-json', 'Bearer ' . self::BEARER_TOKEN);
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willReturnArgument(0);
+        $this->injectRequest('not-json', 'Bearer valid-jwt');
 
         $response = $this->subject->handleAction();
 
@@ -118,7 +113,9 @@ class McpHttpControllerTest extends UnitTestCase
      */
     public function notificationReturns400(): void
     {
-        $this->injectRequest('{"jsonrpc":"2.0","method":"notifications/initialized"}', 'Bearer ' . self::BEARER_TOKEN);
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willReturnArgument(0);
+        $this->injectRequest('{"jsonrpc":"2.0","method":"notifications/initialized"}', 'Bearer valid-jwt');
 
         $response = $this->subject->handleAction();
 
@@ -133,11 +130,14 @@ class McpHttpControllerTest extends UnitTestCase
      */
     public function toolsListReturnsJsonRpcResponse(): void
     {
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willReturnArgument(0);
+
         $controller = $this->createControllerWithMockServer();
         $this->injectRequestInto(
             $controller,
             '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}',
-            'Bearer ' . self::BEARER_TOKEN,
+            'Bearer valid-jwt',
         );
 
         $response = $controller->handleAction();
@@ -179,9 +179,6 @@ class McpHttpControllerTest extends UnitTestCase
 
     /**
      * Creates a controller subclass with buildServer() overridden to avoid final-class mocking.
-     *
-     * ContentRepositoryRegistry and ContentRepository are both final, so we bypass them entirely
-     * by building the Server from a ContentRepositoryFacade mock directly.
      */
     private function createControllerWithMockServer(): McpHttpController
     {
@@ -225,7 +222,7 @@ class McpHttpControllerTest extends UnitTestCase
         };
 
         $this->inject($controller, 'securityContext', $this->securityContext);
-        $this->inject($controller, 'httpTransportSettings', ['enabled' => true, 'bearerToken' => self::BEARER_TOKEN]);
+        $this->inject($controller, 'oauthServerFactory', $this->oauthServerFactory);
 
         return $controller;
     }

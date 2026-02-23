@@ -7,7 +7,10 @@ namespace GesagtGetan\NeosMcp\Controller;
 use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
+use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\ServerRequest;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
@@ -34,9 +37,9 @@ use Psr\Log\NullLogger;
 /**
  * HTTP transport for the MCP server.
  *
- * Receives JSON-RPC requests via POST, validates bearer token authentication,
- * and dispatches them through the MCP Dispatcher. Stateless per-request —
- * no initialize handshake needed. Each request creates a fresh, pre-initialized session.
+ * Receives JSON-RPC requests via POST, validates JWT bearer token via league's
+ * ResourceServer, and dispatches them through the MCP Dispatcher. Stateless
+ * per-request — no initialize handshake needed.
  */
 class McpHttpController extends ActionController
 {
@@ -49,29 +52,43 @@ class McpHttpController extends ActionController
     #[Flow\Inject]
     protected RedirectStorageInterface $redirectStorage;
 
+    #[Flow\Inject]
+    protected OAuthServerFactory $oauthServerFactory;
+
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
 
     #[Flow\InjectConfiguration(path: 'workspaceName', package: 'GesagtGetan.NeosMcp')]
     protected string $workspaceName;
 
-    /** @var array{enabled?: bool, bearerToken?: string|null} */
-    #[Flow\InjectConfiguration(path: 'httpTransport', package: 'GesagtGetan.NeosMcp')]
-    protected array $httpTransportSettings;
+    public function preflightAction(): ResponseInterface
+    {
+        return new Response(204, $this->corsHeaders());
+    }
 
     public function handleAction(): ResponseInterface
     {
-        $bearerToken = $this->httpTransportSettings['bearerToken'] ?? null;
-
-        if (!($this->httpTransportSettings['enabled'] ?? false) || !is_string($bearerToken) || $bearerToken === '') {
+        if (!$this->oauthServerFactory->isEnabled()) {
             return $this->jsonResponse(404, ['error' => 'Not found']);
         }
 
         $httpRequest = $this->request->getHttpRequest();
-        $authHeader = $httpRequest->getHeaderLine('Authorization');
 
-        if (!hash_equals('Bearer ' . $bearerToken, $authHeader)) {
-            return $this->jsonResponse(401, ['error' => 'Unauthorized']);
+        // Validate JWT bearer token via league's ResourceServer.
+        $psrRequest = new ServerRequest(
+            method: 'POST',
+            uri: (string) $httpRequest->getUri(),
+            headers: $httpRequest->getHeaders(),
+            body: (string) $httpRequest->getBody(),
+            serverParams: $_SERVER,
+        );
+
+        $resourceServer = $this->oauthServerFactory->createResourceServer();
+
+        try {
+            $resourceServer->validateAuthenticatedRequest($psrRequest);
+        } catch (OAuthServerException) {
+            return $this->unauthorizedResponse();
         }
 
         $body = (string) $httpRequest->getBody();
@@ -94,6 +111,20 @@ class McpHttpController extends ActionController
         });
 
         return $this->jsonResponse(200, $result->toArray());
+    }
+
+    private function unauthorizedResponse(): ResponseInterface
+    {
+        $issuer = $this->oauthServerFactory->getIssuer();
+
+        return new Response(
+            status: 401,
+            headers: [
+                'Content-Type' => 'application/json',
+                'WWW-Authenticate' => 'Bearer resource_metadata="' . $issuer . '/.well-known/oauth-protected-resource"',
+            ] + $this->corsHeaders(),
+            body: json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR),
+        );
     }
 
     private function dispatch(Request $request): JsonRpcResponse|JsonRpcError
@@ -151,12 +182,29 @@ class McpHttpController extends ActionController
         return $builder->build();
     }
 
+    /** @return array<string, string> */
+    private function corsHeaders(): array
+    {
+        $origin = $this->request->getHttpRequest()->getHeaderLine('Origin');
+        $allowed = $this->oauthServerFactory->getCorsAllowedOrigin($origin);
+
+        if ($allowed === null) {
+            return [];
+        }
+
+        return [
+            'Access-Control-Allow-Origin' => $allowed,
+            'Access-Control-Allow-Methods' => 'POST',
+            'Access-Control-Allow-Headers' => 'Authorization, Content-Type',
+        ];
+    }
+
     /** @param array<mixed> $data */
     private function jsonResponse(int $statusCode, array $data): ResponseInterface
     {
         return new Response(
             status: $statusCode,
-            headers: ['Content-Type' => 'application/json'],
+            headers: ['Content-Type' => 'application/json'] + $this->corsHeaders(),
             body: json_encode($data, JSON_THROW_ON_ERROR),
         );
     }
