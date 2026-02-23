@@ -54,9 +54,14 @@ class OAuthAuthCode implements AuthCodeEntityInterface
     /** @ORM\Column(type="boolean") */
     protected bool $revoked = false;
 
-    /** @var ScopeEntityInterface[] */
+    /**
+     * @var ScopeEntityInterface[]
+     *
+     * @Flow\Transient
+     */
     private array $scopeEntities = [];
 
+    /** @Flow\Transient */
     private ?ClientEntityInterface $clientEntity = null;
 
     public function __construct()
