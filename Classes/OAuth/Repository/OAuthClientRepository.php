@@ -17,7 +17,7 @@ use Neos\Flow\Persistence\Repository;
  */
 class OAuthClientRepository extends Repository implements ClientRepositoryInterface
 {
-    protected $entityClassName = OAuthClient::class;
+    public const ENTITY_CLASSNAME = OAuthClient::class;
 
     /**
      * @param string $clientIdentifier
