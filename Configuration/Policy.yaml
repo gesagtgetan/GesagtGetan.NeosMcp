@@ -38,3 +38,6 @@ roles:
       -
         privilegeTarget: 'GesagtGetan.NeosMcp:OAuthTokenAccess'
         permission: GRANT
+      -
+        privilegeTarget: 'GesagtGetan.NeosMcp:OAuthAuthorizeAccess'
+        permission: GRANT
