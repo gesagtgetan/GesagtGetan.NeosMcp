@@ -9,6 +9,7 @@ use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Persistence\Aspect\PersistenceMagicInterface;
 use Neos\Flow\Utility\Algorithms;
 
 /**
@@ -17,12 +18,15 @@ use Neos\Flow\Utility\Algorithms;
  * Implements league's AuthCodeEntityInterface via explicit methods rather than traits,
  * because league traits use untyped properties that conflict with Flow's ORM mapping.
  *
+ * Implements PersistenceMagicInterface explicitly because Proxy(false) bypasses
+ * AOP introduction. Without it, PersistenceManager::update() rejects the entity.
+ *
  * @Flow\Entity
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_auth_code")
  */
 #[Flow\Proxy(false)]
-class OAuthAuthCode implements AuthCodeEntityInterface
+class OAuthAuthCode implements AuthCodeEntityInterface, PersistenceMagicInterface
 {
     /**
      * @ORM\Id

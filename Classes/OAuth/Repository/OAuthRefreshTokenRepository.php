@@ -36,6 +36,7 @@ class OAuthRefreshTokenRepository extends Repository implements RefreshTokenRepo
 
         if ($refreshToken !== null) {
             $refreshToken->setRevoked(true);
+            $this->update($refreshToken);
         }
     }
 

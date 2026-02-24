@@ -8,17 +8,21 @@ use Doctrine\ORM\Mapping as ORM;
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Persistence\Aspect\PersistenceMagicInterface;
 use Neos\Flow\Utility\Algorithms;
 
 /**
  * Refresh token — long-lived, persisted, rotated on use.
+ *
+ * Implements PersistenceMagicInterface explicitly because Proxy(false) bypasses
+ * AOP introduction. Without it, PersistenceManager::update() rejects the entity.
  *
  * @Flow\Entity
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_refresh_token")
  */
 #[Flow\Proxy(false)]
-class OAuthRefreshToken implements RefreshTokenEntityInterface
+class OAuthRefreshToken implements RefreshTokenEntityInterface, PersistenceMagicInterface
 {
     /**
      * @ORM\Id
