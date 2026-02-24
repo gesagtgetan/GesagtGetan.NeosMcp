@@ -36,7 +36,6 @@ class OAuthAuthCodeRepository extends Repository implements AuthCodeRepositoryIn
 
         if ($authCode !== null) {
             $authCode->setRevoked(true);
-            $this->update($authCode);
         }
     }
 

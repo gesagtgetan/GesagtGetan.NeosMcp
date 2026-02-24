@@ -31,7 +31,7 @@ class OAuthMetadataController extends ActionController
         $issuer = $this->oauthServerFactory->getIssuer();
 
         return $this->jsonResponse(200, [
-            'resource' => $issuer . '/neos/mcp',
+            'resource' => $issuer . '/api/mcp',
             'authorization_servers' => [$issuer],
             'bearer_methods_supported' => ['header'],
         ]);
@@ -47,7 +47,7 @@ class OAuthMetadataController extends ActionController
 
         return $this->jsonResponse(200, [
             'issuer' => $issuer,
-            'authorization_endpoint' => $issuer . '/neos/mcp',
+            'authorization_endpoint' => $issuer . '/api/mcp',
             'token_endpoint' => $issuer . '/oauth/token',
             'response_types_supported' => ['code'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],

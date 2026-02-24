@@ -20,8 +20,8 @@ use Psr\Http\Message\ResponseInterface;
  * Authorization endpoint — validates the OAuth request, shows consent screen,
  * and completes the authorization with a redirect containing the auth code.
  *
- * GET /neos/mcp (with response_type=code) → authorize (requires Neos session)
- * POST /neos/mcp/grant → grant (processes consent form)
+ * GET /api/mcp (with response_type=code) → authorize (requires Neos session)
+ * POST /api/mcp/grant → grant (processes consent form)
  */
 class OAuthAuthorizeController extends ActionController
 {
@@ -40,7 +40,7 @@ class OAuthAuthorizeController extends ActionController
     protected SessionInterface $session;
 
     /**
-     * GET /neos/mcp?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
+     * GET /api/mcp?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
      *
      * Requires Neos session (McpUser role). Auto-grants for the configured client,
      * shows consent screen for any other client.
@@ -86,13 +86,13 @@ class OAuthAuthorizeController extends ActionController
         $isAutoGrant = $authRequest->getClient()->getIdentifier() === $this->oauthServerFactory->getConfiguredClientId();
 
         // Render consent screen (or auto-submitting form for auto-grant).
-        // Authorization always completes via POST to /neos/mcp/grant because Flow
+        // Authorization always completes via POST to /api/mcp/grant because Flow
         // blocks database writes during GET requests ("safe request" protection).
         return $this->renderConsentScreen($authRequest, $account->getAccountIdentifier(), $isAutoGrant);
     }
 
     /**
-     * POST /neos/mcp/grant — processes consent form submission.
+     * POST /api/mcp/grant — processes consent form submission.
      */
     public function grantAction(): ResponseInterface
     {
@@ -247,7 +247,7 @@ class OAuthAuthorizeController extends ActionController
         <p>This application is requesting access to:</p>
         <div class="scopes">{$scopeDisplay}</div>
     </div>
-    <form id="consent-form" method="POST" action="/neos/mcp/grant"{$formStyle}>
+    <form id="consent-form" method="POST" action="/api/mcp/grant"{$formStyle}>
         {$hiddenFields}
         <input type="hidden" name="approve" value="1">
         <div class="actions"{$formStyle}>

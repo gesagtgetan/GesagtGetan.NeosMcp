@@ -289,7 +289,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     /** @param array<string, string> $queryParams */
     private function injectGetRequest(array $queryParams): void
     {
-        $httpRequest = new ServerRequest('GET', 'http://localhost/neos/mcp');
+        $httpRequest = new ServerRequest('GET', 'http://localhost/api/mcp');
         $httpRequest = $httpRequest->withQueryParams($queryParams);
         $actionRequest = $this->createMock(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
@@ -298,7 +298,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
     private function injectPostRequest(string $body): void
     {
-        $httpRequest = new ServerRequest('POST', 'http://localhost/neos/mcp/grant', [], $body);
+        $httpRequest = new ServerRequest('POST', 'http://localhost/api/mcp/grant', [], $body);
         $actionRequest = $this->createMock(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
         $this->inject($this->subject, 'request', $actionRequest);

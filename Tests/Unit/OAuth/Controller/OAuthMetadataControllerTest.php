@@ -51,7 +51,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         self::assertSame('no-store', $response->getHeaderLine('Cache-Control'));
 
         $body = $this->decodeBody($response);
-        self::assertSame('https://example.com/neos/mcp', $body['resource']);
+        self::assertSame('https://example.com/api/mcp', $body['resource']);
         self::assertSame(['https://example.com'], $body['authorization_servers']);
         self::assertSame(['header'], $body['bearer_methods_supported']);
     }
@@ -82,7 +82,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
 
         $body = $this->decodeBody($response);
         self::assertSame('https://example.com', $body['issuer']);
-        self::assertSame('https://example.com/neos/mcp', $body['authorization_endpoint']);
+        self::assertSame('https://example.com/api/mcp', $body['authorization_endpoint']);
         self::assertSame('https://example.com/oauth/token', $body['token_endpoint']);
         self::assertArrayNotHasKey('registration_endpoint', $body);
         self::assertSame(['code'], $body['response_types_supported']);
