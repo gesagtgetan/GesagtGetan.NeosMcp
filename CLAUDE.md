@@ -58,6 +58,13 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 
 **Staging basic auth** (`Web/.htaccess`): The proserverXXXX or getan.at domains require HTTP basic auth. OAuth/MCP routes are exempted via a `%{THE_REQUEST}` exclusion in the `<If>` condition so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/api/mcp` without basic auth credentials. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
 
+## When to Run Which Tests
+
+- **Entity or Repository changes** → always run both unit AND functional tests. Unit tests mock persistence and will never catch ORM issues (missing `@ORM\Id`, hydration failures, `DEFERRED_EXPLICIT` gotchas).
+- **Service/Controller logic** → unit tests are usually sufficient.
+- **Always run `just check`** (phpcs + php-cs-fixer + phpstan) before considering work finished.
+- Functional tests need Docker. If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
+
 ## Testing Gotchas
 
 - **ContentRepository is final** — cannot be mocked in PHPUnit 11+. We use `ContentRepositoryFacade` (an interface) instead. PHPUnit 10 still allows mocking final classes but with deprecation warnings.
@@ -69,6 +76,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 - **Node hierarchy in tests** — Neos enforces Sites → Site → Document. Tests must create a `Neos.Neos:Sites` root, then a `Testing.Site` (extends `Neos.Neos:Site`), then documents under the site.
 - **Dimension space points** — use `resolveDefaultDimensionSpacePoint()` from the facade, not `DimensionSpacePoint::createWithoutDimensions()`. The empty `[]` DSP is invalid when dimensions are configured.
 - **Run `doctrine:validate` after ORM entity changes** — `#[Flow\Proxy(false)]` prevents Flow from injecting the auto-generated primary key. DB entities with `Proxy(false)` need an explicit `@ORM\Id` property. `Proxy(false)` is required on entities with named constructor parameters because Flow's proxy constructor uses `func_get_args()` which breaks named argument calls.
+- **`Proxy(false)` entities must implement `PersistenceMagicInterface`** — Flow uses `DEFERRED_EXPLICIT` change tracking, so modified entities must be explicitly scheduled via `$repository->update()`. But `update()` rejects objects that don't implement `PersistenceMagicInterface` (normally introduced via AOP, which `Proxy(false)` bypasses). All `Proxy(false)` DB entities must explicitly `implements PersistenceMagicInterface`.
 
 ## Coding Philosophy
 
