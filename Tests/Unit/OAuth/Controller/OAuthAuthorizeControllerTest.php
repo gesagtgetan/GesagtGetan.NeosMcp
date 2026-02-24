@@ -33,6 +33,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->subject = new OAuthAuthorizeController();
         $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
+        $this->oauthServerFactory->method('isClientRegistered')->willReturn(true);
         $this->oauthServerFactory->method('getIssuer')->willReturn('https://example.com');
 
         $this->authorizationServer = $this->createMock(AuthorizationServer::class);
@@ -72,9 +73,8 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $response = $this->subject->authorizeAction();
 
         self::assertSame(401, $response->getStatusCode());
-        $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertSame('Authentication required', $body['error']);
+        self::assertStringContainsString('text/html', $response->getHeaderLine('Content-Type'));
+        self::assertStringContainsString('Neos Login Required', (string) $response->getBody());
     }
 
     /**
@@ -83,6 +83,8 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     public function authorizeShowsConsentScreenWithCsrfTokenAndSecurityHeaders(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+        $this->securityContext->method('getCsrfProtectionToken')->willReturn('flow-csrf-token');
         $this->oauthServerFactory->method('getConfiguredClientId')->willReturn('configured-id');
         $this->session->expects(self::once())->method('putData');
 
@@ -124,31 +126,30 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     public function authorizeAutoGrantsForConfiguredClient(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+        $this->securityContext->method('getCsrfProtectionToken')->willReturn('flow-csrf-token');
         $this->oauthServerFactory->method('getConfiguredClientId')->willReturn('configured-id');
 
         $client = $this->createMock(ClientEntityInterface::class);
         $client->method('getIdentifier')->willReturn('configured-id');
+        $client->method('getName')->willReturn('Test Client');
 
         $authRequest = new AuthorizationRequest();
         $authRequest->setGrantTypeId('authorization_code');
         $authRequest->setClient($client);
 
         $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
-        $this->authorizationServer->method('completeAuthorizationRequest')
-            ->willReturnCallback(function (AuthorizationRequest $request) {
-                self::assertTrue($request->isAuthorizationApproved());
-                self::assertNotNull($request->getUser());
-                self::assertSame('admin@example.com', $request->getUser()->getIdentifier());
 
-                return new \GuzzleHttp\Psr7\Response(302, ['Location' => 'https://example.com/callback?code=abc']);
-            });
-
-        $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'test']);
+        $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'configured-id']);
 
         $response = $this->subject->authorizeAction();
 
-        // Auto-granted — should be a redirect, not a consent screen.
-        self::assertSame(302, $response->getStatusCode());
+        // Auto-grant renders a hidden form with auto-submit JS (POST to /api/mcp/grant).
+        self::assertSame(200, $response->getStatusCode());
+        $html = (string) $response->getBody();
+        self::assertStringContainsString('consent-form', $html);
+        self::assertStringContainsString('submit()', $html);
+        self::assertStringContainsString('style="display:none"', $html);
     }
 
     /**
@@ -276,6 +277,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     public function authorizeForwardsLeagueValidationError(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
         $this->authorizationServer->method('validateAuthorizationRequest')
             ->willThrowException(OAuthServerException::invalidClient(new ServerRequest('GET', '/')));
 
