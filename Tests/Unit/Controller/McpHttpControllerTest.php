@@ -111,7 +111,7 @@ class McpHttpControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function notificationReturns400(): void
+    public function notificationReturns204(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
             ->willReturnArgument(0);
@@ -119,10 +119,8 @@ class McpHttpControllerTest extends UnitTestCase
 
         $response = $this->subject->handleAction();
 
-        self::assertSame(400, $response->getStatusCode());
-        $body = $this->decodeJsonBody((string) $response->getBody());
-        self::assertIsArray($body['error']);
-        self::assertSame(-32600, $body['error']['code']);
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame('', (string) $response->getBody());
     }
 
     /**
