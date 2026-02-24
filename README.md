@@ -70,6 +70,13 @@ The package also exposes the MCP server over HTTP at `POST /api/mcp`, secured wi
 
 7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. For example, the proserverXXXX or getan.at staging domains use a `%{THE_REQUEST}` exclusion in `Web/.htaccess` to bypass basic auth for these paths. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
 
+8. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
+   ```apache
+   RewriteCond %{HTTP:Authorization} .
+   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+   ```
+   This copies the `Authorization` header into the `HTTP_AUTHORIZATION` environment variable so PHP can read it. The `RewriteCond` ensures it only fires when the header is present.
+
 ## Configuration
 
 In `Settings.yaml`:
