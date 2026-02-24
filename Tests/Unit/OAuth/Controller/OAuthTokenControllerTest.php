@@ -53,7 +53,12 @@ class OAuthTokenControllerTest extends UnitTestCase
      */
     public function tokenDelegatesToLeagueOnSuccess(): void
     {
-        $leagueResponse = new \GuzzleHttp\Psr7\Response(200, [], '{"access_token":"jwt"}');
+        // Simulate league's behavior: it writes to the body stream via write(),
+        // which advances the pointer to the end. The controller must rewind
+        // before returning, otherwise Flow's emitter reads an empty body.
+        $leagueResponse = new \GuzzleHttp\Psr7\Response(200);
+        $leagueResponse->getBody()->write('{"access_token":"jwt"}');
+
         $this->authorizationServer->method('respondToAccessTokenRequest')
             ->willReturn($leagueResponse);
 
@@ -62,6 +67,9 @@ class OAuthTokenControllerTest extends UnitTestCase
         $response = $this->subject->tokenAction();
 
         self::assertSame(200, $response->getStatusCode());
+        // Use getContents() (not __toString()) because that's how emitters read
+        // the body — from the current stream position, without rewinding.
+        self::assertSame('{"access_token":"jwt"}', $response->getBody()->getContents());
     }
 
     /**
@@ -74,9 +82,9 @@ class OAuthTokenControllerTest extends UnitTestCase
 
         $this->injectRequest('grant_type=authorization_code&code=expired');
 
-        $response = $this->subject->tokenAction();
+        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
 
-        self::assertGreaterThanOrEqual(400, $response->getStatusCode());
+        $this->subject->tokenAction();
     }
 
     private function injectRequest(string $body): void

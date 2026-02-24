@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
+use GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException as McpOAuthServerException;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -53,9 +54,15 @@ class OAuthTokenController extends ActionController
         $psrResponse = new Response(200, $this->corsHeaders());
 
         try {
-            return $server->respondToAccessTokenRequest($psrRequest, $psrResponse);
+            $response = $server->respondToAccessTokenRequest($psrRequest, $psrResponse);
+            // League writes the JSON body via $stream->write(), which advances the
+            // pointer to the end. Without rewind, Flow's emitter reads an empty
+            // body and clients receive Content-Length: 0.
+            $response->getBody()->rewind();
+
+            return $response;
         } catch (OAuthServerException $e) {
-            return $e->generateHttpResponse($psrResponse);
+            throw new McpOAuthServerException('OAuth token exchange failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000022, $e);
         }
     }
 
