@@ -166,7 +166,7 @@ class McpHttpControllerTest extends UnitTestCase
 
     private function injectRequestInto(McpHttpController $controller, string $body, string $authorizationHeader): void
     {
-        $httpRequest = new ServerRequest('POST', 'http://localhost/neos/mcp', [], $body);
+        $httpRequest = new ServerRequest('POST', 'http://localhost/api/mcp', [], $body);
         if ($authorizationHeader !== '') {
             $httpRequest = $httpRequest->withHeader('Authorization', $authorizationHeader);
         }

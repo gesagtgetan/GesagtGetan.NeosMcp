@@ -44,7 +44,7 @@
 
 -
   name: 'OAuth Authorize'
-  uriPattern: 'neos/mcp'
+  uriPattern: 'api/mcp'
   httpMethods: ['GET']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -54,7 +54,7 @@
 
 -
   name: 'OAuth Grant (consent form)'
-  uriPattern: 'neos/mcp/grant'
+  uriPattern: 'api/mcp/grant'
   httpMethods: ['POST']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -64,7 +64,7 @@
 
 -
   name: 'MCP HTTP Transport Preflight'
-  uriPattern: 'neos/mcp'
+  uriPattern: 'api/mcp'
   httpMethods: ['OPTIONS']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -74,7 +74,7 @@
 
 -
   name: 'MCP HTTP Transport'
-  uriPattern: 'neos/mcp'
+  uriPattern: 'api/mcp'
   httpMethods: ['POST']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
