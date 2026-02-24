@@ -17,6 +17,9 @@ use Psr\Http\Message\ResponseInterface;
  */
 class OAuthTokenController extends ActionController
 {
+    /** @phpstan-var array<string> */
+    protected $supportedMediaTypes = ['application/json']; // @phpstan-ignore property.phpDocType
+
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
 
