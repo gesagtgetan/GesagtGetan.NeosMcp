@@ -20,6 +20,7 @@ use Neos\Flow\Security\Context as SecurityContext;
 use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Schema\Constants;
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
+use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Parser;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Response as JsonRpcResponse;
@@ -99,6 +100,10 @@ class McpHttpController extends ActionController
             $message = Parser::parseRequestMessage($body);
         } catch (\JsonException | \InvalidArgumentException) {
             return $this->jsonResponse(400, JsonRpcError::forParseError('Invalid JSON-RPC request')->toArray());
+        }
+
+        if ($message instanceof Notification) {
+            return new Response(204, $this->corsHeaders());
         }
 
         if (!$message instanceof Request) {
