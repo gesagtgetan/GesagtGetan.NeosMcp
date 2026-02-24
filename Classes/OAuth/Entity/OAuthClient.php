@@ -7,17 +7,21 @@ namespace GesagtGetan\NeosMcp\OAuth\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Persistence\Aspect\PersistenceMagicInterface;
 use Neos\Flow\Utility\Algorithms;
 
 /**
  * Pre-registered OAuth client. Created from Settings.yaml on first use.
+ *
+ * Implements PersistenceMagicInterface explicitly because Proxy(false) bypasses
+ * AOP introduction. Without it, PersistenceManager::update() rejects the entity.
  *
  * @Flow\Entity
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_client")
  */
 #[Flow\Proxy(false)]
-class OAuthClient implements ClientEntityInterface
+class OAuthClient implements ClientEntityInterface, PersistenceMagicInterface
 {
     /**
      * @ORM\Id
