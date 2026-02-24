@@ -43,6 +43,9 @@ use Psr\Log\NullLogger;
  */
 class McpHttpController extends ActionController
 {
+    /** @phpstan-var array<string> */
+    protected $supportedMediaTypes = ['application/json', 'text/event-stream']; // @phpstan-ignore property.phpDocType
+
     #[Flow\Inject]
     protected ContentRepositoryRegistry $contentRepositoryRegistry;
 

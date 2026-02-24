@@ -25,6 +25,9 @@ use Psr\Http\Message\ResponseInterface;
  */
 class OAuthAuthorizeController extends ActionController
 {
+    /** @phpstan-var array<string> */
+    protected $supportedMediaTypes = ['text/html', 'application/json']; // @phpstan-ignore property.phpDocType
+
     private const CSRF_SESSION_KEY = 'GesagtGetan.NeosMcp:OAuthCsrfToken';
 
     #[Flow\Inject]

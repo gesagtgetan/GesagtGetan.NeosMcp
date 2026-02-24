@@ -16,6 +16,9 @@ use Psr\Http\Message\ResponseInterface;
  */
 class OAuthMetadataController extends ActionController
 {
+    /** @phpstan-var array<string> */
+    protected $supportedMediaTypes = ['application/json']; // @phpstan-ignore property.phpDocType
+
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
 
