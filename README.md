@@ -110,6 +110,27 @@ GesagtGetan:
 - `get_workspace_status` - review workspace status
 - `discard_workspace_changes` - discard all pending changes
 
+## Workspace Rebase
+
+The Neos Content Repository does not automatically propagate changes from a base workspace (e.g. `live`) to derived workspaces. This means the MCP workspace can become stale: nodes deleted or modified in `live` remain visible in `llm-review` until an explicit rebase occurs.
+
+To keep the LLM's view fresh, the MCP server rebases the workspace **before every tool call**. This ensures reads reflect the latest live state and writes don't target nodes that no longer exist.
+
+### Conflict handling
+
+If unpublished changes in the MCP workspace conflict with live (e.g. a node was edited in the workspace but deleted in live), the rebase fails. When this happens, the tool call still executes against the stale workspace, but the response includes a conflict warning with details about which nodes are affected. The LLM can then decide to discard conflicting changes via `discardWorkspaceChanges` or inform the user.
+
+### Rebase performance (1000 live nodes, MariaDB, 10 runs)
+
+| Scenario | Avg | Min | Max |
+|----------|-----|-----|-----|
+| No-op (workspace already up-to-date) | 4.6 ms | 3.6 ms | 5.8 ms |
+| Empty workspace (outdated, no unpublished changes) | 41.2 ms | 36.5 ms | 51.8 ms |
+| 10 unpublished changes | 285.7 ms | 264.1 ms | 366.1 ms |
+| 50 unpublished changes | 1223.9 ms | 1158.9 ms | 1320.7 ms |
+
+The common case (no-op) adds ~5 ms per tool call. The empty-but-outdated case (typical after publishing) adds ~40 ms. Workspaces with many unpublished changes are more expensive but uncommon in normal MCP usage.
+
 ## Architecture
 
 Production code uses a `ContentRepositoryFacade` interface (instead of the final `ContentRepository` class directly) to allow unit testing via mocks. `DefaultContentRepositoryFacade` wraps the real CR and is wired up in `McpCommandController`.

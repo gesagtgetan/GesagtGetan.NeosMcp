@@ -7,6 +7,8 @@ namespace GesagtGetan\NeosMcp\Tests\Functional\Service;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
+use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
+use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 
 class NodeWriteServiceTest extends AbstractFunctionalTest
@@ -250,5 +252,68 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $node = $this->nodeReadService->getNode($created['nodeAggregateId']);
         self::assertNotNull($node);
         self::assertSame('Replace Me', $node['properties']['title']);
+    }
+
+    /**
+     * @test
+     *
+     * Reproduces a real-world issue: a node created in the shared workspace,
+     * published to live, then deleted in live, was still visible when reading
+     * from the shared workspace. The CR does not auto-rebase derived workspaces
+     * when the base changes — an explicit rebase is required.
+     */
+    public function nodeDeletedInLiveIsStaleWithoutRebase(): void
+    {
+        // Create a node in the shared workspace and publish it to live.
+        $created = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Published then deleted'],
+        );
+        $nodeId = $created['nodeAggregateId'];
+
+        $this->contentRepository->handle(
+            PublishWorkspace::create(WorkspaceName::fromString('test-workspace')),
+        );
+
+        // Delete the node in live.
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService->removeNode($nodeId);
+
+        // Without rebase, the shared workspace still shows the deleted node.
+        self::assertNotNull($this->nodeReadService->getNode($nodeId), 'Without rebase, node is still visible (stale)');
+    }
+
+    /**
+     * @test
+     *
+     * Verifies that rebasing the shared workspace picks up deletions from live.
+     * The MCP HTTP controller rebases before every request to prevent stale reads.
+     */
+    public function nodeDeletedInLiveDisappearsAfterRebase(): void
+    {
+        // Create a node in the shared workspace and publish it to live.
+        $created = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Published then deleted'],
+        );
+        $nodeId = $created['nodeAggregateId'];
+
+        $this->contentRepository->handle(
+            PublishWorkspace::create(WorkspaceName::fromString('test-workspace')),
+        );
+
+        // Delete the node in live.
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService->removeNode($nodeId);
+
+        // Rebase the shared workspace to pick up live changes.
+        $this->contentRepository->handle(
+            RebaseWorkspace::create(WorkspaceName::fromString('test-workspace')),
+        );
+
+        // After rebase, the node must be gone.
+        self::assertNull($this->nodeReadService->getNode($nodeId), 'Node deleted in live must not be visible after rebase');
     }
 }

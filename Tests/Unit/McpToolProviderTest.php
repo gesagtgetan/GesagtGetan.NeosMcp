@@ -9,6 +9,8 @@ use GesagtGetan\NeosMcp\McpToolProvider;
 use Neos\ContentRepository\Core\Dimension\ContentDimensionSourceInterface;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
+use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
+use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
@@ -36,6 +38,9 @@ class McpToolProviderTest extends UnitTestCase
 
         $this->contentRepository->method('handle')->willReturnCallback(
             function (object $command): void {
+                if ($command instanceof RebaseWorkspace) {
+                    throw new WorkspaceCommandSkipped();
+                }
                 $this->handledCommands[] = $command;
             },
         );
