@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Command;
 
+use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
@@ -20,7 +21,6 @@ use Neos\Neos\Domain\Model\WorkspaceRoleAssignments;
 use Neos\Neos\Domain\Model\WorkspaceTitle;
 use Neos\Neos\Domain\Service\WorkspaceService;
 use Neos\RedirectHandler\Storage\RedirectStorageInterface;
-use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PhpMcp\Server\Transports\StdioServerTransport;
@@ -126,13 +126,9 @@ class McpCommandController extends CommandController
         // so adding a new tool only requires adding a method — no registration here.
         $builder = Server::make()
             ->withContainer($container)
-            ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
+            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev');
 
-        foreach ((new \ReflectionClass(McpToolProvider::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(McpTool::class) !== []) {
-                $builder = $builder->withTool([McpToolProvider::class, $method->getName()]);
-            }
-        }
+        $builder = McpToolProvider::registerTools($builder);
 
         $server = $builder->build();
 

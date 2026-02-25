@@ -17,6 +17,7 @@ use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Schema\ToolAnnotations;
 use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Attributes\Schema;
+use PhpMcp\Server\ServerBuilder;
 
 #[Flow\Proxy(false)]
 final readonly class McpToolProvider
@@ -35,6 +36,17 @@ final readonly class McpToolProvider
         $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName);
         $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName);
         $this->redirectService = new RedirectService($redirectStorage);
+    }
+
+    public static function registerTools(ServerBuilder $builder): ServerBuilder
+    {
+        foreach ((new \ReflectionClass(self::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getAttributes(McpTool::class) !== []) {
+                $builder = $builder->withTool([self::class, $method->getName()]);
+            }
+        }
+
+        return $builder;
     }
 
     /**
