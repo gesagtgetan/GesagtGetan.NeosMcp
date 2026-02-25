@@ -24,7 +24,6 @@ use PhpMcp\Schema\JsonRpc\Notification;
 use PhpMcp\Schema\JsonRpc\Parser;
 use PhpMcp\Schema\JsonRpc\Request;
 use PhpMcp\Schema\JsonRpc\Response as JsonRpcResponse;
-use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Dispatcher;
 use PhpMcp\Server\Exception\McpServerException;
@@ -180,11 +179,7 @@ class McpHttpController extends ActionController
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev');
 
-        foreach ((new \ReflectionClass(McpToolProvider::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(McpTool::class) !== []) {
-                $builder = $builder->withTool([McpToolProvider::class, $method->getName()]);
-            }
-        }
+        $builder = McpToolProvider::registerTools($builder);
 
         return $builder->build();
     }

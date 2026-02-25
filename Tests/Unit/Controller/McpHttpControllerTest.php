@@ -20,7 +20,6 @@ use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Tests\UnitTestCase;
 use Neos\RedirectHandler\Storage\RedirectStorageInterface;
-use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -200,11 +199,7 @@ class McpHttpControllerTest extends UnitTestCase
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
 
-        foreach ((new \ReflectionClass(McpToolProvider::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(McpTool::class) !== []) {
-                $builder = $builder->withTool([McpToolProvider::class, $method->getName()]);
-            }
-        }
+        $builder = McpToolProvider::registerTools($builder);
 
         $server = $builder->build();
 
