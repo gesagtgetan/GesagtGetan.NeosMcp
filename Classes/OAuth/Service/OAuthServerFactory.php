@@ -166,6 +166,17 @@ class OAuthServerFactory
         return $server;
     }
 
+    /**
+     * Ensures RSA key pair and encryption key exist on disk.
+     * Called by mcp:setup so key generation fails fast at setup time.
+     */
+    public function ensureKeys(): void
+    {
+        $this->ensurePrivateKey();
+        $this->ensurePublicKey();
+        $this->ensureEncryptionKey();
+    }
+
     public function createResourceServer(): ResourceServer
     {
         $publicKey = new CryptKey($this->ensurePublicKey(), null, false);
