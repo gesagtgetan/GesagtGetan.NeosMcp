@@ -129,4 +129,15 @@ class OAuthClient implements ClientEntityInterface, PersistenceMagicInterface
     {
         return $this->createdAt;
     }
+
+    /** @param array<string> $redirectUris */
+    public function setRedirectUris(array $redirectUris): void
+    {
+        $this->redirectUris = $redirectUris;
+    }
+
+    public function setClientSecret(?string $clientSecret): void
+    {
+        $this->clientSecret = $clientSecret;
+    }
 }
