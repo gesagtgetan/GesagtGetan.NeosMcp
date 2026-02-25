@@ -30,10 +30,12 @@ GesagtGetan:
         knownRedirectUris:
           - 'https://claude.ai/api/mcp/auth_callback'
           - 'https://claude.com/api/mcp/auth_callback'
+          - 'https://chatgpt.com/connector_platform_oauth_redirect'
+          - 'https://platform.openai.com/apps-manage/oauth'
       accessTokenLifetime: 3600
       refreshTokenLifetime: 2592000
       authorizationCodeLifetime: 600
       privateKeyFile: 'oauth-private.key'
       publicKeyFile: 'oauth-public.key'
       encryptionKeyFile: 'oauth-encryption.key'
-      corsAllowedOrigins: ['https://claude.ai', 'https://claude.com']
+      corsAllowedOrigins: ['https://claude.ai', 'https://claude.com', 'https://chatgpt.com', 'https://chat.openai.com']
