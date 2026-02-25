@@ -75,7 +75,7 @@ class McpCommandController extends CommandController
                 WorkspaceName::fromString($this->workspaceBaseWorkspaceName),
                 WorkspaceRoleAssignments::create(
                     WorkspaceRoleAssignment::createForGroup(
-                        'Neos.Neos:AbstractEditor',
+                        'GesagtGetan.NeosMcp:McpUser',
                         WorkspaceRole::COLLABORATOR,
                     ),
                 ),
