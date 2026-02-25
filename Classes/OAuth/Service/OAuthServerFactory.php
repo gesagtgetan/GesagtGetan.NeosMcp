@@ -18,7 +18,6 @@ use League\OAuth2\Server\Grant\RefreshTokenGrant;
 use League\OAuth2\Server\ResourceServer;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Flow\Utility\Environment;
 
 /**
  * Creates configured league AuthorizationServer and ResourceServer instances.
@@ -45,9 +44,6 @@ class OAuthServerFactory
 
     #[Flow\Inject]
     protected PersistenceManagerInterface $persistenceManager;
-
-    #[Flow\Inject]
-    protected Environment $environment;
 
     /** @var array{enabled?: bool, issuer?: string|null, client?: array{id?: string|null, secret?: string|null, knownRedirectUris?: array<string>}, accessTokenLifetime?: int, refreshTokenLifetime?: int, authorizationCodeLifetime?: int, privateKeyFile?: string, publicKeyFile?: string, encryptionKeyFile?: string, corsAllowedOrigins?: array<string>} */
     #[Flow\InjectConfiguration(path: 'oauth', package: 'GesagtGetan.NeosMcp')]
@@ -100,7 +96,7 @@ class OAuthServerFactory
 
     /**
      * Ensures the configured OAuth client exists in the database.
-     * Creates it on first call, no-ops on subsequent calls.
+     * Creates it on first call, updates redirect URIs and secret on subsequent calls.
      */
     public function ensureClient(): void
     {
@@ -112,18 +108,27 @@ class OAuthServerFactory
             throw new \RuntimeException('GesagtGetan.NeosMcp.oauth.client.id and .secret must be configured', 1740000010);
         }
 
-        if ($this->clientRepository->findOneByClientId($clientId) !== null) {
+        $redirectUris = $clientConfig['knownRedirectUris'] ?? [];
+        $hashedSecret = password_hash($clientSecret, PASSWORD_BCRYPT);
+        $existing = $this->clientRepository->findOneByClientId($clientId);
+
+        if ($existing !== null) {
+            $existing->setRedirectUris($redirectUris);
+            $existing->setClientSecret($hashedSecret);
+            $this->clientRepository->update($existing);
+            $this->persistenceManager->persistAll();
+
             return;
         }
 
         $client = new OAuthClient(
             clientId: $clientId,
             clientName: 'MCP Client',
-            redirectUris: $clientConfig['knownRedirectUris'] ?? [],
+            redirectUris: $redirectUris,
             grantTypes: ['authorization_code', 'refresh_token'],
             tokenEndpointAuthMethod: 'client_secret_post',
             isConfidential: true,
-            clientSecret: password_hash($clientSecret, PASSWORD_BCRYPT),
+            clientSecret: $hashedSecret,
         );
 
         $this->clientRepository->add($client);
@@ -240,7 +245,7 @@ class OAuthServerFactory
             return $configured;
         }
 
-        $dir = $this->environment->getPathToTemporaryDirectory() . '/../Persistent/GesagtGetan.NeosMcp';
+        $dir = FLOW_PATH_DATA . 'Persistent/GesagtGetan.NeosMcp'; // @phpstan-ignore constant.notFound, binaryOp.invalid
 
         if (!is_dir($dir)) {
             mkdir($dir, 0700, true);
