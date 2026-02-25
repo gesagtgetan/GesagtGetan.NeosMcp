@@ -33,7 +33,7 @@ GesagtGetan:
           - 'https://chatgpt.com/connector_platform_oauth_redirect'
           - 'https://platform.openai.com/apps-manage/oauth'
       accessTokenLifetime: 3600
-      refreshTokenLifetime: 2592000
+      refreshTokenLifetime: 604800
       authorizationCodeLifetime: 600
       privateKeyFile: 'oauth-private.key'
       publicKeyFile: 'oauth-public.key'
