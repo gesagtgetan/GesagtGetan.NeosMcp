@@ -11,6 +11,7 @@ Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `Distr
 - **OAuth token cleanup command** — Add a CLI command (e.g., `./flow oauth:cleanup`) to delete expired and revoked auth codes and refresh tokens from the database. Run periodically via cron.
 - **Upgrade to league/oauth2-server ^9** — Currently pinned to ^8.5 due to `lcobucci/jwt` version conflict with `flownative/openidconnect-client` (requires ^4.1). Once Flownative supports `lcobucci/jwt ^5`, upgrade to league v9 (changes: `__toString()` → `toString()`, `CryptKey` → `CryptKeyInterface`).
 - **ChatGPT connector support** — The goal is to serve both Claude and ChatGPT from the same endpoints. Adding ChatGPT requires: (1) extend `corsAllowedOrigins` with ChatGPT's origin(s), (2) add ChatGPT's callback URL to `client.knownRedirectUris`.
+- **Audit OAuth exception handling** — Review all catch blocks in OAuth controllers and services. Ensure every caught exception provides enough context in the thrown `OAuthServerException` message for meaningful log entries. Check that no error paths silently swallow exceptions or return empty responses.
 - **CircleCI integration** — Add `.circleci/config.yml` to the repo. Two jobs: (1) static analysis + unit tests (`just check` + `just test-unit`, no DB needed), (2) functional tests (`just test-functional`, needs MariaDB service, full Flow bootstrap with `doctrine:migrate` + `cr:setup`). Dev dependencies (phpunit, phpstan, etc.) are provided by the host project, so CI needs a minimal Neos/Flow checkout. Reference the host project's CircleCI config for the Flow bootstrap pattern.
 - **Image support via MCP** — Two features:
   1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
@@ -28,7 +29,13 @@ just test-functional  # Functional tests (needs test DB)
 just test             # Both
 ```
 
-Functional tests need a reachable MySQL/MariaDB test database (see host project's `Configuration/Testing/Settings.yaml`). If the test DB is only reachable inside a Docker network, run functional tests from within the container.
+Functional tests need a reachable MySQL/MariaDB test database (see host project's `Configuration/Testing/Settings.yaml`). If the test DB is only reachable inside a Docker network, run functional tests from within the container:
+
+```bash
+docker exec --user www-data --interactive --workdir /var/www/FireXYZCom/DistributionPackages/GesagtGetan.NeosMcp firexyz-web-server php ../../bin/phpunit -c phpunit-functional.xml.dist
+```
+
+Note: Use `php` (not `php8.4`) inside the Docker container — the container has `php` on PATH but not the versioned binary.
 
 ## Architecture
 
@@ -63,6 +70,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 - **Entity or Repository changes** → always run both unit AND functional tests. Unit tests mock persistence and will never catch ORM issues (missing `@ORM\Id`, hydration failures, `DEFERRED_EXPLICIT` gotchas).
 - **Service/Controller logic** → unit tests are usually sufficient.
 - **Always run `just check`** (phpcs + php-cs-fixer + phpstan) before considering work finished.
+- **Validate tests catch failures** — after writing non-trivial tests, temporarily break the implementation and verify the tests actually fail. This catches false positives (tests that always pass regardless of implementation).
 - Functional tests need Docker. If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
 
 ## Testing Gotchas
