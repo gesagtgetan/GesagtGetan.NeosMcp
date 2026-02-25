@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthUser;
 use GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException as McpOAuthServerException;
+use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -16,6 +17,7 @@ use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Authorization endpoint — validates the OAuth request, shows consent screen,
@@ -33,6 +35,9 @@ class OAuthAuthorizeController extends ActionController
 
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
+
+    #[Flow\Inject]
+    protected OAuthClientRepository $clientRepository;
 
     #[Flow\Inject]
     protected SecurityContext $securityContext;
@@ -79,7 +84,7 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
-            throw new McpOAuthServerException('OAuth authorization request failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000020, $e);
+            throw new McpOAuthServerException('OAuth authorization request failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000020, $e);
         }
 
         $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
@@ -139,7 +144,7 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
-            throw new McpOAuthServerException('OAuth grant validation failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000021, $e);
+            throw new McpOAuthServerException('OAuth grant validation failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000021, $e);
         }
 
         $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
@@ -335,6 +340,43 @@ HTML;
             ],
             body: $html,
         );
+    }
+
+    /**
+     * League's OAuthServerException messages are often generic (e.g. "Client authentication failed"
+     * for a redirect URI mismatch). This method inspects the request to provide actionable diagnostics.
+     */
+    private function enrichOAuthErrorMessage(OAuthServerException $e, ServerRequestInterface $psrRequest): string
+    {
+        $message = $e->getMessage();
+        $hint = $e->getHint();
+
+        if ($message === 'Client authentication failed' && $hint === null) {
+            $queryParams = $psrRequest->getQueryParams();
+            $clientId = $queryParams['client_id'] ?? null;
+            $requestedRedirectUri = $queryParams['redirect_uri'] ?? null;
+
+            if (is_string($clientId) && is_string($requestedRedirectUri)) {
+                $client = $this->clientRepository->getClientEntity($clientId);
+
+                if ($client !== null) {
+                    $registeredUris = $client->getRedirectUri();
+                    $uriList = is_array($registeredUris) ? implode(', ', $registeredUris) : $registeredUris;
+
+                    return sprintf(
+                        'Redirect URI "%s" is not registered for client "%s". Registered URIs: [%s]. '
+                        . 'If you recently updated knownRedirectUris in Settings.yaml, re-run ./flow mcp:setup to sync them to the database.',
+                        $requestedRedirectUri,
+                        $clientId,
+                        $uriList,
+                    );
+                }
+
+                return sprintf('Client "%s" not found in the database.', $clientId);
+            }
+        }
+
+        return $message . ($hint !== null ? ' (' . $hint . ')' : '');
     }
 
     /** @param array<mixed> $data */
