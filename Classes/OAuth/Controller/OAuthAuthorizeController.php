@@ -108,7 +108,7 @@ class OAuthAuthorizeController extends ActionController
 
         $account = $this->securityContext->getAccount();
         if ($account === null) {
-            return $this->jsonResponse(401, ['error' => 'Authentication required']);
+            return $this->jsonResponse(401, ['error' => 'Neos session expired or missing. Please restart the authorization flow.']);
         }
 
         $httpRequest = $this->request->getHttpRequest();
@@ -118,7 +118,7 @@ class OAuthAuthorizeController extends ActionController
         // Validate CSRF token.
         $submittedToken = $parsedBody['csrf_token'] ?? '';
         if (!is_string($submittedToken) || !$this->validateCsrfToken($submittedToken)) {
-            return $this->jsonResponse(403, ['error' => 'Invalid CSRF token']);
+            return $this->jsonResponse(403, ['error' => 'Invalid or expired CSRF token. Please restart the authorization flow.']);
         }
 
         $approved = ($parsedBody['approve'] ?? '') === '1';
