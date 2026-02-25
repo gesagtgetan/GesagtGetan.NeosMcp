@@ -93,8 +93,9 @@ class McpCommandController extends CommandController
             return;
         }
 
+        $this->oauthServerFactory->ensureKeys();
         $this->oauthServerFactory->ensureClient();
-        $this->outputLine('OAuth client ensured.');
+        $this->outputLine('OAuth client and keys ensured.');
     }
 
     /**
