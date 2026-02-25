@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\OAuth\Service;
 
 use Defuse\Crypto\Key;
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthClient;
+use GesagtGetan\NeosMcp\OAuth\Exception\OAuthSetupException;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthAccessTokenRepository;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthAuthCodeRepository;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
@@ -56,7 +57,7 @@ class OAuthServerFactory
 
     public function getIssuer(): string
     {
-        return $this->settings['issuer'] ?? throw new \RuntimeException('GesagtGetan.NeosMcp.oauth.issuer must be configured', 1740000001);
+        return $this->settings['issuer'] ?? throw new OAuthSetupException('GesagtGetan.NeosMcp.oauth.issuer must be configured', 1740000001);
     }
 
     /**
@@ -80,7 +81,7 @@ class OAuthServerFactory
 
     public function getConfiguredClientId(): string
     {
-        return $this->settings['client']['id'] ?? throw new \RuntimeException('GesagtGetan.NeosMcp.oauth.client.id must be configured', 1740000011);
+        return $this->settings['client']['id'] ?? throw new OAuthSetupException('GesagtGetan.NeosMcp.oauth.client.id must be configured', 1740000011);
     }
 
     public function isClientRegistered(): bool
@@ -105,7 +106,7 @@ class OAuthServerFactory
         $clientSecret = $clientConfig['secret'] ?? null;
 
         if ($clientId === null || $clientId === '' || $clientSecret === null || $clientSecret === '') {
-            throw new \RuntimeException('GesagtGetan.NeosMcp.oauth.client.id and .secret must be configured', 1740000010);
+            throw new OAuthSetupException('GesagtGetan.NeosMcp.oauth.client.id and .secret must be configured', 1740000010);
         }
 
         $redirectUris = $clientConfig['knownRedirectUris'] ?? [];
@@ -218,7 +219,7 @@ class OAuthServerFactory
         $content = file_get_contents($path);
 
         if ($content === false || $content === '') {
-            throw new \RuntimeException('Failed to read encryption key at ' . $path, 1740000002);
+            throw new OAuthSetupException('Failed to read encryption key at ' . $path, 1740000002);
         }
 
         return Key::loadFromAsciiSafeString($content);
@@ -235,7 +236,7 @@ class OAuthServerFactory
         ]);
 
         if ($keyPair === false) {
-            throw new \RuntimeException('Failed to generate RSA key pair', 1740000003);
+            throw new OAuthSetupException('Failed to generate RSA key pair', 1740000003);
         }
 
         $privateKeyPem = '';
@@ -243,7 +244,7 @@ class OAuthServerFactory
         $details = openssl_pkey_get_details($keyPair);
 
         if (!is_string($privateKeyPem) || $privateKeyPem === '' || $details === false || !isset($details['key']) || !is_string($details['key'])) {
-            throw new \RuntimeException('Failed to extract key material', 1740000004);
+            throw new OAuthSetupException('Failed to extract key material', 1740000004);
         }
 
         $this->writeKeyFile($privateKeyFile, $privateKeyPem);
