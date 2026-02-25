@@ -283,9 +283,9 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'nonexistent']);
 
-        $response = $this->subject->authorizeAction();
+        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
 
-        self::assertGreaterThanOrEqual(400, $response->getStatusCode());
+        $this->subject->authorizeAction();
     }
 
     /** @param array<string, string> $queryParams */

@@ -312,29 +312,45 @@ class OAuthRepositoryTest extends FunctionalTestCase
     }
 
     /** @test */
-    public function ensureClientIsIdempotent(): void
+    public function ensureClientUpdatesExistingClient(): void
     {
         $factory = $this->objectManager->get(OAuthServerFactory::class);
-
         $reflection = new \ReflectionProperty($factory, 'settings');
+
         $reflection->setValue($factory, [
             'enabled' => true,
             'client' => [
-                'id' => 'idempotent-client',
-                'secret' => 'idempotent-secret',
+                'id' => 'update-client',
+                'secret' => 'original-secret',
                 'knownRedirectUris' => ['https://example.com/callback'],
             ],
         ]);
 
         $factory->ensureClient();
-        $first = $this->clientRepository->findOneByClientId('idempotent-client');
-        self::assertNotNull($first);
+        $original = $this->clientRepository->findOneByClientId('update-client');
+        self::assertNotNull($original);
+        self::assertSame(['https://example.com/callback'], $original->getRedirectUri());
 
-        // Second call must not throw and must not create a duplicate
+        // Update settings and re-run — must update redirect URIs and secret
+        $reflection->setValue($factory, [
+            'enabled' => true,
+            'client' => [
+                'id' => 'update-client',
+                'secret' => 'new-secret',
+                'knownRedirectUris' => ['https://example.com/callback', 'http://localhost:6274/callback'],
+            ],
+        ]);
+
         $factory->ensureClient();
-        $second = $this->clientRepository->findOneByClientId('idempotent-client');
-        self::assertNotNull($second);
-        self::assertSame($first->getCreatedAt()->getTimestamp(), $second->getCreatedAt()->getTimestamp());
+        $this->clearEntityManager();
+
+        $updated = $this->clientRepository->findOneByClientId('update-client');
+        self::assertNotNull($updated);
+        self::assertSame(['https://example.com/callback', 'http://localhost:6274/callback'], $updated->getRedirectUri());
+        $secret = $updated->getClientSecret();
+        self::assertNotNull($secret);
+        self::assertTrue(password_verify('new-secret', $secret));
+        self::assertSame($original->getCreatedAt()->getTimestamp(), $updated->getCreatedAt()->getTimestamp());
     }
 
     private function clearEntityManager(): void

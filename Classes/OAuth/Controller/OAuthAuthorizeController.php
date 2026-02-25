@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthUser;
+use GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException as McpOAuthServerException;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -78,7 +79,7 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
-            return $e->generateHttpResponse(new Response());
+            throw new McpOAuthServerException('OAuth authorization request failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000020, $e);
         }
 
         $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
@@ -138,7 +139,7 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
-            return $e->generateHttpResponse(new Response());
+            throw new McpOAuthServerException('OAuth grant validation failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000021, $e);
         }
 
         $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));

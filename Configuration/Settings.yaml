@@ -22,6 +22,8 @@ GesagtGetan:
     oauth:
       enabled: false
       issuer: null
+      # IMPORTANT: Client settings (id, secret, knownRedirectUris) are stored in the
+      # database. After changing any value below, run ./flow mcp:setup to apply them.
       client:
         id: null
         secret: null
