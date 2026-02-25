@@ -32,6 +32,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\Workspaces;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
+use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Serializer\Serializer;
 
@@ -308,6 +309,36 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertIsArray($result['properties']['dates']);
         self::assertSame('2024-01-15T10:00:00+00:00', $result['properties']['dates'][0]);
         self::assertSame('2024-06-30T18:00:00+00:00', $result['properties']['dates'][1]);
+    }
+
+    // ── Visibility Constraints Tests ────────────────────────────────
+
+    /**
+     * @test
+     */
+    public function getSubgraphUsesExcludeRemovedConstraintsByDefault(): void
+    {
+        $this->contentGraph->expects(self::once())
+            ->method('getSubgraph')
+            ->with(self::anything(), self::equalTo(NeosVisibilityConstraints::excludeRemoved()));
+
+        $this->subgraph->method('findNodeById')->willReturn(null);
+
+        $this->subject->getNode('any-id');
+    }
+
+    /**
+     * @test
+     */
+    public function getSubgraphUsesEmptyConstraintsWhenIncludeRemovedIsTrue(): void
+    {
+        $this->contentGraph->expects(self::once())
+            ->method('getSubgraph')
+            ->with(self::anything(), self::equalTo(VisibilityConstraints::createEmpty()));
+
+        $this->subgraph->method('findNodeById')->willReturn(null);
+
+        $this->subject->getNode('any-id', includeRemoved: true);
     }
 
     // ── Stub Helpers ────────────────────────────────────────────────

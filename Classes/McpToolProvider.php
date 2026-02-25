@@ -143,6 +143,7 @@ final readonly class McpToolProvider
      * @param string|null $parentNodeAggregateId Limit search to descendants of this node
      * @param int $limit Maximum number of results (default: 100)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<int, mixed>
      */
@@ -154,6 +155,7 @@ final readonly class McpToolProvider
         int $limit = 100,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
     ): array {
         $this->rebaseWorkspace();
 
@@ -163,6 +165,7 @@ final readonly class McpToolProvider
             $parentNodeAggregateId,
             $limit,
             $dimensionSpacePoint,
+            $includeRemoved,
         );
     }
 
@@ -171,6 +174,7 @@ final readonly class McpToolProvider
      *
      * @param string $nodeAggregateId The node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<string, mixed>|null
      */
@@ -179,9 +183,10 @@ final readonly class McpToolProvider
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
     ): ?array {
         $warning = $this->rebaseWorkspace();
-        $node = $this->nodeReadService->getNode($nodeAggregateId, $dimensionSpacePoint);
+        $node = $this->nodeReadService->getNode($nodeAggregateId, $dimensionSpacePoint, $includeRemoved);
 
         return $node !== null ? $this->withRebaseWarning($node, $warning) : null;
     }
@@ -192,6 +197,7 @@ final readonly class McpToolProvider
      * @param string $parentNodeAggregateId The parent node aggregate ID
      * @param string|null $nodeTypeName Filter children by node type
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<int, mixed>
      */
@@ -201,6 +207,7 @@ final readonly class McpToolProvider
         ?string $nodeTypeName = null,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
     ): array {
         $this->rebaseWorkspace();
 
@@ -208,6 +215,7 @@ final readonly class McpToolProvider
             $parentNodeAggregateId,
             $nodeTypeName,
             $dimensionSpacePoint,
+            $includeRemoved,
         );
     }
 

@@ -15,11 +15,11 @@ use Neos\ContentRepository\Core\Feature\NodeMove\Dto\RelationDistributionStrateg
 use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindDescendantNodesFilter;
-use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 #[Flow\Proxy(false)]
 final readonly class NodeWriteService
@@ -169,7 +169,7 @@ final readonly class NodeWriteService
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
         $originDsp = OriginDimensionSpacePoint::fromDimensionSpacePoint($dsp);
         $subgraph = $this->contentRepository->getContentGraph($this->workspaceName)
-            ->getSubgraph($dsp, VisibilityConstraints::createEmpty());
+            ->getSubgraph($dsp, NeosVisibilityConstraints::excludeRemoved());
 
         $sitesRoot = $subgraph->findRootNodeByType(NodeTypeName::fromString('Neos.Neos:Sites'));
         if ($sitesRoot === null) {
