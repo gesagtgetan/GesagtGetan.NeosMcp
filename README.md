@@ -4,13 +4,13 @@ MCP (Model Context Protocol) server for the Neos 9 Content Repository. Gives LLM
 
 ## Setup
 
-Create the review workspace (once, during initial setup or deployment):
-
 ```bash
 ./flow mcp:setup
 ```
 
-This creates a shared workspace visible in the Neos UI with proper metadata and role assignments.
+This creates the shared review workspace, generates OAuth RSA keys, and registers the OAuth client in the database. Run it during initial setup and **after every configuration change** (credentials, redirect URIs, etc.) to apply the new values.
+
+> ⚠️ `mcp:setup` is not a one-time command. Any change to `GesagtGetan.NeosMcp.oauth.client.*` settings only takes effect after re-running `mcp:setup`.
 
 ## Usage
 
@@ -57,20 +57,27 @@ The package also exposes the MCP server over HTTP at `POST /api/mcp`, secured wi
            secret: '<generated client_secret>'
    ```
 
-3. Store the same client_id and client_secret in your password manager. Enter them in the Claude.ai connector's Advanced settings.
-
-4. Run the database migration to create the OAuth tables:
+3. Run the database migration to create the OAuth tables:
    ```bash
    ./flow doctrine:migrate
    ```
 
-5. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
+4. Run `./flow mcp:setup` to create the review workspace, register the OAuth client, and generate RSA keys:
+   ```bash
+   ./flow mcp:setup
+   ```
 
-6. Add `Data/Persistent/GesagtGetan.NeosMcp/` to Deployer's `shared_dirs` so the auto-generated RSA keys persist across deployments.
+   > ⚠️ Re-run `mcp:setup` whenever you change client credentials, redirect URIs, or any other `oauth.client.*` setting. The database is not updated automatically.
 
-7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. For example, the proserverXXXX or getan.at staging domains use a `%{THE_REQUEST}` exclusion in `Web/.htaccess` to bypass basic auth for these paths. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+5. Store the same client_id and client_secret in your password manager. Enter them in the Claude.ai or ChatGPT connector's settings.
 
-8. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
+6. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
+
+7. Add `Data/Persistent/GesagtGetan.NeosMcp/` to Deployer's `shared_dirs` so the auto-generated RSA keys persist across deployments.
+
+8. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. For example, the proserverXXXX or getan.at staging domains use a `%{THE_REQUEST}` exclusion in `Web/.htaccess` to bypass basic auth for these paths. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+
+9. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
    ```apache
    RewriteCond %{HTTP:Authorization} .
    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -99,7 +106,7 @@ GesagtGetan:
 - `get_node` - get a single node
 - `get_children` - list child nodes
 
-### Write (review workspace)
+### Write (staged in review workspace, requires human publishing)
 - `create_node` - create a node
 - `set_node_properties` - update properties
 - `move_node` - move to new parent
@@ -109,6 +116,12 @@ GesagtGetan:
 ### Workspace
 - `get_workspace_status` - review workspace status
 - `discard_workspace_changes` - discard all pending changes
+
+### Redirects (go live immediately, no workspace staging)
+- `list_redirects` - list redirects (optional host/match filter)
+- `get_redirect` - get a single redirect by source path
+- `create_redirect` - create a redirect
+- `remove_redirect` - remove a redirect
 
 ## Workspace Rebase
 
