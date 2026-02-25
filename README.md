@@ -198,3 +198,7 @@ This only needs to be done once (or after adding new Doctrine migrations). The C
 **Why two PHPUnit configs?** Flow ships a global `FunctionalTests.xml` in `Build/BuildEssentials/PhpUnit/`, but it uses the PHPUnit 9 XML schema. This project runs PHPUnit 10, which changes `<exclude>` handling and causes symlinked packages to be discovered twice. Our own `phpunit-functional.xml.dist` uses the PHPUnit 10 schema and scans only this package, avoiding the double execution and deprecation warnings.
 
 **Why not SQLite?** The Neos Content Repository's DoctrineDbal adapter uses MySQL-specific SQL (e.g. `INSERT IGNORE`) that SQLite does not support. A real MySQL/MariaDB database is required.
+
+### Tip: Connect the MCP server while developing
+
+When working on this package with an MCP-capable coding agent (e.g. Claude Code), connect it to a running instance of the MCP server — locally via stdio or remotely via the HTTP transport — so it can query actual nodes, inspect workspace state, and verify tool behavior against real data.
