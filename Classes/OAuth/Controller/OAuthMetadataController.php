@@ -25,7 +25,7 @@ class OAuthMetadataController extends ActionController
     public function protectedResourceAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
-            return $this->jsonResponse(404, ['error' => 'Not found']);
+            return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
         $issuer = $this->oauthServerFactory->getIssuer();
@@ -40,7 +40,7 @@ class OAuthMetadataController extends ActionController
     public function authorizationServerAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
-            return $this->jsonResponse(404, ['error' => 'Not found']);
+            return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
         $issuer = $this->oauthServerFactory->getIssuer();

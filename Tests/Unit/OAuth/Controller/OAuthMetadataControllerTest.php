@@ -27,13 +27,13 @@ class OAuthMetadataControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function protectedResourceReturns404WhenDisabled(): void
+    public function protectedResourceReturns503WhenDisabled(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(false);
 
         $response = $this->subject->protectedResourceAction();
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**
@@ -59,13 +59,13 @@ class OAuthMetadataControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function authorizationServerReturns404WhenDisabled(): void
+    public function authorizationServerReturns503WhenDisabled(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(false);
 
         $response = $this->subject->authorizationServerAction();
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**

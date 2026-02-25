@@ -50,7 +50,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function authorizeReturns404WhenDisabled(): void
+    public function authorizeReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
@@ -59,7 +59,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         $response = $this->subject->authorizeAction();
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**
@@ -155,7 +155,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function grantReturns404WhenDisabled(): void
+    public function grantReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
@@ -164,7 +164,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         $response = $this->subject->grantAction();
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**

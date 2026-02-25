@@ -36,7 +36,7 @@ class OAuthTokenControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function tokenReturns404WhenDisabled(): void
+    public function tokenReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
@@ -45,7 +45,7 @@ class OAuthTokenControllerTest extends UnitTestCase
 
         $response = $this->subject->tokenAction();
 
-        self::assertSame(404, $response->getStatusCode());
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**
