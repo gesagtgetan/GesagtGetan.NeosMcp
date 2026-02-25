@@ -9,7 +9,6 @@ use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
-use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
@@ -78,19 +77,10 @@ class McpHttpController extends ActionController
         $httpRequest = $this->request->getHttpRequest();
         $body = (string) $httpRequest->getBody();
 
-        // Validate JWT bearer token via league's ResourceServer.
-        $psrRequest = new ServerRequest(
-            method: 'POST',
-            uri: (string) $httpRequest->getUri(),
-            headers: $httpRequest->getHeaders(),
-            body: $body,
-            serverParams: $_SERVER,
-        );
-
         $resourceServer = $this->oauthServerFactory->createResourceServer();
 
         try {
-            $resourceServer->validateAuthenticatedRequest($psrRequest);
+            $resourceServer->validateAuthenticatedRequest($httpRequest);
         } catch (OAuthServerException) {
             return $this->unauthorizedResponse();
         }
