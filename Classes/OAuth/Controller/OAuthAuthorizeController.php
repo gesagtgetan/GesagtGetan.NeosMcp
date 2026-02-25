@@ -54,7 +54,7 @@ class OAuthAuthorizeController extends ActionController
     public function authorizeAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
-            return $this->jsonResponse(404, ['error' => 'Not found']);
+            return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
         if (!$this->oauthServerFactory->isClientRegistered()) {
@@ -103,7 +103,7 @@ class OAuthAuthorizeController extends ActionController
     public function grantAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
-            return $this->jsonResponse(404, ['error' => 'Not found']);
+            return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
         $account = $this->securityContext->getAccount();

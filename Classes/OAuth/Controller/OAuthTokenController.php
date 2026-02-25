@@ -32,7 +32,7 @@ class OAuthTokenController extends ActionController
     public function tokenAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
-            return $this->jsonResponse(404, ['error' => 'Not found']);
+            return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
         $httpRequest = $this->request->getHttpRequest();

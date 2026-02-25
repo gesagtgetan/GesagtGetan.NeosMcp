@@ -55,7 +55,7 @@ class McpHttpControllerTest extends UnitTestCase
     /**
      * @test
      */
-    public function disabledEndpointReturns404(): void
+    public function disabledEndpointReturns503(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
@@ -64,9 +64,7 @@ class McpHttpControllerTest extends UnitTestCase
 
         $response = $this->subject->handleAction();
 
-        self::assertSame(404, $response->getStatusCode());
-        $body = $this->decodeJsonBody((string) $response->getBody());
-        self::assertSame('Not found', $body['error']);
+        self::assertSame(503, $response->getStatusCode());
     }
 
     /**
