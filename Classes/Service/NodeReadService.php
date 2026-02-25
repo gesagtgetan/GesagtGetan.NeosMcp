@@ -16,6 +16,7 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 #[Flow\Proxy(false)]
 final readonly class NodeReadService
@@ -74,8 +75,9 @@ final readonly class NodeReadService
         ?string $parentNodeAggregateId = null,
         int $limit = 100,
         ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
     ): array {
-        $subgraph = $this->getSubgraph($dimensionSpacePoint);
+        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
 
         $entryNodeId = $parentNodeAggregateId !== null
             ? NodeAggregateId::fromString($parentNodeAggregateId)
@@ -101,9 +103,9 @@ final readonly class NodeReadService
      *
      * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}|null
      */
-    public function getNode(string $nodeAggregateId, ?array $dimensionSpacePoint = null): ?array
+    public function getNode(string $nodeAggregateId, ?array $dimensionSpacePoint = null, bool $includeRemoved = false): ?array
     {
-        $subgraph = $this->getSubgraph($dimensionSpacePoint);
+        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
         $node = $subgraph->findNodeById(NodeAggregateId::fromString($nodeAggregateId));
 
         if ($node === null) {
@@ -122,8 +124,9 @@ final readonly class NodeReadService
         string $parentNodeAggregateId,
         ?string $nodeTypeName = null,
         ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
     ): array {
-        $subgraph = $this->getSubgraph($dimensionSpacePoint);
+        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
 
         $filter = FindChildNodesFilter::create(
             nodeTypes: $nodeTypeName,
@@ -140,14 +143,18 @@ final readonly class NodeReadService
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      */
-    private function getSubgraph(?array $dimensionSpacePoint = null): ContentSubgraphInterface
+    private function getSubgraph(?array $dimensionSpacePoint = null, bool $includeRemoved = false): ContentSubgraphInterface
     {
         $dsp = $dimensionSpacePoint !== null
             ? DimensionSpacePoint::fromArray($dimensionSpacePoint)
             : $this->resolveDefaultDimensionSpacePoint();
 
+        $visibilityConstraints = $includeRemoved
+            ? VisibilityConstraints::createEmpty()
+            : NeosVisibilityConstraints::excludeRemoved();
+
         return $this->contentRepository->getContentGraph($this->workspaceName)
-            ->getSubgraph($dsp, VisibilityConstraints::createEmpty());
+            ->getSubgraph($dsp, $visibilityConstraints);
     }
 
     private function resolveDefaultDimensionSpacePoint(): DimensionSpacePoint

@@ -9,9 +9,12 @@ use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
 use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
 use Neos\ContentRepository\Core\Feature\NodeCreation\Command\CreateNodeAggregateWithNode;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 
 class NodeReadServiceTest extends AbstractFunctionalTest
 {
@@ -155,6 +158,127 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         );
         self::assertCount(1, $found);
         self::assertSame('text-1', $found[0]['nodeAggregateId']);
+    }
+
+    // ── Soft-Removal (Trash) Visibility Tests ─────────────────────
+
+    /**
+     * @test
+     */
+    public function findNodesExcludesSoftRemovedNodesByDefault(): void
+    {
+        $this->createTestDocument('visible-doc', 'Visible');
+        $this->createTestDocument('removed-doc', 'Removed');
+        $this->softRemoveNode('removed-doc');
+
+        $result = $this->nodeReadService->findNodes(
+            nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
+        );
+
+        $ids = array_column($result, 'nodeAggregateId');
+        self::assertContains('visible-doc', $ids);
+        self::assertNotContains('removed-doc', $ids, 'Soft-removed node must not appear in default findNodes results');
+    }
+
+    /**
+     * @test
+     */
+    public function findNodesIncludesSoftRemovedNodesWhenRequested(): void
+    {
+        $this->createTestDocument('visible-doc', 'Visible');
+        $this->createTestDocument('removed-doc', 'Removed');
+        $this->softRemoveNode('removed-doc');
+
+        $result = $this->nodeReadService->findNodes(
+            nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
+            includeRemoved: true,
+        );
+
+        $ids = array_column($result, 'nodeAggregateId');
+        self::assertContains('visible-doc', $ids);
+        self::assertContains('removed-doc', $ids, 'Soft-removed node must appear when includeRemoved is true');
+    }
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsNullForSoftRemovedNodeByDefault(): void
+    {
+        $this->createTestDocument('removed-doc', 'Removed');
+        $this->softRemoveNode('removed-doc');
+
+        self::assertNull(
+            $this->nodeReadService->getNode('removed-doc'),
+            'Soft-removed node must not be returned by default',
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsSoftRemovedNodeWhenRequested(): void
+    {
+        $this->createTestDocument('removed-doc', 'Removed');
+        $this->softRemoveNode('removed-doc');
+
+        $result = $this->nodeReadService->getNode('removed-doc', includeRemoved: true);
+
+        self::assertNotNull($result, 'Soft-removed node must be returned when includeRemoved is true');
+        self::assertSame('removed-doc', $result['nodeAggregateId']);
+    }
+
+    /**
+     * @test
+     */
+    public function getChildrenExcludesSoftRemovedChildrenByDefault(): void
+    {
+        $this->createTestDocument('child-visible', 'Visible Child');
+        $this->createTestDocument('child-removed', 'Removed Child');
+        $this->softRemoveNode('child-removed');
+
+        $result = $this->nodeReadService->getChildren(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+        );
+
+        $ids = array_column($result, 'nodeAggregateId');
+        self::assertContains('child-visible', $ids);
+        self::assertNotContains('child-removed', $ids, 'Soft-removed child must not appear in default getChildren results');
+    }
+
+    /**
+     * @test
+     */
+    public function getChildrenIncludesSoftRemovedChildrenWhenRequested(): void
+    {
+        $this->createTestDocument('child-visible', 'Visible Child');
+        $this->createTestDocument('child-removed', 'Removed Child');
+        $this->softRemoveNode('child-removed');
+
+        $result = $this->nodeReadService->getChildren(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            includeRemoved: true,
+        );
+
+        $ids = array_column($result, 'nodeAggregateId');
+        self::assertContains('child-visible', $ids);
+        self::assertContains('child-removed', $ids, 'Soft-removed child must appear when includeRemoved is true');
+    }
+
+    private function softRemoveNode(string $nodeAggregateId): void
+    {
+        $dsp = $this->resolveDefaultDimensionSpacePoint();
+
+        $this->contentRepository->handle(
+            TagSubtree::create(
+                WorkspaceName::forLive(),
+                NodeAggregateId::fromString($nodeAggregateId),
+                $dsp,
+                NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+                NeosSubtreeTag::removed(),
+            ),
+        );
     }
 
     private function createTestContentText(
