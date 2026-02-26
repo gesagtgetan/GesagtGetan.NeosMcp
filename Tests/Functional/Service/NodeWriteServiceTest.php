@@ -73,7 +73,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
     /**
      * @test
      */
-    public function removeNodeRemovesFromGraph(): void
+    public function removeNodeSoftRemovesFromGraph(): void
     {
         $createResult = $this->nodeWriteService->createNode(
             self::$siteNodeId->value,
@@ -84,7 +84,11 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $this->nodeWriteService->removeNode($createResult['nodeAggregateId']);
 
         $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
-        self::assertNull($node);
+        self::assertNull($node, 'Soft-removed node must not be returned by default');
+
+        $trashedNode = $this->nodeReadService->getNode($createResult['nodeAggregateId'], includeRemoved: true);
+        self::assertNotNull($trashedNode, 'Soft-removed node must still be accessible with includeRemoved: true');
+        self::assertSame('To Remove', $trashedNode['properties']['title']);
     }
 
     /**

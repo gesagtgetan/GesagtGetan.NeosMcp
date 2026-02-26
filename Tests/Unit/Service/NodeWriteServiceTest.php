@@ -14,7 +14,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValue;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
-use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
@@ -137,12 +137,12 @@ class NodeWriteServiceTest extends UnitTestCase
     /**
      * @test
      */
-    public function removeNodeCallsHandleWithRemoveCommand(): void
+    public function removeNodeCallsHandleWithTagSubtreeCommand(): void
     {
         $result = $this->subject->removeNode('node-id');
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(RemoveNodeAggregate::class, $this->handledCommands[0]);
+        self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
         self::assertSame('node-id', $result['nodeAggregateId']);
         self::assertTrue($result['success']);
     }
