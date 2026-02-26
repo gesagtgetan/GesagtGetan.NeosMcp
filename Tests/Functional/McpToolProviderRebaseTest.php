@@ -6,7 +6,10 @@ namespace GesagtGetan\NeosMcp\Tests\Functional;
 
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 
@@ -89,8 +92,18 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $writeService = new NodeWriteService($this->facade, $this->workspaceName);
         $writeService->setNodeProperties($nodeId, ['title' => 'Modified in workspace']);
 
-        // Delete the same node in live — this creates a conflict.
-        $liveWriteService->removeNode($nodeId);
+        // Hard-delete the same node in live — this creates a conflict because
+        // the workspace's property modification cannot be replayed on a removed node.
+        // (Soft-delete via removeNode would not conflict, as tagging and property
+        // modification are independent operations.)
+        $this->contentRepository->handle(
+            RemoveNodeAggregate::create(
+                WorkspaceName::forLive(),
+                NodeAggregateId::fromString($nodeId),
+                $this->resolveDefaultDimensionSpacePoint(),
+                NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+            ),
+        );
 
         // A tool call should attempt rebase, fail with conflict, and include a warning.
         $result = $this->toolProvider->getNode($nodeId);

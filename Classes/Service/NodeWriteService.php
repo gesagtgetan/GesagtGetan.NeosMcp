@@ -12,13 +12,14 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\NodeMove\Dto\RelationDistributionStrategy;
-use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindDescendantNodesFilter;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 #[Flow\Proxy(false)]
@@ -123,6 +124,8 @@ final readonly class NodeWriteService
     }
 
     /**
+     * Soft-removes a node by tagging it as removed (trash). The node can be restored later.
+     *
      * @param array<string, string>|null $dimensionSpacePoint
      *
      * @return array{nodeAggregateId: string, success: true}
@@ -133,11 +136,12 @@ final readonly class NodeWriteService
     ): array {
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
 
-        $command = RemoveNodeAggregate::create(
+        $command = TagSubtree::create(
             $this->workspaceName,
             NodeAggregateId::fromString($nodeAggregateId),
             $dsp,
             NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+            NeosSubtreeTag::removed(),
         );
 
         $this->contentRepository->handle($command);

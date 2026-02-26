@@ -302,7 +302,8 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Remove a node from the review workspace.
+     * Remove a node from the review workspace. This is a soft-delete (trash) — the node can be restored later.
+     * Use findNodes or getNode with includeRemoved: true to find trashed nodes.
      *
      * @param string $nodeAggregateId The node aggregate ID to remove
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
