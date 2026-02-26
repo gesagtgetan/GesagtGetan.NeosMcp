@@ -17,8 +17,10 @@ Neos:
 GesagtGetan:
   NeosMcp:
     contentRepositoryId: 'default'
-    workspaceName: 'llm-review'
-    workspaceBaseWorkspaceName: 'live'
+    stdioWorkspaceName: 'llm-review'
+    stdioWorkspaceTitle: 'MCP Stdio'
+    stdioWorkspaceDescription: 'Shared workspace for MCP stdio transport'
+    stdioBaseWorkspaceName: 'live'
     oauth:
       enabled: false
       issuer: null

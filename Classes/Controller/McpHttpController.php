@@ -16,6 +16,8 @@ use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Security\Context as SecurityContext;
+use Neos\Neos\Domain\Model\UserId;
+use Neos\Neos\Domain\Service\WorkspaceService;
 use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Schema\Constants;
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
@@ -31,6 +33,7 @@ use PhpMcp\Server\Session\ArraySessionHandler;
 use PhpMcp\Server\Session\Session;
 use PhpMcp\Server\Session\SubscriptionManager;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\NullLogger;
 
 /**
@@ -52,6 +55,9 @@ class McpHttpController extends ActionController
     protected SecurityContext $securityContext;
 
     #[Flow\Inject]
+    protected WorkspaceService $workspaceService;
+
+    #[Flow\Inject]
     protected RedirectStorageInterface $redirectStorage;
 
     #[Flow\Inject]
@@ -59,9 +65,6 @@ class McpHttpController extends ActionController
 
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
-
-    #[Flow\InjectConfiguration(path: 'workspaceName', package: 'GesagtGetan.NeosMcp')]
-    protected string $workspaceName;
 
     public function preflightAction(): ResponseInterface
     {
@@ -80,10 +83,18 @@ class McpHttpController extends ActionController
         $resourceServer = $this->oauthServerFactory->createResourceServer();
 
         try {
-            $resourceServer->validateAuthenticatedRequest($httpRequest);
+            $validatedRequest = $resourceServer->validateAuthenticatedRequest($httpRequest);
         } catch (OAuthServerException) {
             return $this->unauthorizedResponse();
         }
+
+        $result = $this->resolveWorkspaceName($validatedRequest);
+
+        // no workspace could be resolved, return the error response
+        if ($result instanceof ResponseInterface) {
+            return $result;
+        }
+        $workspaceName = $result;
 
         try {
             $message = Parser::parseRequestMessage($body);
@@ -102,8 +113,8 @@ class McpHttpController extends ActionController
             );
         }
 
-        $result = $this->securityContext->withoutAuthorizationChecks(function () use ($message): JsonRpcResponse|JsonRpcError {
-            return $this->dispatch($message);
+        $result = $this->securityContext->withoutAuthorizationChecks(function () use ($message, $workspaceName): JsonRpcResponse|JsonRpcError {
+            return $this->dispatch($message, $workspaceName);
         });
 
         return $this->jsonResponse(200, $result->toArray());
@@ -123,9 +134,31 @@ class McpHttpController extends ActionController
         );
     }
 
-    private function dispatch(Request $request): JsonRpcResponse|JsonRpcError
+    protected function resolveWorkspaceName(ServerRequestInterface $validatedRequest): WorkspaceName|ResponseInterface
     {
-        $server = $this->buildServer();
+        $oauthUserId = $validatedRequest->getAttribute('oauth_user_id');
+        if (!\is_string($oauthUserId)) {
+            return $this->jsonResponse(403, ['error' => 'OAuth token missing user identity']);
+        }
+
+        $crId = ContentRepositoryId::fromString($this->contentRepositoryId);
+
+        try {
+            $userId = new UserId($oauthUserId);
+        } catch (\InvalidArgumentException) {
+            return $this->jsonResponse(403, ['error' => 'Invalid "sub" claim in access token. Re-authorize the application to obtain a new token.']);
+        }
+
+        try {
+            return $this->workspaceService->getPersonalWorkspaceForUser($crId, $userId)->workspaceName;
+        } catch (\RuntimeException) {
+            return $this->jsonResponse(403, ['error' => 'No personal workspace found. Log into the Neos backend first to create one.']);
+        }
+    }
+
+    private function dispatch(Request $request, WorkspaceName $workspaceName): JsonRpcResponse|JsonRpcError
+    {
+        $server = $this->buildServer($workspaceName);
         $configuration = $server->getConfiguration();
         $registry = $server->getRegistry();
 
@@ -153,11 +186,10 @@ class McpHttpController extends ActionController
         }
     }
 
-    protected function buildServer(): Server
+    protected function buildServer(WorkspaceName $workspaceName): Server
     {
         $crId = ContentRepositoryId::fromString($this->contentRepositoryId);
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
-        $workspaceName = WorkspaceName::fromString($this->workspaceName);
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
         $toolProvider = new McpToolProvider($facade, $workspaceName, $this->redirectStorage);

@@ -16,6 +16,7 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
+use Neos\Neos\Domain\Service\UserService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -41,6 +42,9 @@ class OAuthAuthorizeController extends ActionController
 
     #[Flow\Inject]
     protected SecurityContext $securityContext;
+
+    #[Flow\Inject]
+    protected UserService $userService;
 
     #[Flow\Inject]
     protected SessionInterface $session;
@@ -87,7 +91,7 @@ class OAuthAuthorizeController extends ActionController
             throw new McpOAuthServerException('OAuth authorization request failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000020, $e);
         }
 
-        $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
+        $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
 
         $isAutoGrant = $authRequest->getClient()->getIdentifier() === $this->oauthServerFactory->getConfiguredClientId();
 
@@ -147,7 +151,7 @@ class OAuthAuthorizeController extends ActionController
             throw new McpOAuthServerException('OAuth grant validation failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000021, $e);
         }
 
-        $authRequest->setUser(new OAuthUser($account->getAccountIdentifier()));
+        $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
 
         return $this->completeAuthorization($server, $authRequest, $approved);
     }
@@ -377,6 +381,25 @@ HTML;
         }
 
         return $message . ($hint !== null ? ' (' . $hint . ')' : '');
+    }
+
+    /**
+     * Resolve the Neos UserId for the given account. The UserId (a UUID) is stored
+     * as the JWT sub claim — it's opaque, doesn't leak credentials like the username,
+     * and doesn't require knowing the authentication provider to look up the user later.
+     */
+    private function resolveUserId(\Neos\Flow\Security\Account $account): string
+    {
+        $user = $this->userService->getUser(
+            $account->getAccountIdentifier(),
+            $account->getAuthenticationProviderName(),
+        );
+
+        if ($user === null) {
+            throw new \RuntimeException(sprintf('No Neos user found for account "%s" (provider: %s)', $account->getAccountIdentifier(), $account->getAuthenticationProviderName()), 1740000030);
+        }
+
+        return $user->getId()->value;
     }
 
     /** @param array<mixed> $data */

@@ -16,6 +16,9 @@ use Neos\Flow\Security\Account;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
 use Neos\Flow\Tests\UnitTestCase;
+use Neos\Neos\Domain\Model\User;
+use Neos\Neos\Domain\Model\UserId;
+use Neos\Neos\Domain\Service\UserService;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class OAuthAuthorizeControllerTest extends UnitTestCase
@@ -42,8 +45,14 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext = $this->createMock(SecurityContext::class);
         $this->session = $this->createMock(SessionInterface::class);
 
+        $user = $this->createMock(User::class);
+        $user->method('getId')->willReturn(new UserId('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));
+        $userService = $this->createMock(UserService::class);
+        $userService->method('getUser')->willReturn($user);
+
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
         $this->inject($this->subject, 'securityContext', $this->securityContext);
+        $this->inject($this->subject, 'userService', $userService);
         $this->inject($this->subject, 'session', $this->session);
     }
 
@@ -310,6 +319,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     {
         $account = $this->createMock(Account::class);
         $account->method('getAccountIdentifier')->willReturn($identifier);
+        $account->method('getAuthenticationProviderName')->willReturn('Neos.Neos:Backend');
 
         return $account;
     }
