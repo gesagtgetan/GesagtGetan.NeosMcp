@@ -222,8 +222,6 @@ final readonly class McpToolProvider
     // ── Write Tools ─────────────────────────────────────────────────
 
     /**
-     * Create a new node under a parent node in the review workspace.
-     *
      * @param string $parentNodeAggregateId The parent node aggregate ID
      * @param string $nodeTypeName The node type to create (e.g. 'Neos.Neos:Document')
      * @param array<string, mixed>|null $properties Property values to set on the new node
@@ -231,7 +229,14 @@ final readonly class McpToolProvider
      *
      * @return array{nodeAggregateId: string, success: true}
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Create a new node under a parent node in the review workspace.
+
+        IMPORTANT — before calling createNode(), always verify that the node does not already exist:
+        1. Call getNodeTypeSchema() for the parent's node type. Check the `childNodes` field — these are auto-created (tethered) child nodes that already exist when the parent is created. You cannot create them again; use setNodeProperties() to populate their properties instead.
+        2. Call getChildren() on the parent to see all current children. Content collections (e.g. a "main" content area) may already contain nodes with empty/null properties. Populate these with setNodeProperties() instead of creating duplicates.
+        3. Only call createNode() when a genuinely new node is needed.
+        MCP)]
     public function createNode(
         string $parentNodeAggregateId,
         string $nodeTypeName,
