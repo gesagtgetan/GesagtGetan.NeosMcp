@@ -2,7 +2,7 @@
 
 MCP server exposing the Neos 9 Content Repository to LLMs. PHP 8.3+, Neos 9.
 
-Repo: `git@github.com:gesagtgetan/neos-mcp.git` (separate git repo inside `DistributionPackages/GesagtGetan.NeosMcp/`).
+Repo: `git@github.com:gesagtgetan/GesagtGetan.NeosMcp.git` (separate git repo inside `DistributionPackages/GesagtGetan.NeosMcp/`).
 
 ## Open TODOs
 
