@@ -4,6 +4,14 @@ MCP server exposing the Neos 9 Content Repository to LLMs. PHP 8.3+, Neos 9.
 
 Repo: `git@github.com:gesagtgetan/GesagtGetan.NeosMcp.git` (separate git repo inside `DistributionPackages/GesagtGetan.NeosMcp/`).
 
+## Using the MCP Server While Developing
+
+When working on this package, connect to a running instance of the MCP server (locally via stdio or remotely via HTTP) so you can query actual nodes, inspect workspace state, and verify tool behavior against real data. This lets you:
+
+- **Validate changes**: After modifying tool descriptions or schemas, call the tools to confirm they work as expected.
+- **Explore the content tree**: Use `findNodes`, `getChildren`, `getNodeTypeSchema` to understand how node types are structured in practice — tethered child nodes, content collections, property values.
+- **Test write operations**: Create, update, and remove nodes in the review workspace to verify write tools behave correctly. Use `getWorkspaceStatus` and `discardWorkspaceChanges` to inspect and clean up after testing.
+
 ## Open TODOs
 
 - **OAuth token cleanup command** — Add a CLI command (e.g., `./flow oauth:cleanup`) to delete expired and revoked auth codes and refresh tokens from the database. Run periodically via cron. Low priority — accumulation is ~700 rows/year with daily use.
