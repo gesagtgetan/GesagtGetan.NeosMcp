@@ -8,7 +8,7 @@ MCP (Model Context Protocol) server for the Neos 9 Content Repository. Gives LLM
 ./flow mcp:setup
 ```
 
-This creates the shared review workspace, generates OAuth RSA keys, and registers the OAuth client in the database. Run it during initial setup and **after every configuration change** (credentials, redirect URIs, etc.) to apply the new values.
+This creates the shared stdio workspace, generates OAuth RSA keys, and registers the OAuth client in the database. Run it during initial setup and **after every configuration change** (credentials, redirect URIs, etc.) to apply the new values.
 
 > ⚠️ `mcp:setup` is not a one-time command. Any change to `GesagtGetan.NeosMcp.oauth.client.*` settings only takes effect after re-running `mcp:setup`.
 
@@ -18,7 +18,7 @@ This creates the shared review workspace, generates OAuth RSA keys, and register
 ./flow mcp:server
 ```
 
-This starts a stdio-based MCP server. The server requires the review workspace to exist — run `mcp:setup` first. Configure it as an MCP server in your LLM tool (e.g. Claude Code).
+This starts a stdio-based MCP server. The server requires the stdio workspace to exist — run `mcp:setup` first. Configure it as an MCP server in your LLM tool (e.g. Claude Code).
 
 ### Claude Code Configuration
 
@@ -36,6 +36,8 @@ This starts a stdio-based MCP server. The server requires the review workspace t
 ## HTTP Transport (OAuth)
 
 The package also exposes the MCP server over HTTP at `POST /api/mcp`, secured with OAuth 2.0 (authorization code grant + PKCE). This is used by Claude.ai's remote MCP connector and ChatGPT.
+
+Each authenticated user has their own personal workspace (the same one they use in the Neos UI). Changes are isolated per user and can be reviewed/published independently. The JWT `sub` claim contains the Neos `UserId` (UUID), not the username — no credentials are leaked in tokens.
 
 ### Setup
 
@@ -62,7 +64,7 @@ The package also exposes the MCP server over HTTP at `POST /api/mcp`, secured wi
    ./flow doctrine:migrate
    ```
 
-4. Run `./flow mcp:setup` to create the review workspace, register the OAuth client, and generate RSA keys:
+4. Run `./flow mcp:setup` to create the stdio workspace, register the OAuth client, and generate RSA keys:
    ```bash
    ./flow mcp:setup
    ```
@@ -92,8 +94,10 @@ In `Settings.yaml`:
 GesagtGetan:
   NeosMcp:
     contentRepositoryId: 'default'
-    workspaceName: 'llm-review'
-    workspaceBaseWorkspaceName: 'live'
+    stdioWorkspaceName: 'llm-review'
+    stdioWorkspaceTitle: 'MCP Stdio'
+    stdioWorkspaceDescription: 'Shared workspace for MCP stdio transport'
+    stdioBaseWorkspaceName: 'live'
 ```
 
 ## Available Tools
@@ -106,7 +110,7 @@ GesagtGetan:
 - `get_node` - get a single node
 - `get_children` - list child nodes
 
-### Write (staged in review workspace, requires human publishing)
+### Write (staged in workspace, requires human publishing)
 - `create_node` - create a node
 - `set_node_properties` - update properties
 - `move_node` - move to new parent
@@ -114,7 +118,7 @@ GesagtGetan:
 - `find_and_replace_property` - batch find/replace in properties
 
 ### Workspace
-- `get_workspace_status` - review workspace status
+- `get_workspace_status` - workspace status
 - `discard_workspace_changes` - discard all pending changes
 
 ### Redirects (go live immediately, no workspace staging)
@@ -125,7 +129,7 @@ GesagtGetan:
 
 ## Workspace Rebase
 
-The Neos Content Repository does not automatically propagate changes from a base workspace (e.g. `live`) to derived workspaces. This means the MCP workspace can become stale: nodes deleted or modified in `live` remain visible in `llm-review` until an explicit rebase occurs.
+The Neos Content Repository does not automatically propagate changes from a base workspace (e.g. `live`) to derived workspaces. This means the MCP workspace can become stale: nodes deleted or modified in `live` remain visible in the workspace until an explicit rebase occurs.
 
 To keep the LLM's view fresh, the MCP server rebases the workspace **before every tool call**. This ensures reads reflect the latest live state and writes don't target nodes that no longer exist.
 

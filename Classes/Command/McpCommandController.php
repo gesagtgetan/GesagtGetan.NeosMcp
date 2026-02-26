@@ -46,14 +46,20 @@ class McpCommandController extends CommandController
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
 
-    #[Flow\InjectConfiguration(path: 'workspaceName', package: 'GesagtGetan.NeosMcp')]
-    protected string $workspaceName;
+    #[Flow\InjectConfiguration(path: 'stdioWorkspaceName', package: 'GesagtGetan.NeosMcp')]
+    protected string $stdioWorkspaceName;
 
-    #[Flow\InjectConfiguration(path: 'workspaceBaseWorkspaceName', package: 'GesagtGetan.NeosMcp')]
-    protected string $workspaceBaseWorkspaceName;
+    #[Flow\InjectConfiguration(path: 'stdioWorkspaceTitle', package: 'GesagtGetan.NeosMcp')]
+    protected string $stdioWorkspaceTitle;
+
+    #[Flow\InjectConfiguration(path: 'stdioWorkspaceDescription', package: 'GesagtGetan.NeosMcp')]
+    protected string $stdioWorkspaceDescription;
+
+    #[Flow\InjectConfiguration(path: 'stdioBaseWorkspaceName', package: 'GesagtGetan.NeosMcp')]
+    protected string $stdioBaseWorkspaceName;
 
     /**
-     * Set up the MCP review workspace with proper Neos metadata.
+     * Set up the MCP stdio workspace with proper Neos metadata.
      *
      * Creates a shared workspace visible in the Neos UI. Run once during setup.
      * Idempotent — skips if the workspace already exists.
@@ -62,7 +68,7 @@ class McpCommandController extends CommandController
     {
         $crId = ContentRepositoryId::fromString($this->contentRepositoryId);
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
-        $workspaceName = WorkspaceName::fromString($this->workspaceName);
+        $workspaceName = WorkspaceName::fromString($this->stdioWorkspaceName);
 
         if ($contentRepository->findWorkspaceByName($workspaceName) !== null) {
             $this->outputLine('Workspace "%s" already exists.', [$workspaceName->value]);
@@ -70,9 +76,9 @@ class McpCommandController extends CommandController
             $this->workspaceService->createSharedWorkspace(
                 $crId,
                 $workspaceName,
-                new WorkspaceTitle('LLM Review'),
-                new WorkspaceDescription('Review workspace for MCP-generated content changes'),
-                WorkspaceName::fromString($this->workspaceBaseWorkspaceName),
+                new WorkspaceTitle($this->stdioWorkspaceTitle),
+                new WorkspaceDescription($this->stdioWorkspaceDescription),
+                WorkspaceName::fromString($this->stdioBaseWorkspaceName),
                 WorkspaceRoleAssignments::create(
                     WorkspaceRoleAssignment::createForGroup(
                         'GesagtGetan.NeosMcp:McpUser',
@@ -108,7 +114,7 @@ class McpCommandController extends CommandController
     {
         $crId = ContentRepositoryId::fromString($this->contentRepositoryId);
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
-        $workspaceName = WorkspaceName::fromString($this->workspaceName);
+        $workspaceName = WorkspaceName::fromString($this->stdioWorkspaceName);
 
         if ($contentRepository->findWorkspaceByName($workspaceName) === null) {
             $this->outputLine('ERROR: Workspace "%s" does not exist. Run ./flow mcp:setup first.', [$workspaceName->value]);

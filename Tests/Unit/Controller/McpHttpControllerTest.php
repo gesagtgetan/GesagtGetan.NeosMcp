@@ -23,6 +23,8 @@ use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class McpHttpControllerTest extends UnitTestCase
 {
@@ -35,7 +37,16 @@ class McpHttpControllerTest extends UnitTestCase
     {
         parent::setUp();
 
-        $this->subject = new McpHttpController();
+        // Most tests use a subclass that bypasses workspace resolution (WorkspaceService
+        // is final readonly and cannot be mocked). The userNotFoundReturns403 test uses a
+        // real McpHttpController to exercise the actual resolveWorkspaceName() path.
+        $this->subject = new class extends McpHttpController {
+            protected function resolveWorkspaceName(ServerRequestInterface $validatedRequest): WorkspaceName|ResponseInterface // @phpstan-ignore return.unusedType
+            {
+                return WorkspaceName::fromString('user-test');
+            }
+        };
+
         $this->securityContext = $this->createMock(SecurityContext::class);
         $this->securityContext->method('withoutAuthorizationChecks')->willReturnCallback(
             static fn (\Closure $callback): mixed => $callback(),
@@ -85,6 +96,29 @@ class McpHttpControllerTest extends UnitTestCase
             'Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
             $response->getHeaderLine('WWW-Authenticate'),
         );
+    }
+
+    /**
+     * @test
+     */
+    public function missingOAuthUserIdReturns403(): void
+    {
+        // validateAuthenticatedRequest returns the request without oauth_user_id attribute
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willReturnArgument(0);
+        $this->injectRequest('{}', 'Bearer valid-jwt');
+
+        $subject = new McpHttpController();
+        $this->inject($subject, 'securityContext', $this->securityContext);
+        $this->inject($subject, 'oauthServerFactory', $this->oauthServerFactory);
+        $this->inject($subject, 'contentRepositoryId', 'default');
+        $this->injectRequestInto($subject, '{}', 'Bearer valid-jwt');
+
+        $response = $subject->handleAction();
+
+        self::assertSame(403, $response->getStatusCode());
+        $body = $this->decodeJsonBody((string) $response->getBody());
+        self::assertSame('OAuth token missing user identity', $body['error']);
     }
 
     /**
@@ -173,7 +207,8 @@ class McpHttpControllerTest extends UnitTestCase
     }
 
     /**
-     * Creates a controller subclass with buildServer() overridden to avoid final-class mocking.
+     * Creates a controller subclass with buildServer() and resolveWorkspaceName()
+     * overridden to avoid final-class mocking.
      */
     private function createControllerWithMockServer(): McpHttpController
     {
@@ -206,7 +241,12 @@ class McpHttpControllerTest extends UnitTestCase
             {
             }
 
-            protected function buildServer(): Server
+            protected function resolveWorkspaceName(ServerRequestInterface $validatedRequest): WorkspaceName|ResponseInterface // @phpstan-ignore return.unusedType
+            {
+                return WorkspaceName::fromString('user-test');
+            }
+
+            protected function buildServer(WorkspaceName $workspaceName): Server
             {
                 return $this->testServer;
             }
