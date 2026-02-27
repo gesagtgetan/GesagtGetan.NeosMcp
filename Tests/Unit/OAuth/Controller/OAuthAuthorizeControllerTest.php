@@ -203,6 +203,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(403, $response->getStatusCode());
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
+        self::assertIsString($body['error']);
         self::assertStringContainsString('CSRF token', $body['error']);
     }
 
