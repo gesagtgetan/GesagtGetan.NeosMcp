@@ -1,4 +1,10 @@
 Neos:
+  ContentRepositoryRegistry:
+    presets:
+      'default':
+        authProvider:
+          factoryObjectName: GesagtGetan\NeosMcp\Security\McpAwareAuthProviderFactory
+
   Flow:
     mvc:
       routes:
