@@ -1,0 +1,41 @@
+{
+  "description": "Minimal Neos project for CI — provides the Flow framework, dev tools, and test bootstraps",
+  "config": {
+    "vendor-dir": "Packages/Libraries",
+    "bin-dir": "bin",
+    "allow-plugins": {
+      "neos/composer-plugin": true
+    }
+  },
+  "require": {
+    "php": "^8.3",
+    "neos/neos": "^9.1",
+    "neos/neos-ui": "^9.0",
+    "neos/contentgraph-doctrinedbaladapter": "^9.0",
+    "gesagtgetan/neos-mcp": "@dev"
+  },
+  "require-dev": {
+    "neos/buildessentials": "^9.0",
+    "phpunit/phpunit": "^10.5",
+    "phpstan/phpstan": "^2.0",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpstan/phpstan-strict-rules": "^2.0",
+    "squizlabs/php_codesniffer": "^4.0",
+    "friendsofphp/php-cs-fixer": "^3.0"
+  },
+  "scripts": {
+    "post-update-cmd": "Neos\\Flow\\Composer\\InstallerScripts::postUpdateAndInstall",
+    "post-install-cmd": "Neos\\Flow\\Composer\\InstallerScripts::postUpdateAndInstall",
+    "post-package-update": "Neos\\Flow\\Composer\\InstallerScripts::postPackageUpdateAndInstall",
+    "post-package-install": "Neos\\Flow\\Composer\\InstallerScripts::postPackageUpdateAndInstall"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "DistributionPackages/GesagtGetan.NeosMcp",
+      "options": {
+        "symlink": true
+      }
+    }
+  ]
+}

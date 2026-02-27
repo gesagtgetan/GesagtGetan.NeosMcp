@@ -1,0 +1,95 @@
+version: 2.1
+
+commands:
+  install-just:
+    steps:
+      - run:
+          name: Install casey/just
+          command: |
+            wget -q https://github.com/casey/just/releases/download/1.43.1/just-1.43.1-x86_64-unknown-linux-musl.tar.gz
+            echo '6a3003f68fa4d86ada8afe33830a88ffdb6c2fcaff4e5a840b1cb90eaf6f46fc  just-1.43.1-x86_64-unknown-linux-musl.tar.gz' | sha256sum -c
+            tar -xzf just-1.43.1-x86_64-unknown-linux-musl.tar.gz
+            sudo mv just /usr/local/bin/just
+
+  setup-neos-project:
+    description: Create a minimal Neos project and install dependencies
+    steps:
+      - run:
+          name: Create Neos project
+          command: cp .circleci/composer.json ~/neos/composer.json
+      - restore_cache:
+          keys:
+            - composer-cache-v1-{{ checksum ".circleci/composer.json" }}
+            - composer-cache-v1-
+      - run:
+          name: Install dependencies
+          working_directory: ~/neos
+          command: composer install --no-interaction --no-ansi --no-progress --prefer-dist
+      - save_cache:
+          key: composer-cache-v1-{{ checksum ".circleci/composer.json" }}
+          paths:
+            - ~/.composer/cache
+
+jobs:
+  static-and-unit:
+    docker:
+      - image: cimg/php:8.4
+    working_directory: ~/neos/DistributionPackages/GesagtGetan.NeosMcp
+    steps:
+      - checkout
+      - install-just
+      - setup-neos-project
+      - run:
+          name: PHP Code Sniffer
+          command: just phpcs
+      - run:
+          name: PHP CS Fixer
+          command: just cs-fixer
+      - run:
+          name: PHPStan
+          command: just phpstan
+      - run:
+          name: Unit tests
+          command: just test-unit
+
+  functional:
+    docker:
+      - image: cimg/php:8.4
+      - image: cimg/mariadb:11.4
+        environment:
+          MYSQL_ROOT_PASSWORD: ci
+          MARIADB_DATABASE: neos_mcp_test
+    working_directory: ~/neos/DistributionPackages/GesagtGetan.NeosMcp
+    steps:
+      - checkout
+      - install-just
+      - setup-neos-project
+      - run:
+          name: Create testing database configuration
+          command: cp -r .circleci/Configuration/Testing ~/neos/Configuration/
+      - run:
+          name: Wait for MariaDB
+          command: |
+            for i in $(seq 1 30); do
+              if php -r "new PDO('mysql:host=127.0.0.1;port=3306', 'root', 'ci');" 2>/dev/null; then
+                echo "MariaDB is ready"
+                exit 0
+              fi
+              echo "Waiting for MariaDB... ($i/30)"
+              sleep 2
+            done
+            echo "MariaDB did not start in time"
+            exit 1
+      - run:
+          name: Run database migrations
+          working_directory: ~/neos
+          command: FLOW_CONTEXT=Testing ./flow doctrine:migrate
+      - run:
+          name: Functional tests
+          command: just test-functional
+
+workflows:
+  check-and-test:
+    jobs:
+      - static-and-unit
+      - functional

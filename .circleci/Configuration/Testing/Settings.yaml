@@ -1,0 +1,12 @@
+Neos:
+  Flow:
+    persistence:
+      backendOptions:
+        driver: pdo_mysql
+        # path must be null — without this, Flow's PersistenceManager::tearDown()
+        # drops the entire database after each test (inherits ':memory:' from SQLite defaults).
+        path: ~
+        dbname: neos_mcp_test
+        user: root
+        password: ci
+        host: 127.0.0.1
