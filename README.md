@@ -22,6 +22,8 @@ This starts a stdio-based MCP server. The server requires the stdio workspace to
 
 ### Claude Code Configuration
 
+Add to `.mcp.json` in your project root:
+
 ```json
 {
   "mcpServers": {
