@@ -211,10 +211,9 @@ final readonly class NodeWriteService
         ];
     }
 
-    // TODO: Search across all string properties (regardless of property name) so the LLM
-    //       doesn't need to call this once per property. Currently requires knowing the exact
-    //       property name, which means multiple calls for the same search term across different
-    //       node types / properties.
+    // TODO: Make both nodeTypeName and propertyName optional so the LLM can do a simple
+    //       "replace X with Y" across all node types and all string properties. Keep both
+    //       as optional filters to narrow scope when needed.
 
     /**
      * @param array<string, string>|null $dimensionSpacePoint

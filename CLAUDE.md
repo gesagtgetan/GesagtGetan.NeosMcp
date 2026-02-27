@@ -15,7 +15,7 @@ When working on this package, connect to a running instance of the MCP server (l
 ## Open TODOs
 
 - **OAuth token cleanup command** — Add a CLI command (e.g., `./flow oauth:cleanup`) to delete expired and revoked auth codes and refresh tokens from the database. Run periodically via cron. Low priority — accumulation is ~700 rows/year with daily use.
-- **Cross-property find-and-replace** — `findAndReplaceProperty` currently requires a specific `propertyName`. Improvement: search across all string properties of a node type so the LLM doesn't need one call per property for the same search term.
+- **Simplified find-and-replace** — `findAndReplaceProperty` currently requires both `nodeTypeName` and `propertyName`. Make both optional so the LLM can do a simple "replace X with Y" across all node types and all string properties. Keep `nodeTypeName` and `propertyName` as optional filters to narrow scope when needed.
 - **OAuth audit logging** — Inject `Psr\Log\LoggerInterface` (Flow's PSR-3 logger) into OAuth controllers. Log security-relevant events: successful authorization grants (who authorized which connector), token exchanges, failed authentication attempts, revoked tokens. Helps with debugging and auditing who has active MCP access.
 - **Restore trashed nodes via MCP** — Add a `restoreNode(nodeAggregateId)` tool that un-tags a soft-removed node using `UntagSubtree` with `NeosSubtreeTag::removed()`. The `findNodes`/`getNode` tools already support `includeRemoved: true` to look up trashed nodes. Requires the `Neos.Workspace.Ui:TrashBinProjection` to be set up on the instance (`./flow cr:setup && ./flow subscription:replay Neos.Workspace.Ui:TrashBinProjection`).
 - **Image support via MCP** — Three features:
