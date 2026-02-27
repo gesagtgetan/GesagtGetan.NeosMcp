@@ -260,6 +260,44 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
 
     /**
      * @test
+     */
+    public function hideNodeDisablesNodeInGraph(): void
+    {
+        $createResult = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'To Hide'],
+        );
+
+        $this->nodeWriteService->hideNode($createResult['nodeAggregateId']);
+
+        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        self::assertNotNull($node);
+        self::assertTrue($node['hidden'], 'Hidden node must have hidden: true');
+        self::assertSame('To Hide', $node['properties']['title']);
+    }
+
+    /**
+     * @test
+     */
+    public function unhideNodeEnablesNodeInGraph(): void
+    {
+        $createResult = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'To Toggle'],
+        );
+
+        $this->nodeWriteService->hideNode($createResult['nodeAggregateId']);
+        $this->nodeWriteService->unhideNode($createResult['nodeAggregateId']);
+
+        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        self::assertNotNull($node);
+        self::assertFalse($node['hidden'], 'Unhidden node must have hidden: false');
+    }
+
+    /**
+     * @test
      *
      * Reproduces a real-world issue: a node created in the shared workspace,
      * published to live, then deleted in live, was still visible when reading

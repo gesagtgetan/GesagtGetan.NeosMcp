@@ -15,6 +15,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyV
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
 use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
@@ -143,6 +144,32 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result['nodeAggregateId']);
+        self::assertTrue($result['success']);
+    }
+
+    /**
+     * @test
+     */
+    public function hideNodeCallsHandleWithTagSubtreeCommand(): void
+    {
+        $result = $this->subject->hideNode('node-id');
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result['nodeAggregateId']);
+        self::assertTrue($result['success']);
+    }
+
+    /**
+     * @test
+     */
+    public function unhideNodeCallsHandleWithUntagSubtreeCommand(): void
+    {
+        $result = $this->subject->unhideNode('node-id');
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(UntagSubtree::class, $this->handledCommands[0]);
         self::assertSame('node-id', $result['nodeAggregateId']);
         self::assertTrue($result['success']);
     }

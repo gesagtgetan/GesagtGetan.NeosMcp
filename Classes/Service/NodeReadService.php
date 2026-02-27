@@ -16,6 +16,7 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 #[Flow\Proxy(false)]
@@ -67,7 +68,7 @@ final readonly class NodeReadService
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}>
+     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
     public function findNodes(
         ?string $nodeTypeName = null,
@@ -101,7 +102,7 @@ final readonly class NodeReadService
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      *
-     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}|null
+     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}|null
      */
     public function getNode(string $nodeAggregateId, ?array $dimensionSpacePoint = null, bool $includeRemoved = false): ?array
     {
@@ -118,7 +119,7 @@ final readonly class NodeReadService
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}>
+     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
     public function getChildren(
         string $parentNodeAggregateId,
@@ -176,7 +177,7 @@ final readonly class NodeReadService
     /**
      * @param iterable<Node> $nodes
      *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}>
+     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
     private function serializeNodes(iterable $nodes): array
     {
@@ -189,7 +190,7 @@ final readonly class NodeReadService
     }
 
     /**
-     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, properties: array<string, mixed>}
+     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}
      */
     private function serializeNode(Node $node): array
     {
@@ -202,6 +203,7 @@ final readonly class NodeReadService
             'nodeAggregateId' => $node->aggregateId->value,
             'nodeTypeName' => $node->nodeTypeName->value,
             'nodeName' => $node->name?->value,
+            'hidden' => $node->tags->contain(NeosSubtreeTag::disabled()),
             'properties' => $properties,
         ];
     }
