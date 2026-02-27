@@ -8,6 +8,7 @@ use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
+use GesagtGetan\NeosMcp\Security\McpUserContext;
 use GuzzleHttp\Psr7\Response;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
@@ -63,6 +64,9 @@ class McpHttpController extends ActionController
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
 
+    #[Flow\Inject]
+    protected McpUserContext $mcpUserContext;
+
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
 
@@ -96,28 +100,39 @@ class McpHttpController extends ActionController
         }
         $workspaceName = $result;
 
-        try {
-            $message = Parser::parseRequestMessage($body);
-        } catch (\JsonException | \InvalidArgumentException) {
-            return $this->jsonResponse(400, JsonRpcError::forParseError('Invalid JSON-RPC request')->toArray());
-        }
-
-        if ($message instanceof Notification) {
-            return new Response(204, $this->corsHeaders());
-        }
-
-        if (!$message instanceof Request) {
-            return $this->jsonResponse(
-                400,
-                JsonRpcError::forInvalidRequest('Only single JSON-RPC requests are supported', '')->toArray(),
+        $oauthUserId = $validatedRequest->getAttribute('oauth_user_id');
+        if (\is_string($oauthUserId)) {
+            $this->mcpUserContext->setUserId(
+                \Neos\ContentRepository\Core\Feature\Security\Dto\UserId::fromString($oauthUserId),
             );
         }
 
-        $result = $this->securityContext->withoutAuthorizationChecks(function () use ($message, $workspaceName): JsonRpcResponse|JsonRpcError {
-            return $this->dispatch($message, $workspaceName);
-        });
+        try {
+            try {
+                $message = Parser::parseRequestMessage($body);
+            } catch (\JsonException | \InvalidArgumentException) {
+                return $this->jsonResponse(400, JsonRpcError::forParseError('Invalid JSON-RPC request')->toArray());
+            }
 
-        return $this->jsonResponse(200, $result->toArray());
+            if ($message instanceof Notification) {
+                return new Response(204, $this->corsHeaders());
+            }
+
+            if (!$message instanceof Request) {
+                return $this->jsonResponse(
+                    400,
+                    JsonRpcError::forInvalidRequest('Only single JSON-RPC requests are supported', '')->toArray(),
+                );
+            }
+
+            $result = $this->securityContext->withoutAuthorizationChecks(function () use ($message, $workspaceName): JsonRpcResponse|JsonRpcError {
+                return $this->dispatch($message, $workspaceName);
+            });
+
+            return $this->jsonResponse(200, $result->toArray());
+        } finally {
+            $this->mcpUserContext->clear();
+        }
     }
 
     private function unauthorizedResponse(): ResponseInterface

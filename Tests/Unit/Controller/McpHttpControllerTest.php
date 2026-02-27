@@ -8,6 +8,7 @@ use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Controller\McpHttpController;
 use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
+use GesagtGetan\NeosMcp\Security\McpUserContext;
 use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
@@ -61,6 +62,7 @@ class McpHttpControllerTest extends UnitTestCase
 
         $this->inject($this->subject, 'securityContext', $this->securityContext);
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
+        $this->inject($this->subject, 'mcpUserContext', new McpUserContext());
     }
 
     /**
@@ -111,6 +113,7 @@ class McpHttpControllerTest extends UnitTestCase
         $subject = new McpHttpController();
         $this->inject($subject, 'securityContext', $this->securityContext);
         $this->inject($subject, 'oauthServerFactory', $this->oauthServerFactory);
+        $this->inject($subject, 'mcpUserContext', new McpUserContext());
         $this->inject($subject, 'contentRepositoryId', 'default');
         $this->injectRequestInto($subject, '{}', 'Bearer valid-jwt');
 
@@ -254,6 +257,7 @@ class McpHttpControllerTest extends UnitTestCase
 
         $this->inject($controller, 'securityContext', $this->securityContext);
         $this->inject($controller, 'oauthServerFactory', $this->oauthServerFactory);
+        $this->inject($controller, 'mcpUserContext', new McpUserContext());
 
         return $controller;
     }
