@@ -13,6 +13,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWri
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\NodeMove\Dto\RelationDistributionStrategy;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindDescendantNodesFilter;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
@@ -142,6 +143,64 @@ final readonly class NodeWriteService
             $dsp,
             NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
             NeosSubtreeTag::removed(),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return [
+            'nodeAggregateId' => $nodeAggregateId,
+            'success' => true,
+        ];
+    }
+
+    /**
+     * Hides a node by tagging it as disabled. The node will not be visible on the public site.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     *
+     * @return array{nodeAggregateId: string, success: true}
+     */
+    public function hideNode(
+        string $nodeAggregateId,
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+
+        $command = TagSubtree::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            $dsp,
+            NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+            NeosSubtreeTag::disabled(),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return [
+            'nodeAggregateId' => $nodeAggregateId,
+            'success' => true,
+        ];
+    }
+
+    /**
+     * Unhides a previously hidden node by removing the disabled tag.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     *
+     * @return array{nodeAggregateId: string, success: true}
+     */
+    public function unhideNode(
+        string $nodeAggregateId,
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+
+        $command = UntagSubtree::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            $dsp,
+            NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+            NeosSubtreeTag::disabled(),
         );
 
         $this->contentRepository->handle($command);

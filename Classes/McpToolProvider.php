@@ -332,6 +332,50 @@ final readonly class McpToolProvider
     }
 
     /**
+     * Hide a node so it is not visible on the public site. This is reversible — use unhideNode to make it visible again.
+     *
+     * @param string $nodeAggregateId The node aggregate ID to hide
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     *
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
+     */
+    #[McpTool]
+    public function hideNode(
+        string $nodeAggregateId,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        $warning = $this->rebaseWorkspace();
+
+        return $this->withRebaseWarning(
+            $this->nodeWriteService->hideNode($nodeAggregateId, $dimensionSpacePoint),
+            $warning,
+        );
+    }
+
+    /**
+     * Unhide a previously hidden node so it becomes visible on the public site again.
+     *
+     * @param string $nodeAggregateId The node aggregate ID to unhide
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     *
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
+     */
+    #[McpTool]
+    public function unhideNode(
+        string $nodeAggregateId,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        $warning = $this->rebaseWorkspace();
+
+        return $this->withRebaseWarning(
+            $this->nodeWriteService->unhideNode($nodeAggregateId, $dimensionSpacePoint),
+            $warning,
+        );
+    }
+
+    /**
      * Find all nodes of a type where a property contains a search string and replace it. Useful for batch renaming.
      *
      * @param string $nodeTypeName The node type to search in

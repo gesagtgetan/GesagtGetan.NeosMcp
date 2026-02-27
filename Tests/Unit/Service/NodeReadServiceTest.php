@@ -12,6 +12,7 @@ use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
 use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValue;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Dto\SubtreeTags;
 use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
@@ -341,6 +342,58 @@ class NodeReadServiceTest extends UnitTestCase
         $this->subject->getNode('any-id', includeRemoved: true);
     }
 
+    // ── Hidden Field Tests ──────────────────────────────────────────
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsFalseHiddenForVisibleNode(): void
+    {
+        $node = $this->createStubNode('visible-node', 'Vendor:Document.Page');
+        $this->subgraph->method('findNodeById')->willReturn($node);
+
+        $result = $this->subject->getNode('visible-node');
+
+        self::assertNotNull($result);
+        self::assertFalse($result['hidden']);
+    }
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsTrueHiddenForDisabledNode(): void
+    {
+        $node = $this->createStubNodeWithTags(
+            'hidden-node',
+            'Vendor:Document.Page',
+            NodeTags::create(SubtreeTags::fromStrings('disabled'), SubtreeTags::createEmpty()),
+        );
+        $this->subgraph->method('findNodeById')->willReturn($node);
+
+        $result = $this->subject->getNode('hidden-node');
+
+        self::assertNotNull($result);
+        self::assertTrue($result['hidden']);
+    }
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsTrueHiddenForInheritedDisabledNode(): void
+    {
+        $node = $this->createStubNodeWithTags(
+            'inherited-hidden-node',
+            'Vendor:Document.Page',
+            NodeTags::create(SubtreeTags::createEmpty(), SubtreeTags::fromStrings('disabled')),
+        );
+        $this->subgraph->method('findNodeById')->willReturn($node);
+
+        $result = $this->subject->getNode('inherited-hidden-node');
+
+        self::assertNotNull($result);
+        self::assertTrue($result['hidden']);
+    }
+
     // ── Stub Helpers ────────────────────────────────────────────────
 
     private function createStubNode(
@@ -368,6 +421,30 @@ class NodeReadServiceTest extends UnitTestCase
                 null,
                 null,
             ),
+            VisibilityConstraints::createEmpty(),
+        );
+    }
+
+    private function createStubNodeWithTags(
+        string $aggregateId,
+        string $nodeTypeName,
+        NodeTags $tags,
+    ): Node {
+        return Node::create(
+            ContentRepositoryId::fromString('default'),
+            WorkspaceName::fromString('test-workspace'),
+            DimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateId::fromString($aggregateId),
+            OriginDimensionSpacePoint::fromArray(['language' => 'de']),
+            NodeAggregateClassification::CLASSIFICATION_REGULAR,
+            NodeTypeName::fromString($nodeTypeName),
+            new PropertyCollection(
+                SerializedPropertyValues::createEmpty(),
+                $this->propertyConverter,
+            ),
+            null,
+            $tags,
+            Timestamps::create(new \DateTimeImmutable(), new \DateTimeImmutable(), null, null),
             VisibilityConstraints::createEmpty(),
         );
     }
