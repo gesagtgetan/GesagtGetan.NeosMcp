@@ -81,9 +81,11 @@ final readonly class McpToolProvider
     }
 
     /**
-     * @param array<string, mixed> $result
+     * @template T of array<string, mixed>
      *
-     * @return array<string, mixed>
+     * @param T $result
+     *
+     * @return T
      */
     private function withRebaseWarning(array $result, ?string $warning): array
     {
@@ -91,7 +93,7 @@ final readonly class McpToolProvider
             $result['_rebaseWarning'] = $warning;
         }
 
-        return $result;
+        return $result; // @phpstan-ignore return.type (mutation adds _rebaseWarning but T shape is preserved at call sites)
     }
 
     // ── Read Tools ──────────────────────────────────────────────────
@@ -227,7 +229,7 @@ final readonly class McpToolProvider
      * @param array<string, mixed>|null $properties Property values to set on the new node
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
      *
-     * @return array{nodeAggregateId: string, success: true}
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
         Create a new node under a parent node in the review workspace.
@@ -247,7 +249,7 @@ final readonly class McpToolProvider
     ): array {
         $warning = $this->rebaseWorkspace();
 
-        return $this->withRebaseWarning( // @phpstan-ignore return.type
+        return $this->withRebaseWarning(
             $this->nodeWriteService->createNode($parentNodeAggregateId, $nodeTypeName, $properties ?? [], $dimensionSpacePoint),
             $warning,
         );
@@ -260,7 +262,7 @@ final readonly class McpToolProvider
      * @param array<string, mixed> $properties Property values to set
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
      *
-     * @return array{nodeAggregateId: string, success: true}
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool]
     public function setNodeProperties(
@@ -276,7 +278,7 @@ final readonly class McpToolProvider
 
         $warning = $this->rebaseWorkspace();
 
-        return $this->withRebaseWarning( // @phpstan-ignore return.type
+        return $this->withRebaseWarning(
             $this->nodeWriteService->setNodeProperties($nodeAggregateId, $properties, $dimensionSpacePoint),
             $warning,
         );
@@ -289,7 +291,7 @@ final readonly class McpToolProvider
      * @param string $newParentNodeAggregateId The new parent node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
      *
-     * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true}
+     * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool]
     public function moveNode(
@@ -300,7 +302,7 @@ final readonly class McpToolProvider
     ): array {
         $warning = $this->rebaseWorkspace();
 
-        return $this->withRebaseWarning( // @phpstan-ignore return.type
+        return $this->withRebaseWarning(
             $this->nodeWriteService->moveNode($nodeAggregateId, $newParentNodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -313,7 +315,7 @@ final readonly class McpToolProvider
      * @param string $nodeAggregateId The node aggregate ID to remove
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
      *
-     * @return array{nodeAggregateId: string, success: true}
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
     public function removeNode(
@@ -323,7 +325,7 @@ final readonly class McpToolProvider
     ): array {
         $warning = $this->rebaseWorkspace();
 
-        return $this->withRebaseWarning( // @phpstan-ignore return.type
+        return $this->withRebaseWarning(
             $this->nodeWriteService->removeNode($nodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -339,7 +341,7 @@ final readonly class McpToolProvider
      * @param bool $dryRun If true, only report matches without making changes (default: false)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
      *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, oldValue: mixed, newValue: string}>, dryRun: bool}
+     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, oldValue: mixed, newValue: string}>, dryRun: bool, _rebaseWarning?: string}
      */
     #[McpTool]
     public function findAndReplaceProperty(
@@ -353,7 +355,7 @@ final readonly class McpToolProvider
     ): array {
         $warning = $this->rebaseWorkspace();
 
-        return $this->withRebaseWarning( // @phpstan-ignore return.type
+        return $this->withRebaseWarning(
             $this->nodeWriteService->findAndReplaceProperty($nodeTypeName, $propertyName, $search, $replace, $dryRun, $dimensionSpacePoint),
             $warning,
         );
