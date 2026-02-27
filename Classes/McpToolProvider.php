@@ -136,10 +136,10 @@ final readonly class McpToolProvider
      * Search for nodes by type and/or search term. Returns matching nodes with all properties.
      *
      * @param string|null $nodeTypeName Filter by node type (e.g. 'Neos.Neos:Document')
-     * @param string|null $searchTerm Full-text search term
+     * @param string|null $searchTerm Full-text search term — searches across all string properties of matching nodes
      * @param string|null $parentNodeAggregateId Limit search to descendants of this node
      * @param int $limit Maximum number of results (default: 100)
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<int, mixed>
@@ -170,7 +170,7 @@ final readonly class McpToolProvider
      * Get a single node with all its properties by its aggregate ID.
      *
      * @param string $nodeAggregateId The node aggregate ID
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<string, mixed>|null
@@ -193,7 +193,7 @@ final readonly class McpToolProvider
      *
      * @param string $parentNodeAggregateId The parent node aggregate ID
      * @param string|null $nodeTypeName Filter children by node type
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      *
      * @return array<int, mixed>
@@ -222,12 +222,12 @@ final readonly class McpToolProvider
      * @param string $parentNodeAggregateId The parent node aggregate ID
      * @param string $nodeTypeName The node type to create (e.g. 'Neos.Neos:Document')
      * @param array<string, mixed>|null $properties Property values to set on the new node
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
-        Create a new node under a parent node in the review workspace.
+        Create a new node under a parent node in the review workspace. The nodeAggregateId is auto-generated and returned in the response — callers cannot specify it.
 
         IMPORTANT — before calling createNode(), always verify that the node does not already exist:
         1. Call getNodeTypeSchema() for the parent's node type. Check the `childNodes` field — these are auto-created (tethered) child nodes that already exist when the parent is created. You cannot create them again; use setNodeProperties() to populate their properties instead.
@@ -251,11 +251,11 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Update properties on an existing node in the review workspace.
+     * Update properties on an existing node in the review workspace. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
      *
      * @param string $nodeAggregateId The node aggregate ID to update
-     * @param array<string, mixed> $properties Property values to set
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, mixed> $properties Property values to set (partial update — omitted properties are left unchanged)
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
@@ -284,7 +284,7 @@ final readonly class McpToolProvider
      *
      * @param string $nodeAggregateId The node aggregate ID to move
      * @param string $newParentNodeAggregateId The new parent node aggregate ID
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
@@ -308,7 +308,7 @@ final readonly class McpToolProvider
      * Use findNodes or getNode with includeRemoved: true to find trashed nodes.
      *
      * @param string $nodeAggregateId The node aggregate ID to remove
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
@@ -330,7 +330,7 @@ final readonly class McpToolProvider
      * Hide a node so it is not visible on the public site. This is reversible — use unhideNode to make it visible again.
      *
      * @param string $nodeAggregateId The node aggregate ID to hide
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
@@ -352,7 +352,7 @@ final readonly class McpToolProvider
      * Unhide a previously hidden node so it becomes visible on the public site again.
      *
      * @param string $nodeAggregateId The node aggregate ID to unhide
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
@@ -378,7 +378,7 @@ final readonly class McpToolProvider
      * @param string $search The string to search for
      * @param string $replace The replacement string
      * @param bool $dryRun If true, only report matches without making changes (default: false)
-     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, oldValue: mixed, newValue: string}>, dryRun: bool, _rebaseWarning?: string}
      */
