@@ -18,7 +18,7 @@ This creates the shared stdio workspace, generates OAuth RSA keys, and registers
 ./flow mcp:server
 ```
 
-This starts a stdio-based MCP server. The server requires the stdio workspace to exist — run `mcp:setup` first. Configure it as an MCP server in your LLM tool (e.g. Claude Code).
+Flow command that reads MCP requests from stdin and writes responses to stdout. Requires the stdio workspace to exist — run `mcp:setup` first. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that need to see and manage the MCP workspace in the Neos UI.
 
 ### Claude Code Configuration
 
