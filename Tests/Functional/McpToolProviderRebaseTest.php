@@ -11,7 +11,6 @@ use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWork
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 
 /**
  * Tests that McpToolProvider rebases the workspace before tool calls.
@@ -28,8 +27,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $this->workspaceName = WorkspaceName::fromString('test-mcp-workspace');
         $this->createTestWorkspace($this->workspaceName);
 
-        $redirectStorage = $this->createMock(RedirectStorageInterface::class);
-        $this->toolProvider = new McpToolProvider($this->facade, $this->workspaceName, $redirectStorage);
+        $this->toolProvider = new McpToolProvider($this->facade, $this->workspaceName);
     }
 
     /**
