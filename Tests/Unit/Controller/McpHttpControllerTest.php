@@ -20,7 +20,6 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Tests\UnitTestCase;
-use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -225,8 +224,7 @@ class McpHttpControllerTest extends UnitTestCase
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $facade->method('getContentDimensionSource')->willReturn($dimensionSource);
 
-        $redirectStorage = $this->createMock(RedirectStorageInterface::class);
-        $toolProvider = new McpToolProvider($facade, WorkspaceName::fromString('test-workspace'), $redirectStorage);
+        $toolProvider = new McpToolProvider($facade, WorkspaceName::fromString('test-workspace'));
 
         $container = new BasicContainer();
         $container->set(McpToolProvider::class, $toolProvider);

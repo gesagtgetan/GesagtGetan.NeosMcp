@@ -123,12 +123,6 @@ GesagtGetan:
 - `get_workspace_status` - workspace status
 - `discard_workspace_changes` - discard all pending changes
 
-### Redirects (go live immediately, no workspace staging)
-- `list_redirects` - list redirects (optional host/match filter)
-- `get_redirect` - get a single redirect by source path
-- `create_redirect` - create a redirect
-- `remove_redirect` - remove a redirect
-
 ## Workspace Rebase
 
 The Neos Content Repository does not automatically propagate changes from a base workspace (e.g. `live`) to derived workspaces. This means the MCP workspace can become stale: nodes deleted or modified in `live` remain visible in the workspace until an explicit rebase occurs.

@@ -19,7 +19,6 @@ use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Neos\Domain\Model\UserId;
 use Neos\Neos\Domain\Service\WorkspaceService;
-use Neos\RedirectHandler\Storage\RedirectStorageInterface;
 use PhpMcp\Schema\Constants;
 use PhpMcp\Schema\JsonRpc\Error as JsonRpcError;
 use PhpMcp\Schema\JsonRpc\Notification;
@@ -57,9 +56,6 @@ class McpHttpController extends ActionController
 
     #[Flow\Inject]
     protected WorkspaceService $workspaceService;
-
-    #[Flow\Inject]
-    protected RedirectStorageInterface $redirectStorage;
 
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
@@ -207,7 +203,7 @@ class McpHttpController extends ActionController
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->redirectStorage);
+        $toolProvider = new McpToolProvider($facade, $workspaceName);
 
         $container = new BasicContainer();
         $container->set(McpToolProvider::class, $toolProvider);
