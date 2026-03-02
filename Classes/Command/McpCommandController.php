@@ -128,7 +128,8 @@ class McpCommandController extends CommandController
         // so adding a new tool only requires adding a method — no registration here.
         $builder = Server::make()
             ->withContainer($container)
-            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev');
+            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev')
+            ->withInstructions(McpToolProvider::INSTRUCTIONS);
 
         $builder = McpToolProvider::registerTools($builder);
 

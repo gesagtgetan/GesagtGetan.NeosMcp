@@ -215,7 +215,8 @@ class McpHttpController extends ActionController
 
         $builder = Server::make()
             ->withContainer($container)
-            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev');
+            ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev')
+            ->withInstructions(McpToolProvider::INSTRUCTIONS);
 
         $builder = McpToolProvider::registerTools($builder);
 

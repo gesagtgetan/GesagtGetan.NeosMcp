@@ -19,6 +19,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
+use PhpMcp\Server\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class McpToolProviderTest extends UnitTestCase
@@ -151,6 +152,33 @@ class McpToolProviderTest extends UnitTestCase
         $result = $this->subject->findNodes(dimensionSpacePoint: null);
 
         self::assertSame([], $result);
+    }
+
+    /**
+     * @test
+     */
+    public function registerToolsForwardsAttributeDescriptionsAndAnnotations(): void
+    {
+        $builder = Server::make()->withServerInfo('test', '0.0.0');
+        $builder = McpToolProvider::registerTools($builder);
+        $server = $builder->build();
+
+        $tools = $server->getRegistry()->getTools();
+
+        // createNode has an explicit description in #[McpTool(description: ...)]
+        self::assertArrayHasKey('createNode', $tools);
+        self::assertNotNull($tools['createNode']->description, 'createNode description must be forwarded from attribute');
+        self::assertStringContainsString('Create a new node', $tools['createNode']->description);
+
+        // getContentRepositoryInfo has readOnlyHint: true in #[McpTool(annotations: ...)]
+        self::assertArrayHasKey('getContentRepositoryInfo', $tools);
+        self::assertNotNull($tools['getContentRepositoryInfo']->annotations, 'annotations must be forwarded from attribute');
+        self::assertTrue($tools['getContentRepositoryInfo']->annotations->readOnlyHint);
+
+        // removeNode has destructiveHint: true
+        self::assertArrayHasKey('removeNode', $tools);
+        self::assertNotNull($tools['removeNode']->annotations);
+        self::assertTrue($tools['removeNode']->annotations->destructiveHint);
     }
 
     /**
