@@ -138,7 +138,7 @@ class McpCommandController extends CommandController
 
         // Flow's security context requires an HTTP session with an authenticated user,
         // which doesn't exist in CLI mode. Disabling authorization checks for the entire
-        // ReactPHP event loop allows all MCP tool invocations to access the CR freely.
+        // event loop allows all MCP tool invocations to access the CR freely.
         $this->securityContext->withoutAuthorizationChecks(function () use ($server, $transport): void {
             $server->listen($transport);
         });

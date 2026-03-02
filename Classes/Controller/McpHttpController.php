@@ -121,6 +121,11 @@ class McpHttpController extends ActionController
                 );
             }
 
+            // OAuth authentication is separate from Flow's session-based security context.
+            // The JWT bearer token was validated above and the user identity is stored in
+            // McpUserContext, but Flow's SecurityContext has no authenticated session, so its
+            // AOP method interceptors would reject CR operations. Bypass is intentional —
+            // authorization is handled at the OAuth layer, not by Flow's internal policies.
             $result = $this->securityContext->withoutAuthorizationChecks(function () use ($message, $workspaceName): JsonRpcResponse|JsonRpcError {
                 return $this->dispatch($message, $workspaceName);
             });
