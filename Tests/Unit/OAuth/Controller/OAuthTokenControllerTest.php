@@ -12,6 +12,7 @@ use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\NullLogger;
 
 class OAuthTokenControllerTest extends UnitTestCase
 {
@@ -31,6 +32,7 @@ class OAuthTokenControllerTest extends UnitTestCase
         $this->oauthServerFactory->method('createAuthorizationServer')->willReturn($this->authorizationServer);
 
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
+        $this->inject($this->subject, 'logger', new NullLogger());
     }
 
     /**
