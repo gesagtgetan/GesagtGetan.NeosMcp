@@ -20,6 +20,10 @@ use PhpMcp\Server\ServerBuilder;
 #[Flow\Proxy(false)]
 final readonly class McpToolProvider
 {
+    public const string INSTRUCTIONS = <<<'TXT'
+        Tools utilize the Neos CMS 9 Content Repository — a typed node tree with workspaces and optional dimensions (e.g. language). Writes target the user's personal workspace (HTTP) or a shared review workspace (CLI) and are not live until published. Warn the user if you are unsure how to use a tool or unfamiliar with the Neos 9 Content Repository and its node type handling.
+        TXT;
+
     private NodeTypeService $nodeTypeService;
     private NodeReadService $nodeReadService;
     private NodeWriteService $nodeWriteService;
@@ -33,12 +37,29 @@ final readonly class McpToolProvider
         $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName);
     }
 
+    /**
+     * Register all #[McpTool]-annotated methods with the server builder.
+     *
+     * Uses manual withTool() registration instead of the library's auto-discovery
+     * because discovery calls Registry::clear() and cannot be mixed with manual setup.
+     * The attribute's description and annotations are forwarded explicitly since
+     * withTool() does not read #[McpTool] attributes on its own.
+     */
     public static function registerTools(ServerBuilder $builder): ServerBuilder
     {
         foreach ((new \ReflectionClass(self::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if ($method->getAttributes(McpTool::class) !== []) {
-                $builder = $builder->withTool([self::class, $method->getName()]);
+            $attributes = $method->getAttributes(McpTool::class);
+            if ($attributes === []) {
+                continue;
             }
+
+            /** @var McpTool $attr */
+            $attr = $attributes[0]->newInstance();
+            $builder = $builder->withTool(
+                [self::class, $method->getName()],
+                description: $attr->description,
+                annotations: $attr->annotations,
+            );
         }
 
         return $builder;
@@ -227,7 +248,7 @@ final readonly class McpToolProvider
      * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
-        Create a new node under a parent node in the review workspace. The nodeAggregateId is auto-generated and returned in the response — callers cannot specify it.
+        Create a new node under a parent node in the workspace. The nodeAggregateId is auto-generated and returned in the response — callers cannot specify it.
 
         IMPORTANT — before calling createNode(), always verify that the node does not already exist:
         1. Call getNodeTypeSchema() for the parent's node type. Check the `childNodes` field — these are auto-created (tethered) child nodes that already exist when the parent is created. You cannot create them again; use setNodeProperties() to populate their properties instead.
@@ -251,7 +272,7 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Update properties on an existing node in the review workspace. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
+     * Update properties on an existing node. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
      *
      * @param string $nodeAggregateId The node aggregate ID to update
      * @param array<string, mixed> $properties Property values to set (partial update — omitted properties are left unchanged)
@@ -280,7 +301,7 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Move a node to a new parent in the review workspace.
+     * Move a node to a new parent.
      *
      * @param string $nodeAggregateId The node aggregate ID to move
      * @param string $newParentNodeAggregateId The new parent node aggregate ID
@@ -304,7 +325,7 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Remove a node from the review workspace. This is a soft-delete (trash) — the node can be restored later.
+     * Remove a node. This is a soft-delete (trash) — the node can be restored later.
      * Use findNodes or getNode with includeRemoved: true to find trashed nodes.
      *
      * @param string $nodeAggregateId The node aggregate ID to remove
@@ -403,7 +424,7 @@ final readonly class McpToolProvider
     // ── Workspace Tools ─────────────────────────────────────────────
 
     /**
-     * Show the review workspace status including pending change count.
+     * Show the workspace status including pending change count.
      *
      * @return array{workspaceName: string, baseWorkspace: ?string, status: string, hasPendingChanges: bool}
      */
@@ -430,7 +451,7 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Discard all pending changes in the review workspace.
+     * Discard all pending changes in the workspace.
      *
      * @return array{workspaceName: string, success: true}
      */
