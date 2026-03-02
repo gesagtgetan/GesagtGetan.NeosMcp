@@ -20,6 +20,7 @@ use Neos\Neos\Domain\Model\User;
 use Neos\Neos\Domain\Model\UserId;
 use Neos\Neos\Domain\Service\UserService;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\NullLogger;
 
 class OAuthAuthorizeControllerTest extends UnitTestCase
 {
@@ -54,6 +55,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->inject($this->subject, 'securityContext', $this->securityContext);
         $this->inject($this->subject, 'userService', $userService);
         $this->inject($this->subject, 'session', $this->session);
+        $this->inject($this->subject, 'logger', new NullLogger());
     }
 
     /**

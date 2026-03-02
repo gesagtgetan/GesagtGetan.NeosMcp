@@ -67,10 +67,16 @@ class OAuthAuthorizeController extends ActionController
 
         $account = $this->securityContext->getAccount();
         if ($account === null) {
+            $this->logger->info('OAuth authorization rejected: no Neos session');
+
             return $this->loginRequiredResponse();
         }
 
         if (!$this->securityContext->hasRole('GesagtGetan.NeosMcp:McpUser')) {
+            $this->logger->warning('OAuth authorization rejected: missing McpUser role', [
+                'account' => $account->getAccountIdentifier(),
+            ]);
+
             return $this->htmlErrorResponse(403, 'Insufficient Permissions', 'Your Neos account does not have the <code>GesagtGetan.NeosMcp:McpUser</code> role required to authorize MCP applications.');
         }
 
@@ -88,12 +94,23 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
+            $this->logger->warning('OAuth authorization request validation failed', [
+                'account' => $account->getAccountIdentifier(),
+                'error' => $e->getMessage(),
+                'hint' => $e->getHint(),
+            ]);
             throw new McpOAuthServerException('OAuth authorization request failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000020, $e);
         }
 
         $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
 
         $isAutoGrant = $authRequest->getClient()->getIdentifier() === $this->oauthServerFactory->getConfiguredClientId();
+
+        $this->logger->info('OAuth authorization initiated', [
+            'account' => $account->getAccountIdentifier(),
+            'client_id' => $authRequest->getClient()->getIdentifier(),
+            'auto_grant' => $isAutoGrant,
+        ]);
 
         // Render consent screen (or auto-submitting form for auto-grant).
         // Authorization always completes via POST to /api/mcp/grant because Flow
@@ -112,6 +129,8 @@ class OAuthAuthorizeController extends ActionController
 
         $account = $this->securityContext->getAccount();
         if ($account === null) {
+            $this->logger->warning('OAuth grant rejected: session expired');
+
             return $this->jsonResponse(401, ['error' => 'Neos session expired or missing. Please restart the authorization flow.']);
         }
 
@@ -122,6 +141,10 @@ class OAuthAuthorizeController extends ActionController
         // Validate CSRF token.
         $submittedToken = $parsedBody['csrf_token'] ?? '';
         if (!is_string($submittedToken) || !$this->validateCsrfToken($submittedToken)) {
+            $this->logger->warning('OAuth grant rejected: invalid CSRF token', [
+                'account' => $account->getAccountIdentifier(),
+            ]);
+
             return $this->jsonResponse(403, ['error' => 'Invalid or expired CSRF token. Please restart the authorization flow.']);
         }
 
@@ -148,10 +171,20 @@ class OAuthAuthorizeController extends ActionController
         try {
             $authRequest = $server->validateAuthorizationRequest($psrRequest);
         } catch (OAuthServerException $e) {
+            $this->logger->warning('OAuth grant validation failed', [
+                'account' => $account->getAccountIdentifier(),
+                'error' => $e->getMessage(),
+                'hint' => $e->getHint(),
+            ]);
             throw new McpOAuthServerException('OAuth grant validation failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000021, $e);
         }
 
         $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
+
+        $this->logger->info($approved ? 'OAuth authorization granted' : 'OAuth authorization denied', [
+            'account' => $account->getAccountIdentifier(),
+            'client_id' => $authRequest->getClient()->getIdentifier(),
+        ]);
 
         return $this->completeAuthorization($server, $authRequest, $approved);
     }

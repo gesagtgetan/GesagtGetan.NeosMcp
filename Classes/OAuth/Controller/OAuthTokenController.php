@@ -60,8 +60,19 @@ class OAuthTokenController extends ActionController
             // body and clients receive Content-Length: 0.
             $response->getBody()->rewind();
 
+            $this->logger->info('OAuth token exchange succeeded', [
+                'client_id' => $parsedBody['client_id'] ?? 'unknown',
+                'grant_type' => $parsedBody['grant_type'] ?? 'unknown',
+            ]);
+
             return $response;
         } catch (OAuthServerException $e) {
+            $this->logger->warning('OAuth token exchange failed', [
+                'client_id' => $parsedBody['client_id'] ?? 'unknown',
+                'grant_type' => $parsedBody['grant_type'] ?? 'unknown',
+                'error' => $e->getMessage(),
+                'hint' => $e->getHint(),
+            ]);
             throw new McpOAuthServerException('OAuth token exchange failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000022, $e);
         }
     }
