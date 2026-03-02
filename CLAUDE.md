@@ -21,7 +21,7 @@ When working on this package, connect to a running instance of the MCP server (l
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
   3. **Media library search**: New tool `searchAssets(searchTerm?, tag?, mediaType?)` — searches the Neos Media library by filename, tags, and/or media type. Returns metadata (asset identifier, filename, dimensions, tags, caption) so the LLM can pick an existing image by metadata alone without downloading it. If the LLM is unsure whether an asset is a good fit, it can call `getAssetImage(assetIdentifier)` to retrieve the actual image as base64 and visually confirm. This enables workflows like "find a matching hero image for this page" using the assets already in the media library, without needing to upload anything new.
 - **Test tool descriptions with ChatGPT** — ChatGPT is familiar with the Neos 9 Content Repository. Connect it as an MCP client and gather feedback on whether the tool descriptions need further refinement for non-Claude models.
-- **Slim down CLAUDE.md** — This file is loaded into every conversation and costs tokens even when irrelevant. Move rarely-needed sections (OAuth architecture, testing gotchas) into separate files (e.g. `oauth.md`, `testing.md`) that are read on demand. Keep CLAUDE.md as a concise overview with pointers to the detail files.
+
 ## Commands
 
 All commands run from this directory (`DistributionPackages/GesagtGetan.NeosMcp/`):
@@ -51,24 +51,7 @@ Note: Use `php` (not `php8.4`) inside the Docker container — the container has
 - `NodeReadService` / `NodeWriteService` / `NodeTypeService` — domain logic, stateless
 - MCP tool parameters `properties` and `dimensionSpacePoint` are native objects (with `#[Schema]` attributes), not JSON strings.
 
-### OAuth 2.0 Authorization Server (`Classes/OAuth/`)
-
-Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization code grant with PKCE for Claude's remote MCP connector requirements.
-
-**Flow**: Claude discovers endpoints via `.well-known` metadata → user authorizes in browser (Neos session) → Claude exchanges auth code for JWT access token → JWT validated on each MCP request. Client is pre-registered via Settings.yaml (no Dynamic Client Registration).
-
-| Layer | Classes | Notes |
-|-------|---------|-------|
-| Entities | `OAuthClient`, `OAuthAuthCode`, `OAuthRefreshToken` (Flow entities), `OAuthAccessToken` (in-memory, JWT), `OAuthScope`, `OAuthUser` (value objects) | All use `#[Flow\Proxy(false)]`; DB entities have explicit `@ORM\Id` since Flow doesn't inject PK on unproxied classes |
-| Repositories | `OAuthClientRepository`, `OAuthAuthCodeRepository`, `OAuthRefreshTokenRepository` (Flow repos), `OAuthAccessTokenRepository` (no-op), `OAuthScopeRepository` (hardcoded "mcp") | Implement league's repository interfaces |
-| Service | `OAuthServerFactory` — creates league's `AuthorizationServer` + `ResourceServer`, auto-generates RSA keys | Keys stored in `Data/Persistent/GesagtGetan.NeosMcp/` |
-| Controllers | `OAuthMetadataController` (.well-known), `OAuthAuthorizeController` (consent), `OAuthTokenController` (token exchange) | All under `OAuth\Controller` subpackage |
-
-**Configuration** (`Settings.yaml`): `GesagtGetan.NeosMcp.oauth.enabled` (default false), `.issuer`, `.client.id`, `.client.secret`, `.client.knownRedirectUris`, `.corsAllowedOrigins`, `.accessTokenLifetime`.
-
-**Security** (`Policy.yaml`): `McpUser` role (extends `AbstractEditor`) required for authorization endpoint. All other OAuth endpoints are public (Everybody).
-
-**Staging basic auth** (`Web/.htaccess`): The proserverXXXX or getan.at domains require HTTP basic auth. OAuth/MCP routes are exempted via a `%{THE_REQUEST}` exclusion in the `<If>` condition so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/api/mcp` without basic auth credentials. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+OAuth architecture: see [`Documentation/oauth.md`](Documentation/oauth.md)
 
 ## When to Run Which Tests
 
@@ -78,18 +61,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 - **Validate tests catch failures** — after writing non-trivial tests, temporarily break the implementation and verify the tests actually fail. This catches false positives (tests that always pass regardless of implementation).
 - Functional tests need Docker. If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
 
-## Testing Gotchas
-
-- **ContentRepository is final** — cannot be mocked in PHPUnit 11+. We use `ContentRepositoryFacade` (an interface) instead. PHPUnit 10 still allows mocking final classes but with deprecation warnings.
-- **Do NOT use Flow's global `FunctionalTests.xml`** — it uses the PHPUnit 9 schema. Under PHPUnit 10, symlinked packages get discovered twice (each test runs twice). Use the package's own `phpunit-functional.xml.dist` instead.
-- **`phpunit-functional.xml.dist` excludes `AbstractFunctionalTest.php`** — PHPUnit 10 warns about abstract classes found during directory scanning and treats warnings as exit code 1.
-- **Functional tests need Doctrine migrations** — run `FLOW_CONTEXT=Testing ./flow doctrine:migrate` once to create Neos/Flow ORM tables (e.g. `neos_asset_usage`) that the CR's catch-up hooks depend on. The CR's own tables (event store, projections) are created automatically by `ContentRepositoryMaintainer::setUp()`.
-- **`Configuration/Testing/Settings.yaml` (host project) must set `path: ~`** — Flow's Testing defaults inherit `path: ':memory:'` from SQLite config. When both `driver` (pdo_mysql) AND `path` are non-null, `PersistenceManager::tearDown()` calls `$schemaTool->dropDatabase()` after every test, wiping all tables including the CR's event store.
-- **SQLite is not supported** — the CR's DoctrineDbal adapter uses MySQL-specific SQL (`INSERT IGNORE`).
-- **Node hierarchy in tests** — Neos enforces Sites → Site → Document. Tests must create a `Neos.Neos:Sites` root, then a `Testing.Site` (extends `Neos.Neos:Site`), then documents under the site.
-- **Dimension space points** — use `resolveDefaultDimensionSpacePoint()` from the facade, not `DimensionSpacePoint::createWithoutDimensions()`. The empty `[]` DSP is invalid when dimensions are configured.
-- **Run `doctrine:validate` after ORM entity changes** — `#[Flow\Proxy(false)]` prevents Flow from injecting the auto-generated primary key. DB entities with `Proxy(false)` need an explicit `@ORM\Id` property. `Proxy(false)` is required on entities with named constructor parameters because Flow's proxy constructor uses `func_get_args()` which breaks named argument calls.
-- **`Proxy(false)` entities must implement `PersistenceMagicInterface`** — Flow uses `DEFERRED_EXPLICIT` change tracking, so modified entities must be explicitly scheduled via `$repository->update()`. But `update()` rejects objects that don't implement `PersistenceMagicInterface` (normally introduced via AOP, which `Proxy(false)` bypasses). All `Proxy(false)` DB entities must explicitly `implements PersistenceMagicInterface`.
+Testing gotchas and dev dependencies: see [`Documentation/testing.md`](Documentation/testing.md)
 
 ## Coding Philosophy
 
@@ -121,12 +93,3 @@ Format: `PREFIX: Imperative summary` (no period, English, no em dashes).
 - `TEST` — test-only commits (prefer bundling with FEATURE/BUGFIX)
 - `UPGRADE` — composer/node dependency upgrades
 - `INITIAL` — first commit in a new repository only
-
-## Required Dev Dependencies (provided by host project)
-
-The package ships config files but not the tools. The host project must have:
-
-- `phpunit/phpunit` ^10.5
-- `phpstan/phpstan` with `phpstan-phpunit` and `phpstan-strict-rules`
-- `squizlabs/php_codesniffer`
-- `friendsofphp/php-cs-fixer`
