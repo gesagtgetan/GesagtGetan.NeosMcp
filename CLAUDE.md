@@ -6,7 +6,7 @@ Repo: `git@github.com:gesagtgetan/GesagtGetan.NeosMcp.git` (separate git repo in
 
 ## Using the MCP Server While Developing
 
-When working on this package, connect to a running instance of the MCP server (locally via stdio or remotely via HTTP) so you can query actual nodes, inspect workspace state, and verify tool behavior against real data. This lets you:
+When working on this package, connect to a running instance of the MCP server (locally via stdio or remotely via HTTP) so you can query actual nodes, inspect workspace state, and verify tool behavior against real data. (After local code changes, reconnect the MCP server — e.g. via `/mcp` in Claude Code — so the agent picks up the updated PHP files.) This lets you:
 
 - **Validate changes**: After modifying tool descriptions or schemas, call the tools to confirm they work as expected.
 - **Explore the content tree**: Use `findNodes`, `getChildren`, `getNodeTypeSchema` to understand how node types are structured in practice — tethered child nodes, content collections, property values.
