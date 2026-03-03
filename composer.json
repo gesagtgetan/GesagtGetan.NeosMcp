@@ -8,6 +8,14 @@
     "neos/neos": "^9.1",
     "php-mcp/server": "^3.3"
   },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.86",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpstan/phpstan-strict-rules": "^2.0",
+    "phpunit/phpunit": "^10.5",
+    "squizlabs/php_codesniffer": "^4.0"
+  },
   "autoload": {
     "psr-4": {
       "GesagtGetan\\NeosMcp\\": "Classes/"
