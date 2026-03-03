@@ -2,7 +2,64 @@
 
 MCP (Model Context Protocol) server for the Neos 9 Content Repository. Gives LLMs structured access to content nodes, node types, and workspaces.
 
-## Setup
+## HTTP Transport (OAuth)
+
+The package exposes the MCP server over HTTP at `POST /api/mcp`, secured with OAuth 2.0 (authorization code grant + PKCE). This is used by Claude.ai's remote MCP connector and ChatGPT.
+
+Each authenticated user has their own personal workspace (the same one they use in the Neos UI). Changes are isolated per user and can be reviewed/published independently. The JWT `sub` claim contains the Neos `UserId` (UUID), not the username — no credentials are leaked in tokens.
+
+### Setup
+
+1. Generate client credentials (or retrieve from password manager if they exist already)
+   ```bash
+   openssl rand -hex 16   # client_id
+   openssl rand -hex 32   # client_secret
+   ```
+2. Enter them in the Claude.ai or ChatGPT connector's settings along with the MCP endpoint URL: `https://your-domain.com/api/mcp`.
+3. Configure `Configuration/Production/Settings.yaml`:
+   ```yaml
+   GesagtGetan:
+     NeosMcp:
+       oauth:
+         enabled: true
+         issuer: 'https://your-domain.com'
+         client:
+           id: '<generated client_id>'
+           secret: '<generated client_secret>'
+   ```
+
+4. Run `./flow mcp:setup` to create the stdio workspace, register the OAuth client, and generate RSA keys:
+   ```bash
+   ./flow mcp:setup
+   ```
+
+   > ⚠️ Re-run `mcp:setup` whenever you change client credentials, redirect URIs, or any other `oauth.client.*` setting. The database is not updated automatically.
+
+5. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
+
+6. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+
+   For example, to bypass basic auth on staging domains, add this to `Web/.htaccess`:
+   ```apache
+   # Bypass basic auth for OAuth/MCP endpoints so Claude can reach them without credentials.
+   <If "(%{HTTP_HOST} =~ /\.proserver\.punkt\.de/ || %{HTTP_HOST} =~ /\.getan\.at/) && %{THE_REQUEST} !~ m#(GET|POST|OPTIONS) /(\.well-known/oauth-|oauth/token|api/mcp)#">
+   ```
+
+7. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
+   ```apache
+   # Forward the Authorization header to PHP — Apache mod_proxy_fcgi strips it otherwise.
+   RewriteCond %{HTTP:Authorization} .
+   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+   ```
+   This copies the `Authorization` header into the `HTTP_AUTHORIZATION` environment variable so PHP can read it. The `RewriteCond` ensures it only fires when the header is present.
+
+8. Connect the MCP server in Claude.ai or ChatGPT and test with a prompt like "List all node types for the connected Neos website" to verify the connection works end-to-end.
+
+## CLI Transport (stdio, optional)
+
+Optional transport for local development. Useful for testing tools directly or connecting a local coding agent (e.g. Claude Code) without going through OAuth.
+
+### Setup
 
 ```bash
 ./flow mcp:setup
@@ -10,9 +67,7 @@ MCP (Model Context Protocol) server for the Neos 9 Content Repository. Gives LLM
 
 This creates the shared stdio workspace, generates OAuth RSA keys, and registers the OAuth client in the database. Run it during initial setup and **after every configuration change** (credentials, redirect URIs, etc.) to apply the new values.
 
-> ⚠️ `mcp:setup` is not a one-time command. Any change to `GesagtGetan.NeosMcp.oauth.client.*` settings only takes effect after re-running `mcp:setup`.
-
-## Usage
+### Usage
 
 ```bash
 ./flow mcp:server
@@ -20,7 +75,7 @@ This creates the shared stdio workspace, generates OAuth RSA keys, and registers
 
 Flow command that reads MCP requests from stdin and writes responses to stdout. Requires the stdio workspace to exist — run `mcp:setup` first. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that need to see and manage the MCP workspace in the Neos UI.
 
-### Claude Code Configuration
+### Claude Code Configuration 
 
 Add to `.mcp.json` in your project root:
 
@@ -35,60 +90,9 @@ Add to `.mcp.json` in your project root:
 }
 ```
 
-## HTTP Transport (OAuth)
+Then run `/mcp` in Claude Code to connect the server.
 
-The package also exposes the MCP server over HTTP at `POST /api/mcp`, secured with OAuth 2.0 (authorization code grant + PKCE). This is used by Claude.ai's remote MCP connector and ChatGPT.
-
-Each authenticated user has their own personal workspace (the same one they use in the Neos UI). Changes are isolated per user and can be reviewed/published independently. The JWT `sub` claim contains the Neos `UserId` (UUID), not the username — no credentials are leaked in tokens.
-
-### Setup
-
-1. Generate client credentials:
-   ```bash
-   openssl rand -hex 16   # client_id
-   openssl rand -hex 32   # client_secret
-   ```
-
-2. Configure `Configuration/Production/Settings.yaml`:
-   ```yaml
-   GesagtGetan:
-     NeosMcp:
-       oauth:
-         enabled: true
-         issuer: 'https://your-domain.com'
-         client:
-           id: '<generated client_id>'
-           secret: '<generated client_secret>'
-   ```
-
-3. Run the database migration to create the OAuth tables:
-   ```bash
-   ./flow doctrine:migrate
-   ```
-
-4. Run `./flow mcp:setup` to create the stdio workspace, register the OAuth client, and generate RSA keys:
-   ```bash
-   ./flow mcp:setup
-   ```
-
-   > ⚠️ Re-run `mcp:setup` whenever you change client credentials, redirect URIs, or any other `oauth.client.*` setting. The database is not updated automatically.
-
-5. Store the same client_id and client_secret in your password manager. Enter them in the Claude.ai or ChatGPT connector's settings.
-
-6. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
-
-7. Add `Data/Persistent/GesagtGetan.NeosMcp/` to Deployer's `shared_dirs` so the auto-generated RSA keys persist across deployments.
-
-8. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. For example, the proserverXXXX or getan.at staging domains use a `%{THE_REQUEST}` exclusion in `Web/.htaccess` to bypass basic auth for these paths. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
-
-9. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
-   ```apache
-   RewriteCond %{HTTP:Authorization} .
-   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-   ```
-   This copies the `Authorization` header into the `HTTP_AUTHORIZATION` environment variable so PHP can read it. The `RewriteCond` ensures it only fires when the header is present.
-
-## Configuration
+### Optional Workspace Configuration
 
 In `Settings.yaml`:
 
@@ -105,23 +109,28 @@ GesagtGetan:
 ## Available Tools
 
 ### Read
-- `get_content_repository_info` - dimensions, workspaces, dimension space points
-- `list_node_types` - list non-abstract node types (optional filter)
-- `get_node_type_schema` - full schema for a node type
-- `find_nodes` - search by type/term
-- `get_node` - get a single node
-- `get_children` - list child nodes
+
+- `getContentRepositoryInfo` — dimensions, workspaces, dimension space points
+- `listNodeTypes` — list non-abstract node types (optional filter)
+- `getNodeTypeSchema` — full schema for a node type including properties, child nodes, and references
+- `findNodes` — search by type and/or search term
+- `getNode` — get a single node with all properties
+- `getChildren` — list child nodes, optionally filtered by type
+- `getWorkspaceStatus` — workspace status including pending change count
 
 ### Write (staged in workspace, requires human publishing)
-- `create_node` - create a node
-- `set_node_properties` - update properties
-- `move_node` - move to new parent
-- `remove_node` - remove a node
-- `find_and_replace_property` - batch find/replace in properties
+
+- `createNode` — create a node under a parent (ID auto-generated)
+- `setNodeProperties` — partial property update
+- `moveNode` — move to new parent
+- `hideNode` — hide a node from the public site (reversible)
+- `unhideNode` — unhide a previously hidden node
+- `findAndReplace` — batch find/replace across the content tree
+- `removeNode` — soft-delete a node (can be restored)
 
 ### Workspace
-- `get_workspace_status` - workspace status
-- `discard_workspace_changes` - discard all pending changes
+
+- `discardWorkspaceChanges` — discard all pending changes
 
 ## Workspace Rebase
 
@@ -174,24 +183,11 @@ just test-functional  # Run functional tests only
 
 ### Required Dev Dependencies
 
-The package ships config files but not the tools themselves. The host project must provide these as Composer dev dependencies:
-
-- `phpunit/phpunit` ^10.5
-- `phpstan/phpstan` with `phpstan-phpunit` and `phpstan-strict-rules`
-- `squizlabs/php_codesniffer`
-- `friendsofphp/php-cs-fixer`
-
-The configs (`phpcs.xml.dist`, `.php-cs-fixer.dist.php`, `phpstan.neon.dist`) use the same rules as this host project (PSR-12, @Symfony, PHPStan level max).
+The package ships config files but not the tools themselves. The host project must provide them as Composer dev dependencies — see `require-dev` in the host project's `composer.json` for the full list.
 
 ### Functional Test Prerequisites
 
-Functional tests need a MySQL/MariaDB test database (configured in the host project's `Configuration/Testing/Settings.yaml`). Before the first run, create the Neos/Flow schema:
-
-```bash
-FLOW_CONTEXT=Testing ./flow doctrine:migrate
-```
-
-This only needs to be done once (or after adding new Doctrine migrations). The Content Repository's own tables (event store, projections) are created automatically by the test base class.
+Functional tests need a MySQL/MariaDB test database (configured in the host project's `Configuration/Testing/Settings.yaml`). The Content Repository's own tables (event store, projections) are created automatically by the test base class.
 
 ### FAQ
 
