@@ -54,6 +54,9 @@ class McpCommandController extends CommandController
     #[Flow\InjectConfiguration(path: 'stdioBaseWorkspaceName', package: 'GesagtGetan.NeosMcp')]
     protected string $stdioBaseWorkspaceName;
 
+    #[Flow\InjectConfiguration(path: 'propertyTruncateLength', package: 'GesagtGetan.NeosMcp')]
+    protected ?int $propertyTruncateLength;
+
     /**
      * Set up the MCP stdio workspace with proper Neos metadata.
      *
@@ -118,7 +121,7 @@ class McpCommandController extends CommandController
         }
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName);
+        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->propertyTruncateLength);
 
         $container = new BasicContainer();
         $container->set(McpToolProvider::class, $toolProvider);

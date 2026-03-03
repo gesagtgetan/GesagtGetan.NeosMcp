@@ -394,6 +394,122 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertTrue($result['hidden']);
     }
 
+    // ── Property Truncation Tests ───────────────────────────────────
+
+    /**
+     * @test
+     */
+    public function findNodesTruncatesLongStringProperties(): void
+    {
+        $service = new NodeReadService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+            propertyTruncateLength: 30,
+        );
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $this->subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $node = $this->createStubNodeWithTypedProperty(
+            'long-node',
+            'text',
+            str_repeat('A', 100),
+            'string',
+        );
+        $this->subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
+
+        $result = $service->findNodes();
+
+        self::assertCount(1, $result);
+        $text = $result[0]['properties']['text'];
+        self::assertIsString($text);
+        self::assertSame(31, mb_strlen($text)); // 30 + "…"
+        self::assertStringEndsWith('…', $text);
+    }
+
+    /**
+     * @test
+     */
+    public function findNodesDoesNotTruncateShortStrings(): void
+    {
+        $service = new NodeReadService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+            propertyTruncateLength: 30,
+        );
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $this->subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $node = $this->createStubNodeWithTypedProperty(
+            'short-node',
+            'title',
+            'Short title',
+            'string',
+        );
+        $this->subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
+
+        $result = $service->findNodes();
+
+        self::assertCount(1, $result);
+        self::assertSame('Short title', $result[0]['properties']['title']);
+    }
+
+    /**
+     * @test
+     */
+    public function getNodeReturnsFullPropertyValues(): void
+    {
+        $longValue = str_repeat('A', 100);
+        $node = $this->createStubNodeWithTypedProperty(
+            'full-node',
+            'text',
+            $longValue,
+            'string',
+        );
+        $this->subgraph->method('findNodeById')->willReturn($node);
+
+        // Even with truncation configured, getNode returns full values
+        $service = new NodeReadService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+            propertyTruncateLength: 30,
+        );
+
+        $result = $service->getNode('full-node');
+
+        self::assertNotNull($result);
+        self::assertSame($longValue, $result['properties']['text']);
+    }
+
+    /**
+     * @test
+     */
+    public function getChildrenTruncatesLongStringProperties(): void
+    {
+        $service = new NodeReadService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+            propertyTruncateLength: 30,
+        );
+
+        $node = $this->createStubNodeWithTypedProperty(
+            'child-node',
+            'text',
+            str_repeat('B', 100),
+            'string',
+        );
+        $this->subgraph->method('findChildNodes')->willReturn(Nodes::fromArray([$node]));
+
+        $result = $service->getChildren('parent-id');
+
+        self::assertCount(1, $result);
+        $text = $result[0]['properties']['text'];
+        self::assertIsString($text);
+        self::assertSame(31, mb_strlen($text));
+        self::assertStringEndsWith('…', $text);
+    }
+
     // ── Stub Helpers ────────────────────────────────────────────────
 
     private function createStubNode(
