@@ -181,9 +181,9 @@ just test-unit        # Run unit tests only
 just test-functional  # Run functional tests only
 ```
 
-### Required Dev Dependencies
+### Dev Dependencies
 
-The package ships config files but not the tools themselves. The host project must provide them as Composer dev dependencies — see `require-dev` in the host project's `composer.json` for the full list.
+Dev tools are declared in `require-dev` in this package's `composer.json`.
 
 ### Functional Test Prerequisites
 
