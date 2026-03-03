@@ -66,6 +66,9 @@ class McpHttpController extends ActionController
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
 
+    #[Flow\InjectConfiguration(path: 'propertyTruncateLength', package: 'GesagtGetan.NeosMcp')]
+    protected ?int $propertyTruncateLength;
+
     public function preflightAction(): ResponseInterface
     {
         return new Response(204, $this->corsHeaders());
@@ -208,7 +211,7 @@ class McpHttpController extends ActionController
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName);
+        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->propertyTruncateLength);
 
         $container = new BasicContainer();
         $container->set(McpToolProvider::class, $toolProvider);

@@ -25,6 +25,7 @@ final readonly class NodeReadService
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
+        private ?int $propertyTruncateLength = null,
     ) {
     }
 
@@ -96,7 +97,7 @@ final readonly class NodeReadService
 
         $nodes = $subgraph->findDescendantNodes($entryNodeId, $filter);
 
-        return $this->serializeNodes($nodes);
+        return $this->serializeNodes($nodes, $this->propertyTruncateLength);
     }
 
     /**
@@ -138,7 +139,7 @@ final readonly class NodeReadService
             $filter,
         );
 
-        return $this->serializeNodes($nodes);
+        return $this->serializeNodes($nodes, $this->propertyTruncateLength);
     }
 
     /**
@@ -179,11 +180,11 @@ final readonly class NodeReadService
      *
      * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
-    private function serializeNodes(iterable $nodes): array
+    private function serializeNodes(iterable $nodes, ?int $truncateStringsAt = null): array
     {
         $result = [];
         foreach ($nodes as $node) {
-            $result[] = $this->serializeNode($node);
+            $result[] = $this->serializeNode($node, $truncateStringsAt);
         }
 
         return $result;
@@ -192,11 +193,11 @@ final readonly class NodeReadService
     /**
      * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}
      */
-    private function serializeNode(Node $node): array
+    private function serializeNode(Node $node, ?int $truncateStringsAt = null): array
     {
         $properties = [];
         foreach ($node->properties as $propertyName => $propertyValue) {
-            $properties[$propertyName] = $this->serializePropertyValue($propertyValue);
+            $properties[$propertyName] = $this->serializePropertyValue($propertyValue, $truncateStringsAt);
         }
 
         return [
@@ -208,10 +209,14 @@ final readonly class NodeReadService
         ];
     }
 
-    private function serializePropertyValue(mixed $value): mixed
+    private function serializePropertyValue(mixed $value, ?int $truncateStringsAt = null): mixed
     {
-        if ($value === null || is_scalar($value)) {
+        if ($value === null || is_bool($value) || is_int($value) || is_float($value)) {
             return $value;
+        }
+
+        if (is_string($value)) {
+            return self::truncateString($value, $truncateStringsAt);
         }
 
         if ($value instanceof \DateTimeInterface) {
@@ -223,7 +228,9 @@ final readonly class NodeReadService
         }
 
         if ($value instanceof \Stringable) {
-            return (string) $value;
+            $stringValue = (string) $value;
+
+            return self::truncateString($stringValue, $truncateStringsAt);
         }
 
         if (is_object($value)) {
@@ -231,9 +238,18 @@ final readonly class NodeReadService
         }
 
         if (is_array($value)) {
-            return array_map($this->serializePropertyValue(...), $value);
+            return array_map(fn (mixed $v): mixed => $this->serializePropertyValue($v, $truncateStringsAt), $value);
         }
 
         return null;
+    }
+
+    private static function truncateString(string $value, ?int $maxLength): string
+    {
+        if ($maxLength === null || mb_strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        return mb_substr($value, 0, $maxLength) . '…';
     }
 }

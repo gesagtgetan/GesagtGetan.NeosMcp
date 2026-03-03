@@ -31,9 +31,10 @@ final readonly class McpToolProvider
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
+        ?int $propertyTruncateLength = null,
     ) {
         $this->nodeTypeService = new NodeTypeService($this->contentRepository);
-        $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName);
+        $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName, $propertyTruncateLength);
         $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName);
     }
 

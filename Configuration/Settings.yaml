@@ -23,6 +23,9 @@ Neos:
 GesagtGetan:
   NeosMcp:
     contentRepositoryId: 'default'
+    # Max chars for string properties in multi-node responses (findNodes, getChildren).
+    # getNode always returns full values. Set to null to disable truncation.
+    propertyTruncateLength: 150
     stdioWorkspaceName: 'llm-review'
     stdioWorkspaceTitle: 'MCP Stdio'
     stdioWorkspaceDescription: 'Shared workspace for MCP stdio transport'
