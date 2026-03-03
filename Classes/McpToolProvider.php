@@ -392,23 +392,23 @@ final readonly class McpToolProvider
     }
 
     /**
-     * Find all nodes of a type where a property contains a search string and replace it. Useful for batch renaming.
+     * Find and replace a string across the content tree. Without filters, searches all node types and all string properties. Use nodeTypeName and/or propertyName to narrow scope.
      *
-     * @param string $nodeTypeName The node type to search in
-     * @param string $propertyName The property name to search
      * @param string $search The string to search for
      * @param string $replace The replacement string
+     * @param string|null $nodeTypeName Optional filter: restrict to this node type (e.g. 'Neos.Neos:Document'). Omit to search all node types.
+     * @param string|null $propertyName Optional filter: restrict to this property. Omit to search all string properties of each node.
      * @param bool $dryRun If true, only report matches without making changes (default: false)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, oldValue: mixed, newValue: string}>, dryRun: bool, _rebaseWarning?: string}
+     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool, _rebaseWarning?: string}
      */
     #[McpTool]
-    public function findAndReplaceProperty(
-        string $nodeTypeName,
-        string $propertyName,
+    public function findAndReplace(
         string $search,
         string $replace,
+        ?string $nodeTypeName = null,
+        ?string $propertyName = null,
         bool $dryRun = false,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
@@ -416,7 +416,7 @@ final readonly class McpToolProvider
         $warning = $this->rebaseWorkspace();
 
         return $this->withRebaseWarning(
-            $this->nodeWriteService->findAndReplaceProperty($nodeTypeName, $propertyName, $search, $replace, $dryRun, $dimensionSpacePoint),
+            $this->nodeWriteService->findAndReplace($search, $replace, $nodeTypeName, $propertyName, $dryRun, $dimensionSpacePoint),
             $warning,
         );
     }

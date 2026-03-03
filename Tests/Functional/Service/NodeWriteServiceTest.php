@@ -136,7 +136,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
     /**
      * @test
      */
-    public function findAndReplacePropertyUpdatesMatchingNodes(): void
+    public function findAndReplaceUpdatesMatchingNodes(): void
     {
         $this->nodeWriteService->createNode(
             self::$siteNodeId->value,
@@ -150,17 +150,19 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'No Match Here'],
         );
 
-        $result = $this->nodeWriteService->findAndReplaceProperty(
-            'GesagtGetan.NeosMcp:Testing.Document',
-            'title',
+        $result = $this->nodeWriteService->findAndReplace(
             'Hello',
             'Hi',
+            nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
+            propertyName: 'title',
         );
 
         self::assertSame(1, $result['affectedNodes']);
         self::assertFalse($result['dryRun']);
         self::assertSame('Hello World', $result['matches'][0]['oldValue']);
         self::assertSame('Hi World', $result['matches'][0]['newValue']);
+        self::assertSame('title', $result['matches'][0]['propertyName']);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
     }
 
     /**
@@ -234,7 +236,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
     /**
      * @test
      */
-    public function findAndReplacePropertyDryRunDoesNotModify(): void
+    public function findAndReplaceDryRunDoesNotModify(): void
     {
         $created = $this->nodeWriteService->createNode(
             self::$siteNodeId->value,
@@ -242,11 +244,11 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'Replace Me'],
         );
 
-        $result = $this->nodeWriteService->findAndReplaceProperty(
-            'GesagtGetan.NeosMcp:Testing.Document',
-            'title',
+        $result = $this->nodeWriteService->findAndReplace(
             'Replace',
             'Changed',
+            nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
+            propertyName: 'title',
             dryRun: true,
         );
 
@@ -256,6 +258,119 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $node = $this->nodeReadService->getNode($created['nodeAggregateId']);
         self::assertNotNull($node);
         self::assertSame('Replace Me', $node['properties']['title']);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplaceWithoutNodeTypeNameSearchesAllTypes(): void
+    {
+        $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Hello Document'],
+        );
+
+        // Create a document with a tethered "main" ContentCollection, then add a text content node.
+        $document = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Container'],
+        );
+        $documentChildren = $this->nodeReadService->getChildren($document['nodeAggregateId']);
+        $mainCollection = null;
+        foreach ($documentChildren as $child) {
+            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
+                $mainCollection = $child;
+                break;
+            }
+        }
+        self::assertNotNull($mainCollection);
+
+        $this->nodeWriteService->createNode(
+            $mainCollection['nodeAggregateId'],
+            'GesagtGetan.NeosMcp:Testing.Content.Text',
+            ['text' => 'Hello Content'],
+        );
+
+        $result = $this->nodeWriteService->findAndReplace(
+            'Hello',
+            'Hi',
+            propertyName: 'title',
+            dryRun: true,
+        );
+
+        // Only the Document matches — Content.Text has no "title" property
+        self::assertSame(1, $result['affectedNodes']);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplaceWithoutPropertyNameSearchesAllStringProperties(): void
+    {
+        $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Hello Title', 'text' => 'Hello Body'],
+        );
+
+        $result = $this->nodeWriteService->findAndReplace(
+            'Hello',
+            'Hi',
+            nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
+            dryRun: true,
+        );
+
+        self::assertSame(2, $result['affectedNodes']);
+
+        $propertyNames = array_column($result['matches'], 'propertyName');
+        self::assertContains('title', $propertyNames);
+        self::assertContains('text', $propertyNames);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplaceWithBothFiltersOmitted(): void
+    {
+        $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Foo Document'],
+        );
+
+        $document = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Container'],
+        );
+        $documentChildren = $this->nodeReadService->getChildren($document['nodeAggregateId']);
+        $mainCollection = null;
+        foreach ($documentChildren as $child) {
+            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
+                $mainCollection = $child;
+                break;
+            }
+        }
+        self::assertNotNull($mainCollection);
+
+        $this->nodeWriteService->createNode(
+            $mainCollection['nodeAggregateId'],
+            'GesagtGetan.NeosMcp:Testing.Content.Text',
+            ['text' => 'Foo Content'],
+        );
+
+        // No nodeTypeName, no propertyName — full wildcard
+        $result = $this->nodeWriteService->findAndReplace('Foo', 'Bar');
+
+        self::assertSame(2, $result['affectedNodes']);
+        self::assertFalse($result['dryRun']);
+
+        $nodeTypeNames = array_column($result['matches'], 'nodeTypeName');
+        self::assertContains('GesagtGetan.NeosMcp:Testing.Document', $nodeTypeNames);
+        self::assertContains('GesagtGetan.NeosMcp:Testing.Content.Text', $nodeTypeNames);
     }
 
     /**

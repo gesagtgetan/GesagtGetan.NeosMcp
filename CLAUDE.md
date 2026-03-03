@@ -14,7 +14,6 @@ When working on this package, connect to a running instance of the MCP server (l
 
 ## Open TODOs
 
-- **Simplified find-and-replace** — `findAndReplaceProperty` currently requires both `nodeTypeName` and `propertyName`. Make both optional so the LLM can do a simple "replace X with Y" across all node types and all string properties. Keep `nodeTypeName` and `propertyName` as optional filters to narrow scope when needed.
 - **Image support via MCP** — Three features:
   1. **Image reading**: New tool `getNodeImage(nodeAggregateId, propertyName)` — loads the Image asset from Neos, returns base64 image content block so the LLM can _see_ the image. Enables batch alt-text generation (`findNodes` where `alternativeText` is empty, loop, generate alt text, `setNodeProperties`).
   2. **Image upload**: New tool `uploadImage(url, filename?)` — fetches image from URL, imports via Flow `ResourceManager`, creates `Image` asset, returns `{assetIdentifier: "..."}`. The identifier can then be used in `createNode`/`setNodeProperties` for `ImageInterface` properties. URL-fetch approach avoids binary-in-JSON problems. Check whether the CR accepts raw asset UUIDs as property values or needs explicit conversion to `Image` objects.
