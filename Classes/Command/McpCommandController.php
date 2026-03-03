@@ -7,6 +7,7 @@ namespace GesagtGetan\NeosMcp\Command;
 use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
 use GesagtGetan\NeosMcp\McpToolProvider;
+use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
@@ -35,6 +36,9 @@ class McpCommandController extends CommandController
 
     #[Flow\Inject]
     protected SecurityContext $securityContext;
+
+    #[Flow\Inject]
+    protected OAuthClientRepository $clientRepository;
 
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
@@ -101,6 +105,11 @@ class McpCommandController extends CommandController
         $this->oauthServerFactory->ensureKeys();
         $this->oauthServerFactory->ensureClient();
         $this->outputLine('OAuth client and keys ensured.');
+
+        $totalClients = $this->clientRepository->countAll();
+        if ($totalClients > 1) {
+            $this->outputLine('⚠️  Warning: The database contains %d OAuth clients, but only 1 is configured. If these were not added deliberately, the extra clients may be stale and should be removed.', [$totalClients]);
+        }
     }
 
     /**
