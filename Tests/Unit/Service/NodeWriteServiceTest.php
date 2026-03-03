@@ -387,6 +387,67 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('Baz page', $result['matches'][1]['newValue']);
     }
 
+    /**
+     * @test
+     */
+    public function findAndReplaceTruncatesLongValues(): void
+    {
+        $service = new NodeWriteService(
+            $this->contentRepository,
+            WorkspaceName::fromString('test-workspace'),
+            propertyTruncateLength: 30,
+        );
+
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $longValue = str_repeat('A', 200) . 'Pellets' . str_repeat('B', 200);
+
+        $node = $this->createStubNodeWithProperties('node-1', 'Vendor:Content.Text', ['text' => $longValue]);
+        $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
+
+        $result = $service->findAndReplace('Pellets', 'Holzpellets', dryRun: true);
+
+        self::assertSame(1, $result['affectedNodes']);
+        $match = $result['matches'][0];
+
+        // Both old and new values are truncated to 30 + "…"
+        self::assertSame(31, mb_strlen($match['oldValue']));
+        self::assertStringEndsWith('…', $match['oldValue']);
+        self::assertSame(31, mb_strlen($match['newValue']));
+        self::assertStringEndsWith('…', $match['newValue']);
+    }
+
+    /**
+     * @test
+     */
+    public function findAndReplaceDoesNotTruncateWithoutSetting(): void
+    {
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+
+        $sitesRoot = $this->createStubNode('sites-root', 'Neos.Neos:Sites');
+        $subgraph->method('findRootNodeByType')->willReturn($sitesRoot);
+
+        $longValue = str_repeat('A', 300);
+
+        $node = $this->createStubNodeWithProperties('node-1', 'Vendor:Content.Text', ['text' => $longValue]);
+        $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
+
+        // Default subject has no truncation configured
+        $result = $this->subject->findAndReplace('A', 'B', dryRun: true);
+
+        self::assertSame(300, mb_strlen($result['matches'][0]['oldValue']));
+        self::assertSame(300, mb_strlen($result['matches'][0]['newValue']));
+    }
+
     private function createStubNode(string $aggregateId, string $nodeTypeName): Node
     {
         return Node::create(

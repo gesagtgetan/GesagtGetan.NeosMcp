@@ -35,7 +35,7 @@ final readonly class McpToolProvider
     ) {
         $this->nodeTypeService = new NodeTypeService($this->contentRepository);
         $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName, $propertyTruncateLength);
-        $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName);
+        $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName, $propertyTruncateLength);
     }
 
     /**

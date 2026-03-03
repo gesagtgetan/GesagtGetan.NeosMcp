@@ -29,6 +29,7 @@ final readonly class NodeWriteService
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
+        private ?int $propertyTruncateLength = null,
     ) {
     }
 
@@ -214,7 +215,7 @@ final readonly class NodeWriteService
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool}
+     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool} oldValue/newValue are context snippets (~80 chars around match), not full values
      */
     public function findAndReplace(
         string $search,
@@ -265,8 +266,8 @@ final readonly class NodeWriteService
                     'nodeAggregateId' => $node->aggregateId->value,
                     'nodeTypeName' => $node->nodeTypeName->value,
                     'propertyName' => $name,
-                    'oldValue' => $currentValue,
-                    'newValue' => $newValue,
+                    'oldValue' => self::truncateString($currentValue, $this->propertyTruncateLength),
+                    'newValue' => self::truncateString($newValue, $this->propertyTruncateLength),
                 ];
                 $updatedProperties[$name] = $newValue;
             }
@@ -288,6 +289,15 @@ final readonly class NodeWriteService
             'matches' => $matches,
             'dryRun' => $dryRun,
         ];
+    }
+
+    private static function truncateString(string $value, ?int $maxLength): string
+    {
+        if ($maxLength === null || mb_strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        return mb_substr($value, 0, $maxLength) . '…';
     }
 
     /**
