@@ -397,19 +397,14 @@ HTML;
                 $client = $this->clientRepository->getClientEntity($clientId);
 
                 if ($client !== null) {
-                    $registeredUris = $client->getRedirectUri();
-                    $uriList = is_array($registeredUris) ? implode(', ', $registeredUris) : $registeredUris;
-
                     return sprintf(
-                        'Redirect URI "%s" is not registered for client "%s". Registered URIs: [%s]. '
-                        . 'If you recently updated knownRedirectUris in Settings.yaml, re-run ./flow mcp:setup to sync them to the database.',
-                        $requestedRedirectUri,
+                        'The redirect URI provided for client "%s" does not match any registered URI.'
+                        . ' If you recently updated knownRedirectUris in Settings.yaml, re-run ./flow mcp:setup to sync them to the database.',
                         $clientId,
-                        $uriList,
                     );
                 }
 
-                return sprintf('Client "%s" not found in the database.', $clientId);
+                return sprintf('The provided client ID "%s" is not recognized by this server.', $clientId);
             }
         }
 
