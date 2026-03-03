@@ -211,20 +211,16 @@ final readonly class NodeWriteService
         ];
     }
 
-    // TODO: Make both nodeTypeName and propertyName optional so the LLM can do a simple
-    //       "replace X with Y" across all node types and all string properties. Keep both
-    //       as optional filters to narrow scope when needed.
-
     /**
      * @param array<string, string>|null $dimensionSpacePoint
      *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, oldValue: mixed, newValue: string}>, dryRun: bool}
+     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool}
      */
-    public function findAndReplaceProperty(
-        string $nodeTypeName,
-        string $propertyName,
+    public function findAndReplace(
         string $search,
         string $replace,
+        ?string $nodeTypeName = null,
+        ?string $propertyName = null,
         bool $dryRun = false,
         ?array $dimensionSpacePoint = null,
     ): array {
@@ -243,28 +239,44 @@ final readonly class NodeWriteService
 
         $matches = [];
         foreach ($nodes as $node) {
-            $currentValue = $node->getProperty($propertyName);
-            if (!is_string($currentValue)) {
+            $propertiesToReplace = [];
+
+            if ($propertyName !== null) {
+                $currentValue = $node->getProperty($propertyName);
+                if (is_string($currentValue) && str_contains($currentValue, $search)) {
+                    $propertiesToReplace[$propertyName] = $currentValue;
+                }
+            } else {
+                foreach ($node->properties as $name => $value) {
+                    if (is_string($value) && str_contains($value, $search)) {
+                        $propertiesToReplace[$name] = $value;
+                    }
+                }
+            }
+
+            if ($propertiesToReplace === []) {
                 continue;
             }
 
-            if (!str_contains($currentValue, $search)) {
-                continue;
+            $updatedProperties = [];
+            foreach ($propertiesToReplace as $name => $currentValue) {
+                $newValue = str_replace($search, $replace, $currentValue);
+                $matches[] = [
+                    'nodeAggregateId' => $node->aggregateId->value,
+                    'nodeTypeName' => $node->nodeTypeName->value,
+                    'propertyName' => $name,
+                    'oldValue' => $currentValue,
+                    'newValue' => $newValue,
+                ];
+                $updatedProperties[$name] = $newValue;
             }
-
-            $newValue = str_replace($search, $replace, $currentValue);
-            $matches[] = [
-                'nodeAggregateId' => $node->aggregateId->value,
-                'oldValue' => $currentValue,
-                'newValue' => $newValue,
-            ];
 
             if (!$dryRun) {
                 $command = SetNodeProperties::create(
                     $this->workspaceName,
                     $node->aggregateId,
                     $originDsp,
-                    PropertyValuesToWrite::fromArray([$propertyName => $newValue]),
+                    PropertyValuesToWrite::fromArray($updatedProperties),
                 );
 
                 $this->contentRepository->handle($command);
