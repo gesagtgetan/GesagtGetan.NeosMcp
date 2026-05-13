@@ -112,7 +112,7 @@ GesagtGetan:
 
 - `getContentRepositoryInfo` — dimensions, workspaces, dimension space points
 - `listNodeTypes` — list non-abstract node types (optional filter)
-- `getNodeTypeSchema` — full schema for a node type including properties, child nodes, and references
+- `getNodeTypeSchema` — full schema for a node type including properties, child nodes, and references. Per-property `label` and `description` are surfaced from each property's `ui.label` and `ui.help.message` in NodeTypes.yaml — author once for the Neos editor tooltip, get the same hint for the LLM.
 - `findNodes` — search by type and/or search term
 - `getNode` — get a single node with all properties
 - `getChildren` — list child nodes, optionally filtered by type
@@ -131,6 +131,33 @@ GesagtGetan:
 ### Workspace
 
 - `discardWorkspaceChanges` — discard all pending changes
+
+## Hints for the LLM (`ui.help.message`)
+
+LLMs occasionally pick the wrong property when two look similar. Leave a hint on the property in NodeTypes.yaml:
+
+```yaml
+'Vendor.Pkg:Mixin.SomeMixin':
+  properties:
+    titleOverride:
+      ui:
+        help:
+          message: >-
+            One sentence describing what the property is for and when (or
+            when NOT) to use it. Refer to other properties by their machine
+            name in `backticks`.
+```
+
+`getNodeTypeSchema` returns `ui.help.message` as the per-property `description` field, so the LLM reads it whenever it inspects the schema before a write. The same string already renders as a tooltip in the Neos editor backend, so editors and LLM share one source of truth — authoring guidance once benefits both.
+
+When to add a hint:
+- Two properties have similar names but different purposes (`title` / `titleOverride`, `image` / `fallbackImage`, etc.)
+- A property has a non-obvious format constraint or interaction with another property
+- A property looks tempting but is actually deprecated or only used by one rendering path
+
+When NOT to add a hint:
+- The property name is self-explanatory and matches the editor field label
+- Every property doesn't need a tooltip; only the genuinely confusing ones
 
 ## Workspace Rebase
 

@@ -1,0 +1,26 @@
+# Hints surfaced to MCP clients via `getNodeTypeSchema`.
+#
+# Each `ui.help.message` here is rendered as a tooltip in the Neos editor AND
+# returned as the per-property `description` in the schema response, so the
+# LLM sees the same guidance an editor would. Messages stay in the editor's
+# language (German for this project) so backend users see consistent copy.
+#
+# As a rule of thumb, hints belong in the package that owns the node type or
+# mixin. This file is the exception: it carries overrides for core packages
+# (e.g. Neos.Seo) which we don't ship ourselves but want to clarify for the
+# LLM regardless. Hints for site- or package-specific properties belong in
+# those packages, not here.
+
+'Neos.Seo:TitleTagMixin':
+  abstract: true
+  properties:
+    titleOverride:
+      ui:
+        help:
+          message: >-
+            Optionaler SEO-Titel für das HTML-`<title>`-Tag (Browser-Tab,
+            Suchergebnisse, Social Shares). Nur setzen, wenn der SEO-Titel
+            sich vom Seiten-Titel unterscheiden soll. Ansonsten leer lassen,
+            dann übernimmt Neos automatisch die Property `title`. Achtung:
+            SEO-relevante Titel niemals in `title` schreiben — das macht
+            den Seitenbaum im Neos-Backend unlesbar.
