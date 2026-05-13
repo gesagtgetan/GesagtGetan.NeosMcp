@@ -62,6 +62,15 @@ class McpNodeToolProviderTest extends UnitTestCase
     }
 
     #[Test]
+    public function reorderNodeRejectsMissingPlacement(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1779800000);
+
+        $this->subject->reorderNode('node-id');
+    }
+
+    #[Test]
     public function setNodePropertiesRejectsEmptyProperties(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
