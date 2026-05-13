@@ -11,6 +11,7 @@ use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\NullLogger;
 
@@ -35,9 +36,7 @@ class OAuthTokenControllerTest extends UnitTestCase
         $this->inject($this->subject, 'logger', new NullLogger());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function tokenReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
@@ -50,9 +49,7 @@ class OAuthTokenControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function tokenDelegatesToLeagueOnSuccess(): void
     {
         // Simulate league's behavior: it writes to the body stream via write(),
@@ -74,9 +71,7 @@ class OAuthTokenControllerTest extends UnitTestCase
         self::assertSame('{"access_token":"jwt"}', $response->getBody()->getContents());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function tokenReturnsLeagueErrorOnFailure(): void
     {
         $this->authorizationServer->method('respondToAccessTokenRequest')

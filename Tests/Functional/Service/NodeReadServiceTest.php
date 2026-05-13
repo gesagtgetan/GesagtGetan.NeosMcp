@@ -15,6 +15,7 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
+use PHPUnit\Framework\Attributes\Test;
 
 class NodeReadServiceTest extends AbstractFunctionalTest
 {
@@ -29,9 +30,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getContentRepositoryInfoReturnsValidStructure(): void
     {
         $result = $this->nodeReadService->getContentRepositoryInfo();
@@ -45,9 +44,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertNotEmpty($result['workspaces']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesReturnsCreatedNode(): void
     {
         $this->createTestDocument('test-doc-1', 'Test Page');
@@ -62,9 +59,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertSame('Test Page', $result[0]['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesFiltersByNodeType(): void
     {
         $this->createTestDocument('doc-1', 'Page One');
@@ -77,9 +72,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertSame('doc-1', $result[0]['nodeAggregateId']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsNodeById(): void
     {
         $this->createTestDocument('my-doc', 'My Document', 'Some text content');
@@ -93,9 +86,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertSame('Some text content', $result['properties']['text']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsNullForNonExistentNode(): void
     {
         $result = $this->nodeReadService->getNode('does-not-exist');
@@ -103,9 +94,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertNull($result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getChildrenReturnsChildNodes(): void
     {
         $this->createTestDocument('parent-doc', 'Parent');
@@ -123,9 +112,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertContains('child-2', $ids);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReadsContentTextWithinDocumentCollection(): void
     {
         $this->createTestDocument('doc-with-content', 'Document with content');
@@ -162,9 +149,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
 
     // ── Soft-Removal (Trash) Visibility Tests ─────────────────────
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesExcludesSoftRemovedNodesByDefault(): void
     {
         $this->createTestDocument('visible-doc', 'Visible');
@@ -180,9 +165,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertNotContains('removed-doc', $ids, 'Soft-removed node must not appear in default findNodes results');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesIncludesSoftRemovedNodesWhenRequested(): void
     {
         $this->createTestDocument('visible-doc', 'Visible');
@@ -199,9 +182,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertContains('removed-doc', $ids, 'Soft-removed node must appear when includeRemoved is true');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsNullForSoftRemovedNodeByDefault(): void
     {
         $this->createTestDocument('removed-doc', 'Removed');
@@ -213,9 +194,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsSoftRemovedNodeWhenRequested(): void
     {
         $this->createTestDocument('removed-doc', 'Removed');
@@ -227,9 +206,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertSame('removed-doc', $result['nodeAggregateId']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getChildrenExcludesSoftRemovedChildrenByDefault(): void
     {
         $this->createTestDocument('child-visible', 'Visible Child');
@@ -246,9 +223,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertNotContains('child-removed', $ids, 'Soft-removed child must not appear in default getChildren results');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getChildrenIncludesSoftRemovedChildrenWhenRequested(): void
     {
         $this->createTestDocument('child-visible', 'Visible Child');

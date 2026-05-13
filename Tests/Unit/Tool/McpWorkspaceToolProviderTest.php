@@ -17,6 +17,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class McpWorkspaceToolProviderTest extends UnitTestCase
@@ -50,9 +51,7 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getWorkspaceStatusReturnsNotFoundForMissingWorkspace(): void
     {
         $this->contentRepository->method('findWorkspaceByName')->willReturn(null);
@@ -64,9 +63,7 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
         self::assertFalse($result['hasPendingChanges']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getWorkspaceStatusReturnsWorkspaceInfo(): void
     {
         $workspace = Workspace::create(
@@ -86,9 +83,7 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
         self::assertTrue($result['hasPendingChanges']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function discardWorkspaceChangesCallsHandle(): void
     {
         $this->handledCommands = [];

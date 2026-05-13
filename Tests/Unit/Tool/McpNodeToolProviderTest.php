@@ -19,6 +19,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class McpNodeToolProviderTest extends UnitTestCase
@@ -60,9 +61,7 @@ class McpNodeToolProviderTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setNodePropertiesRejectsEmptyProperties(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -76,9 +75,7 @@ class McpNodeToolProviderTest extends UnitTestCase
         $this->subject->setNodeProperties('node-id', []);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function listNodeTypesReturnsResultsForEmptyConfig(): void
     {
         $result = $this->subject->listNodeTypes();
@@ -88,9 +85,7 @@ class McpNodeToolProviderTest extends UnitTestCase
         self::assertContains('Neos.ContentRepository:Root', $names);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesHandlesNullDimensionSpacePoint(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -104,9 +99,7 @@ class McpNodeToolProviderTest extends UnitTestCase
         self::assertSame([], $result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesAcceptsDimensionSpacePointArray(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);

@@ -9,12 +9,11 @@ use GesagtGetan\NeosMcp\Tool\McpToolReflector;
 use GesagtGetan\NeosMcp\Tool\McpWorkspaceToolProvider;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\Test;
 
 class McpToolReflectorTest extends UnitTestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function forwardsAttributeDescriptionsAndAnnotationsFromNodeProvider(): void
     {
         $builder = Server::make()->withServerInfo('test', '0.0.0');
@@ -37,9 +36,7 @@ class McpToolReflectorTest extends UnitTestCase
         self::assertTrue($tools['removeNode']->annotations->destructiveHint);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function forwardsAttributesFromWorkspaceProvider(): void
     {
         $builder = Server::make()->withServerInfo('test', '0.0.0');

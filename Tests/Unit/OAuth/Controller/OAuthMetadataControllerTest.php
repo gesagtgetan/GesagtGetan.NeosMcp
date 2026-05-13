@@ -7,6 +7,7 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Controller;
 use GesagtGetan\NeosMcp\OAuth\Controller\OAuthMetadataController;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ResponseInterface;
 
@@ -24,9 +25,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function protectedResourceReturns503WhenDisabled(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(false);
@@ -36,9 +35,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function protectedResourceReturnsCorrectMetadata(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
@@ -56,9 +53,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         self::assertSame(['header'], $body['bearer_methods_supported']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizationServerReturns503WhenDisabled(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(false);
@@ -68,9 +63,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizationServerReturnsCorrectMetadata(): void
     {
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);

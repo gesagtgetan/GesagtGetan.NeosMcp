@@ -10,6 +10,7 @@ use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class WorkspaceRebaserTest extends UnitTestCase
@@ -24,9 +25,7 @@ class WorkspaceRebaserTest extends UnitTestCase
         $this->subject = new WorkspaceRebaser($this->contentRepository, WorkspaceName::fromString('test-ws'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function rebaseReturnsNullWhenSuccessful(): void
     {
         $this->contentRepository->expects(self::once())->method('handle')->with(self::isInstanceOf(RebaseWorkspace::class));
@@ -34,9 +33,7 @@ class WorkspaceRebaserTest extends UnitTestCase
         self::assertNull($this->subject->rebase());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function rebaseReturnsNullForAlreadyUpToDateWorkspace(): void
     {
         $this->contentRepository->method('handle')->willThrowException(new WorkspaceCommandSkipped());
@@ -44,9 +41,7 @@ class WorkspaceRebaserTest extends UnitTestCase
         self::assertNull($this->subject->rebase());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function withWarningAddsKeyWhenWarningProvided(): void
     {
         $result = $this->subject->withWarning(['x' => 1], 'something went wrong');
@@ -54,9 +49,7 @@ class WorkspaceRebaserTest extends UnitTestCase
         self::assertSame(['x' => 1, '_rebaseWarning' => 'something went wrong'], $result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function withWarningReturnsResultUnchangedWhenWarningIsNull(): void
     {
         $result = $this->subject->withWarning(['x' => 1], null);

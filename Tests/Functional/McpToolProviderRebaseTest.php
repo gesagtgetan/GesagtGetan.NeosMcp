@@ -14,6 +14,7 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Tests that the node tool provider rebases the workspace before tool calls.
@@ -39,11 +40,10 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
     }
 
     /**
-     * @test
-     *
      * Verifies that a tool call triggers a workspace rebase, picking up live
      * changes that happened after the workspace was created.
      */
+    #[Test]
     public function toolCallRebasesWorkspaceToReflectLiveChanges(): void
     {
         // Create a node in the MCP workspace and publish it to live.
@@ -73,11 +73,10 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
     }
 
     /**
-     * @test
-     *
      * When the workspace has unpublished changes that conflict with live, the
      * rebase fails and the tool response must include a _rebaseWarning.
      */
+    #[Test]
     public function toolCallReturnsRebaseWarningOnConflict(): void
     {
         // Create a node in live.

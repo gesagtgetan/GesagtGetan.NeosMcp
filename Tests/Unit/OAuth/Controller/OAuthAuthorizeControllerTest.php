@@ -19,6 +19,7 @@ use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Domain\Model\User;
 use Neos\Neos\Domain\Model\UserId;
 use Neos\Neos\Domain\Service\UserService;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\NullLogger;
 
@@ -58,9 +59,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->inject($this->subject, 'logger', new NullLogger());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizeReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
@@ -73,9 +72,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizeReturns401WithoutSession(): void
     {
         $this->securityContext->method('getAccount')->willReturn(null);
@@ -88,9 +85,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertStringContainsString('Neos Login Required', (string) $response->getBody());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizeShowsConsentScreenWithCsrfTokenAndSecurityHeaders(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -131,9 +126,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertStringContainsString('name="csrf_token"', $html);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizeAutoGrantsForConfiguredClient(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -163,9 +156,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertStringContainsString('style="display:none"', $html);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantReturns503WhenDisabled(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
@@ -178,9 +169,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantReturns401WithoutSession(): void
     {
         $this->securityContext->method('getAccount')->willReturn(null);
@@ -191,9 +180,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(401, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantRejects403WithoutCsrfToken(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -209,9 +196,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertStringContainsString('CSRF token', $body['error']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantRejects403WithWrongCsrfToken(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -223,9 +208,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(403, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantPassesApprovalFlagToLeague(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -253,9 +236,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(302, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function grantPassesDenialFlagToLeague(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
@@ -283,9 +264,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(302, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function authorizeForwardsLeagueValidationError(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
