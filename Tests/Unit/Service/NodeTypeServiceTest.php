@@ -144,6 +144,54 @@ class NodeTypeServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function getNodeTypeSchemaIncludesPropertyValidation(): void
+    {
+        $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
+            'Vendor:Document.Page' => [
+                'properties' => [
+                    'titleOverride' => [
+                        'type' => 'string',
+                        'validation' => [
+                            'Neos.Neos/Validation/StringLengthValidator' => ['maximum' => 60],
+                            'Neos.Neos/Validation/NotEmptyValidator' => [],
+                        ],
+                    ],
+                    'price' => [
+                        'type' => 'integer',
+                        'validation' => [
+                            'Neos.Neos/Validation/NumberRangeValidator' => ['minimum' => 0, 'maximum' => 999],
+                        ],
+                    ],
+                    'noValidation' => ['type' => 'string'],
+                    'wholeBlockDisabled' => ['type' => 'string', 'validation' => null],
+                    'singleValidatorDisabled' => [
+                        'type' => 'string',
+                        'validation' => [
+                            'Neos.Neos/Validation/StringLengthValidator' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->contentRepository->method('getNodeTypeManager')->willReturn($nodeTypeManager);
+
+        $result = $this->subject->getNodeTypeSchema('Vendor:Document.Page');
+
+        self::assertSame(
+            ['StringLength' => ['maximum' => 60], 'NotEmpty' => []],
+            $result['properties']['titleOverride']['validation'] ?? null,
+        );
+        self::assertSame(
+            ['NumberRange' => ['minimum' => 0, 'maximum' => 999]],
+            $result['properties']['price']['validation'] ?? null,
+        );
+        self::assertArrayNotHasKey('validation', $result['properties']['noValidation']);
+        self::assertArrayNotHasKey('validation', $result['properties']['wholeBlockDisabled']);
+        self::assertArrayNotHasKey('validation', $result['properties']['singleValidatorDisabled']);
+    }
+
+    #[Test]
     public function getNodeTypeSchemaThrowsForUnknownType(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([]);
