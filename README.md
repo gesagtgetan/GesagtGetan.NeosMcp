@@ -155,19 +155,64 @@ The common case (no-op) adds ~5 ms per tool call. The empty-but-outdated case (t
 
 ## Architecture
 
-Production code uses a `ContentRepositoryFacade` interface (instead of the final `ContentRepository` class directly) to allow unit testing via mocks. `DefaultContentRepositoryFacade` wraps the real CR and is wired up in `McpCommandController`.
+Production code uses a `ContentRepositoryFacade` interface (instead of the final `ContentRepository` class directly) to allow unit testing via mocks. `DefaultContentRepositoryFacade` wraps the real CR.
+
+Tools are contributed through `Tool\McpToolProvider` implementations. The `Tool\McpToolProviderRegistry` Flow singleton uses Flow's `ReflectionService` to auto-discover every implementation in the application and dispatches each one per request — there is no Settings.yaml registry to maintain. Both controllers (`Command\McpCommandController`, `Controller\McpHttpController`) call `registerAll()` when building their server.
 
 ```
 Classes/
-  Command/McpCommandController.php   # CLI entry point, creates facade + tool provider
+  Command/McpCommandController.php   # CLI entry point (stdio transport, setup command)
+  Controller/McpHttpController.php   # HTTP transport (OAuth-secured)
   ContentRepositoryFacade.php        # Interface for testability
   DefaultContentRepositoryFacade.php # Wraps real ContentRepository
-  McpToolProvider.php                # Dispatches MCP tool calls to services
   Service/
     NodeReadService.php              # Read operations (find, get, children)
     NodeTypeService.php              # Node type listing and schema
     NodeWriteService.php             # Write operations (create, update, move, remove)
+  Tool/
+    McpToolProvider.php              # Interface — implement to contribute tools
+    McpToolProviderRegistry.php      # Auto-discovery + dispatch (Flow singleton)
+    McpRequestContext.php            # Per-request DTO handed to every provider
+    McpToolReflector.php             # Scans #[McpTool] methods on a handler
+    WorkspaceRebaser.php             # Pre-call rebase + conflict warning
+    McpNodeToolProvider.php          # Built-in: node tools (read/write/type)
+    McpWorkspaceToolProvider.php     # Built-in: workspace tools
 ```
+
+## Extending with Custom Tools
+
+Any Flow package can contribute MCP tools by implementing `GesagtGetan\NeosMcp\Tool\McpToolProvider`. The registry discovers implementations automatically through `ReflectionService`, so there is nothing to register in `Settings.yaml`.
+
+A minimal stateless provider — for a tool that doesn't need workspace or CR access — keeps the `#[McpTool]` methods on itself:
+
+```php
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
+use GesagtGetan\NeosMcp\Tool\McpToolProvider;
+use GesagtGetan\NeosMcp\Tool\McpToolReflector;
+use Neos\Flow\Annotations as Flow;
+use PhpMcp\Server\Attributes\McpTool;
+use PhpMcp\Server\Defaults\BasicContainer;
+use PhpMcp\Server\ServerBuilder;
+
+#[Flow\Scope('singleton')]
+final readonly class EchoToolProvider implements McpToolProvider
+{
+    public function registerTools(ServerBuilder $builder, BasicContainer $container, McpRequestContext $context): ServerBuilder
+    {
+        $container->set(self::class, $this);
+
+        return McpToolReflector::register($builder, self::class);
+    }
+
+    #[McpTool(description: 'Echo a string back')]
+    public function echo(string $message): string
+    {
+        return $message;
+    }
+}
+```
+
+If your tools need per-request workspace/CR state, build a small handler from `McpRequestContext` inside `registerTools()` (the way `McpNodeToolProvider` does) — singletons should not hold per-request state directly.
 
 ## Development
 

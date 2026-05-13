@@ -50,10 +50,17 @@ Note: Use `php` (not `php8.4`) inside the Docker container — the container has
 
 - `ContentRepositoryFacade` — interface over the final `ContentRepository` class, exists solely for unit-testability via mocks
 - `DefaultContentRepositoryFacade` — production implementation, thin pass-through to real CR
-- `McpToolProvider` — MCP tool methods with `#[McpTool]` attributes, delegates to service classes. Reflection-based auto-registration in McpCommandController (adding a tool = adding a method).
-- `McpCommandController` — CLI entry points: `./flow mcp:server` (stdio transport) and `./flow mcp:setup` (creates shared workspace with Neos UI metadata via `WorkspaceService::createSharedWorkspace`)
-- `NodeReadService` / `NodeWriteService` / `NodeTypeService` — domain logic, stateless
+- `Tool\McpToolProvider` — interface implemented by any class that contributes MCP tools. Built-in implementations live in `Tool/`; third-party Flow packages can ship their own.
+- `Tool\McpToolProviderRegistry` — Flow singleton. Uses `ReflectionService` to auto-discover every `McpToolProvider` implementation in the application; controllers call `registerAll()` per request. No Settings.yaml needed.
+- `Tool\McpNodeToolProvider` — built-in node tools (read, write, node-type). Prototype-scoped; `registerTools()` initializes its service dependencies from the request context, then the `#[McpTool]` methods on the same instance handle the calls.
+- `Tool\McpWorkspaceToolProvider` — built-in workspace tools (status, discard). Same lifecycle as the node provider.
+- `Tool\WorkspaceRebaser` — extracted helper; rebases before every tool call and produces the `_rebaseWarning` payload on conflict.
+- `Tool\McpToolReflector` — static helper that scans a handler class for `#[McpTool]` methods and forwards them to `ServerBuilder::withTool()`. Use it from any provider.
+- `McpCommandController` — CLI entry points: `./flow mcp:server` (stdio transport) and `./flow mcp:setup` (creates shared workspace with Neos UI metadata via `WorkspaceService::createSharedWorkspace`).
+- `NodeReadService` / `NodeWriteService` / `NodeTypeService` — domain logic, stateless.
 - MCP tool parameters `properties` and `dimensionSpacePoint` are native objects (with `#[Schema]` attributes), not JSON strings.
+
+To contribute MCP tools from another Flow package, implement `GesagtGetan\NeosMcp\Tool\McpToolProvider`. The registry will discover and dispatch it automatically — see README "Extending with custom tools".
 
 OAuth architecture: see [`Documentation/oauth.md`](Documentation/oauth.md)
 

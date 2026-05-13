@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace GesagtGetan\NeosMcp\Tests\Unit;
+namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
-use GesagtGetan\NeosMcp\McpToolProvider;
+use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use Neos\ContentRepository\Core\Dimension\ContentDimensionSourceInterface;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
@@ -14,34 +15,29 @@ use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
-use Neos\ContentRepository\Core\SharedModel\Workspace\ContentStreamId;
-use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
+use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 
-class McpToolProviderTest extends UnitTestCase
+class McpNodeToolProviderTest extends UnitTestCase
 {
-    private McpToolProvider $subject;
+    private McpNodeToolProvider $subject;
     private ContentRepositoryFacade&MockObject $contentRepository;
-
-    /** @var list<object> */
-    private array $handledCommands = [];
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
-        $this->handledCommands = [];
 
+        // Rebase commands trigger WorkspaceCommandSkipped (the "already up-to-date"
+        // happy path); other commands are ignored — these tests don't exercise writes.
         $this->contentRepository->method('handle')->willReturnCallback(
-            function (object $command): void {
+            static function (object $command): void {
                 if ($command instanceof RebaseWorkspace) {
                     throw new WorkspaceCommandSkipped();
                 }
-                $this->handledCommands[] = $command;
             },
         );
 
@@ -56,9 +52,11 @@ class McpToolProviderTest extends UnitTestCase
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $this->contentRepository->method('getContentDimensionSource')->willReturn($dimensionSource);
 
-        $this->subject = new McpToolProvider(
-            $this->contentRepository,
-            WorkspaceName::fromString('test-workspace'),
+        $this->subject = new McpNodeToolProvider();
+        $this->subject->registerTools(
+            Server::make()->withServerInfo('test', '0.0.0'),
+            new BasicContainer(),
+            new McpRequestContext($this->contentRepository, WorkspaceName::fromString('test-workspace')),
         );
     }
 
@@ -76,54 +74,6 @@ class McpToolProviderTest extends UnitTestCase
         $this->expectExceptionCode(1770740199);
 
         $this->subject->setNodeProperties('node-id', []);
-    }
-
-    /**
-     * @test
-     */
-    public function getWorkspaceStatusReturnsNotFoundForMissingWorkspace(): void
-    {
-        $this->contentRepository->method('findWorkspaceByName')->willReturn(null);
-
-        $result = $this->subject->getWorkspaceStatus();
-
-        self::assertSame('test-workspace', $result['workspaceName']);
-        self::assertSame('not_found', $result['status']);
-        self::assertFalse($result['hasPendingChanges']);
-    }
-
-    /**
-     * @test
-     */
-    public function getWorkspaceStatusReturnsWorkspaceInfo(): void
-    {
-        $workspace = Workspace::create(
-            WorkspaceName::fromString('test-workspace'),
-            WorkspaceName::fromString('live'),
-            ContentStreamId::fromString('cs-1'),
-            WorkspaceStatus::UP_TO_DATE,
-            true,
-        );
-        $this->contentRepository->method('findWorkspaceByName')->willReturn($workspace);
-
-        $result = $this->subject->getWorkspaceStatus();
-
-        self::assertSame('test-workspace', $result['workspaceName']);
-        self::assertSame('live', $result['baseWorkspace']);
-        self::assertSame('UP_TO_DATE', $result['status']);
-        self::assertTrue($result['hasPendingChanges']);
-    }
-
-    /**
-     * @test
-     */
-    public function discardWorkspaceChangesCallsHandle(): void
-    {
-        $this->handledCommands = [];
-
-        $this->subject->discardWorkspaceChanges();
-
-        self::assertCount(1, $this->handledCommands);
     }
 
     /**
@@ -152,33 +102,6 @@ class McpToolProviderTest extends UnitTestCase
         $result = $this->subject->findNodes(dimensionSpacePoint: null);
 
         self::assertSame([], $result);
-    }
-
-    /**
-     * @test
-     */
-    public function registerToolsForwardsAttributeDescriptionsAndAnnotations(): void
-    {
-        $builder = Server::make()->withServerInfo('test', '0.0.0');
-        $builder = McpToolProvider::registerTools($builder);
-        $server = $builder->build();
-
-        $tools = $server->getRegistry()->getTools();
-
-        // createNode has an explicit description in #[McpTool(description: ...)]
-        self::assertArrayHasKey('createNode', $tools);
-        self::assertNotNull($tools['createNode']->description, 'createNode description must be forwarded from attribute');
-        self::assertStringContainsString('Create a new node', $tools['createNode']->description);
-
-        // getContentRepositoryInfo has readOnlyHint: true in #[McpTool(annotations: ...)]
-        self::assertArrayHasKey('getContentRepositoryInfo', $tools);
-        self::assertNotNull($tools['getContentRepositoryInfo']->annotations, 'annotations must be forwarded from attribute');
-        self::assertTrue($tools['getContentRepositoryInfo']->annotations->readOnlyHint);
-
-        // removeNode has destructiveHint: true
-        self::assertArrayHasKey('removeNode', $tools);
-        self::assertNotNull($tools['removeNode']->annotations);
-        self::assertTrue($tools['removeNode']->annotations->destructiveHint);
     }
 
     /**

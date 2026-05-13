@@ -6,9 +6,11 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\Controller;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Controller\McpHttpController;
-use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GesagtGetan\NeosMcp\Security\McpUserContext;
+use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
+use GesagtGetan\NeosMcp\Tool\McpWorkspaceToolProvider;
 use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
@@ -224,16 +226,16 @@ class McpHttpControllerTest extends UnitTestCase
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $facade->method('getContentDimensionSource')->willReturn($dimensionSource);
 
-        $toolProvider = new McpToolProvider($facade, WorkspaceName::fromString('test-workspace'));
+        $context = new McpRequestContext($facade, WorkspaceName::fromString('test-workspace'));
 
         $container = new BasicContainer();
-        $container->set(McpToolProvider::class, $toolProvider);
 
         $builder = Server::make()
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
 
-        $builder = McpToolProvider::registerTools($builder);
+        $builder = (new McpNodeToolProvider())->registerTools($builder, $container, $context);
+        $builder = (new McpWorkspaceToolProvider())->registerTools($builder, $container, $context);
 
         $server = $builder->build();
 
