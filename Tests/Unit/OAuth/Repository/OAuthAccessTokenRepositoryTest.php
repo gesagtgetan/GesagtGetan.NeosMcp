@@ -8,6 +8,7 @@ use GesagtGetan\NeosMcp\OAuth\Entity\OAuthAccessToken;
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthScope;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthAccessTokenRepository;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class OAuthAccessTokenRepositoryTest extends TestCase
@@ -19,9 +20,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
         $this->subject = new OAuthAccessTokenRepository();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNewTokenAssemblesTokenWithClientAndScopes(): void
     {
         $client = $this->createMock(ClientEntityInterface::class);
@@ -38,9 +37,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
         self::assertSame('mcp', $token->getScopes()[0]->getIdentifier());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNewTokenHandlesNullUserIdentifier(): void
     {
         $client = $this->createMock(ClientEntityInterface::class);
@@ -50,9 +47,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
         self::assertNull($token->getUserIdentifier());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function persistIsNoOp(): void
     {
         $token = $this->createMock(OAuthAccessToken::class);
@@ -62,9 +57,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function revokeIsNoOp(): void
     {
         // Should not throw.
@@ -72,9 +65,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function accessTokenIsNeverRevoked(): void
     {
         self::assertFalse($this->subject->isAccessTokenRevoked('any-token-id'));

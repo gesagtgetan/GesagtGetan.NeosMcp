@@ -31,6 +31,7 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Serializer\Serializer;
 
@@ -73,9 +74,7 @@ class NodeWriteServiceTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createNodeCallsHandleWithCreateCommand(): void
     {
         $result = $this->subject->createNode(
@@ -90,9 +89,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertNotEmpty($result['nodeAggregateId']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createNodeReturnsGeneratedAggregateId(): void
     {
         $result = $this->subject->createNode('parent-id', 'Vendor:Content.Text', []);
@@ -105,9 +102,7 @@ class NodeWriteServiceTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setNodePropertiesCallsHandleWithSetCommand(): void
     {
         $result = $this->subject->setNodeProperties(
@@ -121,9 +116,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertTrue($result['success']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function moveNodeCallsHandleWithMoveCommand(): void
     {
         $result = $this->subject->moveNode('node-id', 'new-parent-id');
@@ -135,9 +128,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertTrue($result['success']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function removeNodeCallsHandleWithTagSubtreeCommand(): void
     {
         $result = $this->subject->removeNode('node-id');
@@ -148,9 +139,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertTrue($result['success']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function hideNodeCallsHandleWithTagSubtreeCommand(): void
     {
         $result = $this->subject->hideNode('node-id');
@@ -161,9 +150,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertTrue($result['success']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function unhideNodeCallsHandleWithUntagSubtreeCommand(): void
     {
         $result = $this->subject->unhideNode('node-id');
@@ -174,9 +161,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertTrue($result['success']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceDryRunDoesNotCallHandle(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -215,9 +200,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('New Title', $result['matches'][0]['newValue']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceAppliesReplacements(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -248,9 +231,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithoutNodeTypeNameSearchesAllTypes(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -291,9 +272,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('Vendor:Content.Headline', $result['matches'][1]['nodeTypeName']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithoutPropertyNameSearchesAllStringProperties(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -326,9 +305,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('Hi Body', $result['matches'][1]['newValue']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithoutPropertyNameSkipsNonStringProperties(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -358,9 +335,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('title', $result['matches'][0]['propertyName']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithBothFiltersOmitted(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);
@@ -387,9 +362,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertSame('Baz page', $result['matches'][1]['newValue']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceTruncatesLongValues(): void
     {
         $service = new NodeWriteService(
@@ -423,9 +396,7 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertStringEndsWith('…', $match['newValue']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceDoesNotTruncateWithoutSetting(): void
     {
         $contentGraph = $this->createMock(ContentGraphInterface::class);

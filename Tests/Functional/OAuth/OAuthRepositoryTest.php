@@ -14,6 +14,7 @@ use GesagtGetan\NeosMcp\OAuth\Repository\OAuthRefreshTokenRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Tests\FunctionalTestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OAuthRepositoryTest extends FunctionalTestCase
 {
@@ -43,7 +44,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
     // OAuthClientRepository
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function clientPersistsAndLoadsCorrectly(): void
     {
         $redirectUris = ['https://example.com/callback', 'https://example.com/callback2'];
@@ -77,7 +78,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertEqualsWithDelta(time(), $loaded->getCreatedAt()->getTimestamp(), 5);
     }
 
-    /** @test */
+    #[Test]
     public function validateClientVerifiesPasswordHash(): void
     {
         $client = new OAuthClient(
@@ -99,7 +100,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertFalse($this->clientRepository->validateClient('confidential-client', 'correct-secret', 'client_credentials'));
     }
 
-    /** @test */
+    #[Test]
     public function clientIdHasUniqueConstraint(): void
     {
         $metadata = $this->objectManager->get(EntityManagerInterface::class)
@@ -114,7 +115,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
     // OAuthAuthCodeRepository (league entry points)
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function authCodePersistsAndLoadsCorrectly(): void
     {
         $expiresAt = new \DateTimeImmutable('+10 minutes');
@@ -160,7 +161,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertSame('auth-code-client', $r->getValue($loaded));
     }
 
-    /** @test */
+    #[Test]
     public function revokeAuthCodeUpdatesDatabase(): void
     {
         $client = new OAuthClient(
@@ -185,7 +186,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertTrue($this->authCodeRepository->isAuthCodeRevoked('revoke-this-code'));
     }
 
-    /** @test */
+    #[Test]
     public function isAuthCodeRevokedReturnsTrueForMissingCode(): void
     {
         self::assertTrue($this->authCodeRepository->isAuthCodeRevoked('nonexistent-code'));
@@ -195,7 +196,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
     // OAuthRefreshTokenRepository (league entry points)
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function refreshTokenPersistsAndLoadsCorrectly(): void
     {
         $expiresAt = new \DateTimeImmutable('+30 days');
@@ -240,7 +241,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertSame('mcp', $r->getProperty('scopes')->getValue($loaded));
     }
 
-    /** @test */
+    #[Test]
     public function revokeRefreshTokenUpdatesDatabase(): void
     {
         $client = new OAuthClient(
@@ -270,7 +271,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertTrue($this->refreshTokenRepository->isRefreshTokenRevoked('revoke-this-refresh'));
     }
 
-    /** @test */
+    #[Test]
     public function isRefreshTokenRevokedReturnsTrueForMissingToken(): void
     {
         self::assertTrue($this->refreshTokenRepository->isRefreshTokenRevoked('nonexistent-token'));
@@ -280,7 +281,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
     // OAuthServerFactory
     // -----------------------------------------------------------------------
 
-    /** @test */
+    #[Test]
     public function ensureClientCreatesClientInDatabase(): void
     {
         $factory = $this->objectManager->get(OAuthServerFactory::class);
@@ -311,7 +312,7 @@ class OAuthRepositoryTest extends FunctionalTestCase
         self::assertTrue(password_verify('factory-test-secret', $loaded->getClientSecret()));
     }
 
-    /** @test */
+    #[Test]
     public function ensureClientUpdatesExistingClient(): void
     {
         $factory = $this->objectManager->get(OAuthServerFactory::class);

@@ -10,6 +10,7 @@ use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use PHPUnit\Framework\Attributes\Test;
 
 class NodeWriteServiceTest extends AbstractFunctionalTest
 {
@@ -27,9 +28,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $this->nodeReadService = new NodeReadService($this->facade, $workspaceName);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createNodeAndRetrieve(): void
     {
         $result = $this->nodeWriteService->createNode(
@@ -48,9 +47,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('Created by test', $node['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setNodePropertiesUpdatesValues(): void
     {
         $createResult = $this->nodeWriteService->createNode(
@@ -70,9 +67,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('Updated', $node['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function removeNodeSoftRemovesFromGraph(): void
     {
         $createResult = $this->nodeWriteService->createNode(
@@ -91,9 +86,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('To Remove', $trashedNode['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function moveNodeChangesParent(): void
     {
         $parent1 = $this->nodeWriteService->createNode(
@@ -133,9 +126,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame($child['nodeAggregateId'], $parent2Children[0]['nodeAggregateId']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceUpdatesMatchingNodes(): void
     {
         $this->nodeWriteService->createNode(
@@ -165,9 +156,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function createMultipleContentNodesInDocumentCollection(): void
     {
         // Create a document — this auto-creates its tethered "main" ContentCollection.
@@ -233,9 +222,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertCount(3, $found);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceDryRunDoesNotModify(): void
     {
         $created = $this->nodeWriteService->createNode(
@@ -260,9 +247,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('Replace Me', $node['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithoutNodeTypeNameSearchesAllTypes(): void
     {
         $this->nodeWriteService->createNode(
@@ -305,9 +290,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithoutPropertyNameSearchesAllStringProperties(): void
     {
         $this->nodeWriteService->createNode(
@@ -330,9 +313,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertContains('text', $propertyNames);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findAndReplaceWithBothFiltersOmitted(): void
     {
         $this->nodeWriteService->createNode(
@@ -373,9 +354,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertContains('GesagtGetan.NeosMcp:Testing.Content.Text', $nodeTypeNames);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function hideNodeDisablesNodeInGraph(): void
     {
         $createResult = $this->nodeWriteService->createNode(
@@ -392,9 +371,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertSame('To Hide', $node['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function unhideNodeEnablesNodeInGraph(): void
     {
         $createResult = $this->nodeWriteService->createNode(
@@ -412,13 +389,12 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
     }
 
     /**
-     * @test
-     *
      * Reproduces a real-world issue: a node created in the shared workspace,
      * published to live, then deleted in live, was still visible when reading
      * from the shared workspace. The CR does not auto-rebase derived workspaces
      * when the base changes — an explicit rebase is required.
      */
+    #[Test]
     public function nodeDeletedInLiveIsStaleWithoutRebase(): void
     {
         // Create a node in the shared workspace and publish it to live.
@@ -442,11 +418,10 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
     }
 
     /**
-     * @test
-     *
      * Verifies that rebasing the shared workspace picks up deletions from live.
      * The MCP HTTP controller rebases before every request to prevent stale reads.
      */
+    #[Test]
     public function nodeDeletedInLiveDisappearsAfterRebase(): void
     {
         // Create a node in the shared workspace and publish it to live.

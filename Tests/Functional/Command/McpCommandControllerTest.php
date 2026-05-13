@@ -15,6 +15,7 @@ use Neos\Neos\Domain\Model\WorkspaceRoleAssignments;
 use Neos\Neos\Domain\Model\WorkspaceTitle;
 use Neos\Neos\Domain\Repository\WorkspaceMetadataAndRoleRepository;
 use Neos\Neos\Domain\Service\WorkspaceService;
+use PHPUnit\Framework\Attributes\Test;
 
 class McpCommandControllerTest extends AbstractFunctionalTest
 {
@@ -38,9 +39,7 @@ class McpCommandControllerTest extends AbstractFunctionalTest
         $this->metadataRepository->deleteWorkspaceRoleAssignments($this->crId, $workspaceName);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function setupCreatesSharedWorkspaceWithNeosMetadata(): void
     {
         $workspaceName = WorkspaceName::fromString('llm-review');

@@ -24,6 +24,7 @@ use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -66,9 +67,7 @@ class McpHttpControllerTest extends UnitTestCase
         $this->inject($this->subject, 'mcpUserContext', new McpUserContext());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function disabledEndpointReturns503(): void
     {
         $factory = $this->createMock(OAuthServerFactory::class);
@@ -81,9 +80,7 @@ class McpHttpControllerTest extends UnitTestCase
         self::assertSame(503, $response->getStatusCode());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function failedJwtValidationReturns401WithDiscoveryHeader(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
@@ -101,9 +98,7 @@ class McpHttpControllerTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function missingOAuthUserIdReturns403(): void
     {
         // validateAuthenticatedRequest returns the request without oauth_user_id attribute
@@ -125,9 +120,7 @@ class McpHttpControllerTest extends UnitTestCase
         self::assertSame('OAuth token missing user identity', $body['error']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function invalidJsonReturns400WithParseError(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
@@ -143,9 +136,7 @@ class McpHttpControllerTest extends UnitTestCase
         self::assertSame(-32700, $body['error']['code']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function notificationReturns204(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
@@ -158,9 +149,7 @@ class McpHttpControllerTest extends UnitTestCase
         self::assertSame('', (string) $response->getBody());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function toolsListReturnsJsonRpcResponse(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')

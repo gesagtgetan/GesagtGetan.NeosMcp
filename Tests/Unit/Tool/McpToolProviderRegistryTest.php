@@ -15,12 +15,11 @@ use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PhpMcp\Server\ServerBuilder;
+use PHPUnit\Framework\Attributes\Test;
 
 class McpToolProviderRegistryTest extends UnitTestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function registerAllInvokesEveryDiscoveredProviderInOrder(): void
     {
         /** @var list<string> $invocations */
@@ -79,9 +78,7 @@ class McpToolProviderRegistryTest extends UnitTestCase
         self::assertSame(['A', 'B'], $invocations);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function nonImplementingClassesAreSilentlySkipped(): void
     {
         $reflectionService = $this->createMock(ReflectionService::class);

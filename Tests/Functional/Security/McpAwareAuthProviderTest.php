@@ -14,6 +14,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
+use PHPUnit\Framework\Attributes\Test;
 
 class McpAwareAuthProviderTest extends AbstractFunctionalTest
 {
@@ -33,9 +34,7 @@ class McpAwareAuthProviderTest extends AbstractFunctionalTest
         parent::tearDown();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function crEventRecordsMcpUserAsInitiatingUserId(): void
     {
         $expectedUserId = 'mcp-test-user-' . bin2hex(random_bytes(4));
@@ -64,9 +63,7 @@ class McpAwareAuthProviderTest extends AbstractFunctionalTest
         self::assertSame($expectedUserId, $lastInitiatingUserId);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function crEventRecordsSystemUserWhenNoMcpUser(): void
     {
         // McpUserContext is cleared in setUp — no MCP user active

@@ -34,6 +34,7 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\Workspaces;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
 use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Serializer\Serializer;
 
@@ -115,9 +116,7 @@ class NodeReadServiceTest extends UnitTestCase
         );
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getContentRepositoryInfoReturnsDimensionsAndWorkspaces(): void
     {
         $dimensionSource = $this->createMock(ContentDimensionSourceInterface::class);
@@ -150,9 +149,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame('live', $result['workspaces'][0]['name']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsNullForMissingNode(): void
     {
         $this->subgraph->method('findNodeById')->willReturn(null);
@@ -162,9 +159,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertNull($result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsSerializedNode(): void
     {
         $node = $this->createStubNode(
@@ -184,9 +179,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertArrayHasKey('properties', $result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesReturnsEmptyArrayWhenNoSitesRoot(): void
     {
         $this->subgraph->method('findRootNodeByType')->willReturn(null);
@@ -196,9 +189,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame([], $result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getChildrenDelegatesToFindChildNodes(): void
     {
         $node = $this->createStubNode('child-1', 'Vendor:Content.Text');
@@ -215,9 +206,7 @@ class NodeReadServiceTest extends UnitTestCase
 
     // ── Property Serialization Tests ────────────────────────────────
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeSerializesDateTimeAsAtomString(): void
     {
         $node = $this->createStubNodeWithTypedProperty(
@@ -234,9 +223,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame('2024-01-15T10:30:00+00:00', $result['properties']['createdAt']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeSerializesJsonSerializableAsJsonValue(): void
     {
         $node = $this->createStubNodeWithTypedProperty(
@@ -253,9 +240,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame(['key' => 'value', 'count' => 42], $result['properties']['metadata']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeSerializesStringableAsString(): void
     {
         $node = $this->createStubNodeWithTypedProperty(
@@ -272,9 +257,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame('https://example.com', $result['properties']['uri']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeSerializesPlainObjectAsClassName(): void
     {
         $node = $this->createStubNodeWithTypedProperty(
@@ -291,9 +274,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame('[object:stdClass]', $result['properties']['unknown']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeSerializesNestedArrayWithDateTimesRecursively(): void
     {
         $node = $this->createStubNodeWithTypedProperty(
@@ -314,9 +295,7 @@ class NodeReadServiceTest extends UnitTestCase
 
     // ── Visibility Constraints Tests ────────────────────────────────
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getSubgraphUsesExcludeRemovedConstraintsByDefault(): void
     {
         $this->contentGraph->expects(self::once())
@@ -328,9 +307,7 @@ class NodeReadServiceTest extends UnitTestCase
         $this->subject->getNode('any-id');
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getSubgraphUsesEmptyConstraintsWhenIncludeRemovedIsTrue(): void
     {
         $this->contentGraph->expects(self::once())
@@ -344,9 +321,7 @@ class NodeReadServiceTest extends UnitTestCase
 
     // ── Hidden Field Tests ──────────────────────────────────────────
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsFalseHiddenForVisibleNode(): void
     {
         $node = $this->createStubNode('visible-node', 'Vendor:Document.Page');
@@ -358,9 +333,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertFalse($result['hidden']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsTrueHiddenForDisabledNode(): void
     {
         $node = $this->createStubNodeWithTags(
@@ -376,9 +349,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertTrue($result['hidden']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsTrueHiddenForInheritedDisabledNode(): void
     {
         $node = $this->createStubNodeWithTags(
@@ -396,9 +367,7 @@ class NodeReadServiceTest extends UnitTestCase
 
     // ── Property Truncation Tests ───────────────────────────────────
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesTruncatesLongStringProperties(): void
     {
         $service = new NodeReadService(
@@ -427,9 +396,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertStringEndsWith('…', $text);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function findNodesDoesNotTruncateShortStrings(): void
     {
         $service = new NodeReadService(
@@ -455,9 +422,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame('Short title', $result[0]['properties']['title']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeReturnsFullPropertyValues(): void
     {
         $longValue = str_repeat('A', 100);
@@ -482,9 +447,7 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertSame($longValue, $result['properties']['text']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getChildrenTruncatesLongStringProperties(): void
     {
         $service = new NodeReadService(

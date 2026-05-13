@@ -13,6 +13,7 @@ use Neos\ContentRepository\Core\Feature\Security\Dto\UserId;
 use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class McpAwareAuthProviderTest extends UnitTestCase
@@ -30,9 +31,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         $this->subject = new McpAwareAuthProvider($this->inner, $this->mcpUserContext);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function mcpUserTakesPrecedenceOverInnerProvider(): void
     {
         $mcpUserId = UserId::fromString('mcp-user-uuid');
@@ -46,9 +45,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertTrue($mcpUserId->equals($result));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function fallsBackToInnerProviderWhenNoMcpUser(): void
     {
         $innerUserId = UserId::fromString('inner-user-uuid');
@@ -59,9 +56,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertTrue($innerUserId->equals($result));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function returnsNullWhenNeitherMcpNorInnerHasUser(): void
     {
         $this->inner->method('getAuthenticatedUserId')->willReturn(null);
@@ -69,9 +64,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertNull($this->subject->getAuthenticatedUserId());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function clearRemovesMcpUserAndFallsBackToInner(): void
     {
         $mcpUserId = UserId::fromString('mcp-user-uuid');
@@ -91,9 +84,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertTrue($innerUserId->equals($result));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function delegatesCanReadNodesFromWorkspace(): void
     {
         $workspaceName = WorkspaceName::fromString('user-test');
@@ -103,9 +94,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertSame($expected, $this->subject->canReadNodesFromWorkspace($workspaceName));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function delegatesGetVisibilityConstraints(): void
     {
         $workspaceName = WorkspaceName::fromString('user-test');
@@ -115,9 +104,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
         self::assertSame($expected, $this->subject->getVisibilityConstraints($workspaceName));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function delegatesCanExecuteCommand(): void
     {
         $command = $this->createMock(CommandInterface::class);

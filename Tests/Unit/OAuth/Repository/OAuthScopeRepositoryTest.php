@@ -7,6 +7,7 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Repository;
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthScope;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthScopeRepository;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class OAuthScopeRepositoryTest extends TestCase
@@ -18,9 +19,7 @@ class OAuthScopeRepositoryTest extends TestCase
         $this->subject = new OAuthScopeRepository();
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function mcpScopeIsResolved(): void
     {
         $scope = $this->subject->getScopeEntityByIdentifier('mcp');
@@ -29,9 +28,7 @@ class OAuthScopeRepositoryTest extends TestCase
         self::assertSame('mcp', $scope->getIdentifier());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function unknownScopeReturnsNull(): void
     {
         self::assertNull($this->subject->getScopeEntityByIdentifier('admin'));
@@ -39,9 +36,7 @@ class OAuthScopeRepositoryTest extends TestCase
         self::assertNull($this->subject->getScopeEntityByIdentifier('openid'));
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function finalizeScopesAlwaysReturnsMcpScope(): void
     {
         $client = $this->createMock(ClientEntityInterface::class);
@@ -53,9 +48,7 @@ class OAuthScopeRepositoryTest extends TestCase
         self::assertSame('mcp', $result[0]->getIdentifier());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function finalizeScopesIgnoresRequestedScopes(): void
     {
         $client = $this->createMock(ClientEntityInterface::class);
@@ -72,9 +65,7 @@ class OAuthScopeRepositoryTest extends TestCase
         self::assertSame('mcp', $result[0]->getIdentifier());
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function mcpScopeSerializesToString(): void
     {
         $scope = $this->subject->getScopeEntityByIdentifier('mcp');

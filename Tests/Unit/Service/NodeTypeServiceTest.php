@@ -8,6 +8,7 @@ use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\Flow\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class NodeTypeServiceTest extends UnitTestCase
@@ -22,9 +23,7 @@ class NodeTypeServiceTest extends UnitTestCase
         $this->subject = new NodeTypeService($this->contentRepository);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function listNodeTypesReturnsOnlyNonAbstractTypes(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
@@ -48,9 +47,7 @@ class NodeTypeServiceTest extends UnitTestCase
         self::assertNotContains('Vendor:Mixin.Abstract', $names);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function listNodeTypesFiltersByNameCaseInsensitive(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
@@ -66,9 +63,7 @@ class NodeTypeServiceTest extends UnitTestCase
         self::assertSame('Vendor:Document.Page', $result[0]['name']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function listNodeTypesReturnsExpectedStructure(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
@@ -96,9 +91,7 @@ class NodeTypeServiceTest extends UnitTestCase
         self::assertContains('body', $result[0]['declaredProperties']);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeTypeSchemaReturnsFullSchema(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
@@ -122,9 +115,7 @@ class NodeTypeServiceTest extends UnitTestCase
         self::assertArrayHasKey('references', $result);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function getNodeTypeSchemaThrowsForUnknownType(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([]);
