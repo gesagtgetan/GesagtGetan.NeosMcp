@@ -243,15 +243,17 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Move a node to a new parent.
-     *
      * @param string $nodeAggregateId The node aggregate ID to move
      * @param string $newParentNodeAggregateId The new parent node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      *
      * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Move a node to a different parent. The node is appended at the end of the new parent's children.
+
+        Use reorderNode instead to change a node's sort order within its current parent (relative to siblings).
+        MCP)]
     public function moveNode(
         string $nodeAggregateId,
         string $newParentNodeAggregateId,
@@ -262,6 +264,45 @@ final class McpNodeToolProvider implements McpToolProvider
 
         return $this->rebaser->withWarning(
             $this->nodeWriteService->moveNode($nodeAggregateId, $newParentNodeAggregateId, $dimensionSpacePoint),
+            $warning,
+        );
+    }
+
+    /**
+     * @param string $nodeAggregateId The node aggregate ID to reorder
+     * @param string|null $placeBeforeNodeAggregateId Place the node directly before this sibling. Provide either this or placeAfterNodeAggregateId (at least one is required).
+     * @param string|null $placeAfterNodeAggregateId Place the node directly after this sibling. Provide either this or placeBeforeNodeAggregateId (at least one is required).
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
+     *
+     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
+     */
+    #[McpTool(description: <<<'MCP'
+        Change a node's sort order within its current parent by placing it relative to a sibling. The parent does NOT change.
+
+        Provide at least one of `placeBeforeNodeAggregateId` or `placeAfterNodeAggregateId`. The target sibling must currently be a child of the same parent.
+
+        Use moveNode instead to move a node to a different parent.
+        MCP)]
+    public function reorderNode(
+        string $nodeAggregateId,
+        ?string $placeBeforeNodeAggregateId = null,
+        ?string $placeAfterNodeAggregateId = null,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        if ($placeBeforeNodeAggregateId === null && $placeAfterNodeAggregateId === null) {
+            throw new \InvalidArgumentException('At least one of placeBeforeNodeAggregateId or placeAfterNodeAggregateId must be provided.', 1779800000);
+        }
+
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeWriteService->reorderNode(
+                $nodeAggregateId,
+                $placeBeforeNodeAggregateId,
+                $placeAfterNodeAggregateId,
+                $dimensionSpacePoint,
+            ),
             $warning,
         );
     }

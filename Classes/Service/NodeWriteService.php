@@ -126,6 +126,49 @@ final readonly class NodeWriteService
     }
 
     /**
+     * Reorders a node within its current parent by placing it relative to a sibling.
+     * At least one of `$placeBeforeNodeAggregateId` or `$placeAfterNodeAggregateId`
+     * must be provided. The parent is not changed.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     *
+     * @return array{nodeAggregateId: string, success: true}
+     */
+    public function reorderNode(
+        string $nodeAggregateId,
+        ?string $placeBeforeNodeAggregateId = null,
+        ?string $placeAfterNodeAggregateId = null,
+        ?array $dimensionSpacePoint = null,
+    ): array {
+        if ($placeBeforeNodeAggregateId === null && $placeAfterNodeAggregateId === null) {
+            throw new \InvalidArgumentException('At least one of placeBeforeNodeAggregateId or placeAfterNodeAggregateId must be provided.', 1779800000);
+        }
+
+        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+
+        $command = MoveNodeAggregate::create(
+            $this->workspaceName,
+            $dsp,
+            NodeAggregateId::fromString($nodeAggregateId),
+            RelationDistributionStrategy::default(),
+            newParentNodeAggregateId: null,
+            newPrecedingSiblingNodeAggregateId: $placeAfterNodeAggregateId !== null
+                ? NodeAggregateId::fromString($placeAfterNodeAggregateId)
+                : null,
+            newSucceedingSiblingNodeAggregateId: $placeBeforeNodeAggregateId !== null
+                ? NodeAggregateId::fromString($placeBeforeNodeAggregateId)
+                : null,
+        );
+
+        $this->contentRepository->handle($command);
+
+        return [
+            'nodeAggregateId' => $nodeAggregateId,
+            'success' => true,
+        ];
+    }
+
+    /**
      * Soft-removes a node by tagging it as removed (trash). The node can be restored later.
      *
      * @param array<string, string>|null $dimensionSpacePoint
