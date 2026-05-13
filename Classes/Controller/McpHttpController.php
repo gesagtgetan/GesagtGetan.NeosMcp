@@ -6,9 +6,10 @@ namespace GesagtGetan\NeosMcp\Controller;
 
 use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
-use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GesagtGetan\NeosMcp\Security\McpUserContext;
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
+use GesagtGetan\NeosMcp\Tool\McpToolProviderRegistry;
 use GuzzleHttp\Psr7\Response;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
@@ -62,6 +63,9 @@ class McpHttpController extends ActionController
 
     #[Flow\Inject]
     protected McpUserContext $mcpUserContext;
+
+    #[Flow\Inject]
+    protected McpToolProviderRegistry $toolProviderRegistry;
 
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
@@ -211,17 +215,16 @@ class McpHttpController extends ActionController
         $contentRepository = $this->contentRepositoryRegistry->get($crId);
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->propertyTruncateLength);
+        $context = new McpRequestContext($facade, $workspaceName, $this->propertyTruncateLength);
 
         $container = new BasicContainer();
-        $container->set(McpToolProvider::class, $toolProvider);
 
         $builder = Server::make()
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev')
-            ->withInstructions(McpToolProvider::INSTRUCTIONS);
+            ->withInstructions(McpToolProviderRegistry::INSTRUCTIONS);
 
-        $builder = McpToolProvider::registerTools($builder);
+        $builder = $this->toolProviderRegistry->registerAll($builder, $container, $context);
 
         return $builder->build();
     }

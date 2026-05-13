@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tests\Functional;
 
-use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use PhpMcp\Server\Defaults\BasicContainer;
+use PhpMcp\Server\Server;
 
 /**
- * Tests that McpToolProvider rebases the workspace before tool calls.
+ * Tests that the node tool provider rebases the workspace before tool calls.
  */
 class McpToolProviderRebaseTest extends AbstractFunctionalTest
 {
-    private McpToolProvider $toolProvider;
+    private McpNodeToolProvider $provider;
     private WorkspaceName $workspaceName;
 
     protected function setUp(): void
@@ -27,7 +30,12 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $this->workspaceName = WorkspaceName::fromString('test-mcp-workspace');
         $this->createTestWorkspace($this->workspaceName);
 
-        $this->toolProvider = new McpToolProvider($this->facade, $this->workspaceName);
+        $this->provider = new McpNodeToolProvider();
+        $this->provider->registerTools(
+            Server::make()->withServerInfo('test', '0.0.0'),
+            new BasicContainer(),
+            new McpRequestContext($this->facade, $this->workspaceName),
+        );
     }
 
     /**
@@ -56,7 +64,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $liveWriteService->removeNode($nodeId);
 
         // A tool call should trigger a rebase, making the deleted node invisible.
-        $result = $this->toolProvider->findNodes(
+        $result = $this->provider->findNodes(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
         );
 
@@ -104,7 +112,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         );
 
         // A tool call should attempt rebase, fail with conflict, and include a warning.
-        $result = $this->toolProvider->getNode($nodeId);
+        $result = $this->provider->getNode($nodeId);
 
         self::assertNotNull($result, 'Node should still be visible in stale workspace');
         self::assertArrayHasKey('_rebaseWarning', $result, 'Tool response must include _rebaseWarning on conflict');

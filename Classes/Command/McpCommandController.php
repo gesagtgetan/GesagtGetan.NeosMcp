@@ -6,9 +6,10 @@ namespace GesagtGetan\NeosMcp\Command;
 
 use Composer\InstalledVersions;
 use GesagtGetan\NeosMcp\DefaultContentRepositoryFacade;
-use GesagtGetan\NeosMcp\McpToolProvider;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
+use GesagtGetan\NeosMcp\Tool\McpRequestContext;
+use GesagtGetan\NeosMcp\Tool\McpToolProviderRegistry;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
@@ -42,6 +43,9 @@ class McpCommandController extends CommandController
 
     #[Flow\Inject]
     protected OAuthServerFactory $oauthServerFactory;
+
+    #[Flow\Inject]
+    protected McpToolProviderRegistry $toolProviderRegistry;
 
     #[Flow\InjectConfiguration(path: 'contentRepositoryId', package: 'GesagtGetan.NeosMcp')]
     protected string $contentRepositoryId;
@@ -130,20 +134,16 @@ class McpCommandController extends CommandController
         }
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $toolProvider = new McpToolProvider($facade, $workspaceName, $this->propertyTruncateLength);
+        $context = new McpRequestContext($facade, $workspaceName, $this->propertyTruncateLength);
 
         $container = new BasicContainer();
-        $container->set(McpToolProvider::class, $toolProvider);
 
-        // Register all #[McpTool]-annotated methods from the provider.
-        // Tool names, descriptions, and annotations live on the methods themselves,
-        // so adding a new tool only requires adding a method — no registration here.
         $builder = Server::make()
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev')
-            ->withInstructions(McpToolProvider::INSTRUCTIONS);
+            ->withInstructions(McpToolProviderRegistry::INSTRUCTIONS);
 
-        $builder = McpToolProvider::registerTools($builder);
+        $builder = $this->toolProviderRegistry->registerAll($builder, $container, $context);
 
         $server = $builder->build();
 

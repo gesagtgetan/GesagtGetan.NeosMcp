@@ -2,118 +2,61 @@
 
 declare(strict_types=1);
 
-namespace GesagtGetan\NeosMcp;
+namespace GesagtGetan\NeosMcp\Tool;
 
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
-use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
-use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
-use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Exception\WorkspaceRebaseFailed;
-use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
 use PhpMcp\Schema\ToolAnnotations;
 use PhpMcp\Server\Attributes\McpTool;
 use PhpMcp\Server\Attributes\Schema;
+use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\ServerBuilder;
 
-#[Flow\Proxy(false)]
-final readonly class McpToolProvider
+/**
+ * Built-in MCP tool provider for node-scoped operations (read, write, node-type).
+ *
+ * Prototype-scoped: {@see McpToolProviderRegistry} resolves a fresh instance per
+ * MCP request via `ObjectManager`. The request context (workspace, CR facade,
+ * truncation length) is injected through {@see registerTools()} and stored on
+ * the instance; tool methods then read it directly. Because each request gets a
+ * fresh instance, there is no shared-state risk between concurrent requests.
+ *
+ * Every public `#[McpTool]` method rebases the workspace before its underlying
+ * service call so reads see live state and writes don't target stale nodes;
+ * mutating tools forward any rebase-conflict warning on the response payload.
+ */
+#[Flow\Scope('prototype')]
+final class McpNodeToolProvider implements McpToolProvider
 {
-    public const string INSTRUCTIONS = <<<'TXT'
-        Tools utilize the Neos CMS 9 Content Repository — a typed node tree with workspaces and optional dimensions (e.g. language). Writes target the user's personal workspace (HTTP) or a shared review workspace (CLI) and are not live until published. Warn the user if you are unsure how to use a tool or unfamiliar with the Neos 9 Content Repository and its node type handling.
-        TXT;
-
-    private NodeTypeService $nodeTypeService;
     private NodeReadService $nodeReadService;
     private NodeWriteService $nodeWriteService;
+    private NodeTypeService $nodeTypeService;
+    private WorkspaceRebaser $rebaser;
 
-    public function __construct(
-        private ContentRepositoryFacade $contentRepository,
-        private WorkspaceName $workspaceName,
-        ?int $propertyTruncateLength = null,
-    ) {
-        $this->nodeTypeService = new NodeTypeService($this->contentRepository);
-        $this->nodeReadService = new NodeReadService($this->contentRepository, $this->workspaceName, $propertyTruncateLength);
-        $this->nodeWriteService = new NodeWriteService($this->contentRepository, $this->workspaceName, $propertyTruncateLength);
+    public function registerTools(
+        ServerBuilder $builder,
+        BasicContainer $container,
+        McpRequestContext $context,
+    ): ServerBuilder {
+        $this->nodeReadService = new NodeReadService(
+            $context->contentRepository,
+            $context->workspaceName,
+            $context->propertyTruncateLength,
+        );
+        $this->nodeWriteService = new NodeWriteService(
+            $context->contentRepository,
+            $context->workspaceName,
+            $context->propertyTruncateLength,
+        );
+        $this->nodeTypeService = new NodeTypeService($context->contentRepository);
+        $this->rebaser = new WorkspaceRebaser($context->contentRepository, $context->workspaceName);
+
+        $container->set(self::class, $this);
+
+        return McpToolReflector::register($builder, self::class);
     }
-
-    /**
-     * Register all #[McpTool]-annotated methods with the server builder.
-     *
-     * Uses manual withTool() registration instead of the library's auto-discovery
-     * because discovery calls Registry::clear() and cannot be mixed with manual setup.
-     * The attribute's description and annotations are forwarded explicitly since
-     * withTool() does not read #[McpTool] attributes on its own.
-     */
-    public static function registerTools(ServerBuilder $builder): ServerBuilder
-    {
-        foreach ((new \ReflectionClass(self::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            $attributes = $method->getAttributes(McpTool::class);
-            if ($attributes === []) {
-                continue;
-            }
-
-            /** @var McpTool $attr */
-            $attr = $attributes[0]->newInstance();
-            $builder = $builder->withTool(
-                [self::class, $method->getName()],
-                description: $attr->description,
-                annotations: $attr->annotations,
-            );
-        }
-
-        return $builder;
-    }
-
-    /**
-     * Rebases the workspace onto its base so reads reflect the latest live state
-     * and writes don't target stale nodes. Returns a conflict warning string when
-     * the rebase fails due to conflicting unpublished changes, or null on success.
-     */
-    private function rebaseWorkspace(): ?string
-    {
-        try {
-            $this->contentRepository->handle(RebaseWorkspace::create($this->workspaceName));
-        } catch (WorkspaceCommandSkipped) {
-            // Workspace is already up-to-date — nothing to do.
-        } catch (WorkspaceRebaseFailed $e) {
-            $conflicts = $e->conflictingEvents->map(static function ($conflict): array {
-                $entry = ['message' => $conflict->getException()->getMessage()];
-                $nodeId = $conflict->getAffectedNodeAggregateId();
-                if ($nodeId !== null) {
-                    $entry['nodeAggregateId'] = $nodeId->value;
-                }
-
-                return $entry;
-            });
-
-            return 'Workspace rebase failed due to conflicts with live. '
-                . 'The workspace may contain stale data. '
-                . 'Consider discarding conflicting changes via discardWorkspaceChanges. '
-                . 'Conflicts: ' . json_encode($conflicts, JSON_THROW_ON_ERROR);
-        }
-
-        return null;
-    }
-
-    /**
-     * @template T of array<string, mixed>
-     *
-     * @param T $result
-     *
-     * @return T
-     */
-    private function withRebaseWarning(array $result, ?string $warning): array
-    {
-        if ($warning !== null) {
-            $result['_rebaseWarning'] = $warning;
-        }
-
-        return $result; // @phpstan-ignore return.type (mutation adds _rebaseWarning but T shape is preserved at call sites)
-    }
-
-    // ── Read Tools ──────────────────────────────────────────────────
 
     /**
      * Returns available dimensions, workspaces, and dimension space points for the content repository.
@@ -123,9 +66,9 @@ final readonly class McpToolProvider
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function getContentRepositoryInfo(): array
     {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning($this->nodeReadService->getContentRepositoryInfo(), $warning);
+        return $this->rebaser->withWarning($this->nodeReadService->getContentRepositoryInfo(), $warning);
     }
 
     /**
@@ -136,7 +79,7 @@ final readonly class McpToolProvider
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function listNodeTypes(?string $filter = null): array
     {
-        $this->rebaseWorkspace();
+        $this->rebaser->rebase();
 
         return $this->nodeTypeService->listNodeTypes($filter);
     }
@@ -149,7 +92,7 @@ final readonly class McpToolProvider
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function getNodeTypeSchema(string $nodeTypeName): array
     {
-        $this->rebaseWorkspace();
+        $this->rebaser->rebase();
 
         return $this->nodeTypeService->getNodeTypeSchema($nodeTypeName);
     }
@@ -176,7 +119,7 @@ final readonly class McpToolProvider
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
     ): array {
-        $this->rebaseWorkspace();
+        $this->rebaser->rebase();
 
         return $this->nodeReadService->findNodes(
             $nodeTypeName,
@@ -204,10 +147,10 @@ final readonly class McpToolProvider
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
     ): ?array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
         $node = $this->nodeReadService->getNode($nodeAggregateId, $dimensionSpacePoint, $includeRemoved);
 
-        return $node !== null ? $this->withRebaseWarning($node, $warning) : null;
+        return $node !== null ? $this->rebaser->withWarning($node, $warning) : null;
     }
 
     /**
@@ -228,7 +171,7 @@ final readonly class McpToolProvider
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
     ): array {
-        $this->rebaseWorkspace();
+        $this->rebaser->rebase();
 
         return $this->nodeReadService->getChildren(
             $parentNodeAggregateId,
@@ -237,8 +180,6 @@ final readonly class McpToolProvider
             $includeRemoved,
         );
     }
-
-    // ── Write Tools ─────────────────────────────────────────────────
 
     /**
      * @param string $parentNodeAggregateId The parent node aggregate ID
@@ -264,9 +205,9 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->createNode($parentNodeAggregateId, $nodeTypeName, $properties ?? [], $dimensionSpacePoint),
             $warning,
         );
@@ -293,9 +234,9 @@ final readonly class McpToolProvider
             throw new \InvalidArgumentException('Properties must be a non-empty JSON object.', 1770740199);
         }
 
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->setNodeProperties($nodeAggregateId, $properties, $dimensionSpacePoint),
             $warning,
         );
@@ -317,9 +258,9 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->moveNode($nodeAggregateId, $newParentNodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -340,9 +281,9 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->removeNode($nodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -362,9 +303,9 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->hideNode($nodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -384,9 +325,9 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->unhideNode($nodeAggregateId, $dimensionSpacePoint),
             $warning,
         );
@@ -414,61 +355,11 @@ final readonly class McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
     ): array {
-        $warning = $this->rebaseWorkspace();
+        $warning = $this->rebaser->rebase();
 
-        return $this->withRebaseWarning(
+        return $this->rebaser->withWarning(
             $this->nodeWriteService->findAndReplace($search, $replace, $nodeTypeName, $propertyName, $dryRun, $dimensionSpacePoint),
             $warning,
         );
-    }
-
-    // ── Workspace Tools ─────────────────────────────────────────────
-
-    /**
-     * Show the workspace status including pending change count.
-     *
-     * @return array{workspaceName: string, baseWorkspace: ?string, status: string, hasPendingChanges: bool}
-     */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
-    public function getWorkspaceStatus(): array
-    {
-        $this->rebaseWorkspace();
-        $workspace = $this->contentRepository->findWorkspaceByName($this->workspaceName);
-        if ($workspace === null) {
-            return [
-                'workspaceName' => $this->workspaceName->value,
-                'baseWorkspace' => null,
-                'status' => 'not_found',
-                'hasPendingChanges' => false,
-            ];
-        }
-
-        return [
-            'workspaceName' => $workspace->workspaceName->value,
-            'baseWorkspace' => $workspace->baseWorkspaceName?->value,
-            'status' => $workspace->status->value,
-            'hasPendingChanges' => $workspace->hasPublishableChanges(),
-        ];
-    }
-
-    /**
-     * Discard all pending changes in the workspace.
-     *
-     * @return array{workspaceName: string, success: true}
-     */
-    #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
-    public function discardWorkspaceChanges(): array
-    {
-        $this->rebaseWorkspace();
-        $this->contentRepository->handle(
-            \Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\DiscardWorkspace::create(
-                $this->workspaceName,
-            ),
-        );
-
-        return [
-            'workspaceName' => $this->workspaceName->value,
-            'success' => true,
-        ];
     }
 }
