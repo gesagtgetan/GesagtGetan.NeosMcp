@@ -51,7 +51,7 @@ final readonly class NodeTypeService
     }
 
     /**
-     * @return array{name: string, label: string, abstract: bool, final: bool, superTypes: list<string>, properties: array<string, array{type: string, defaultValue: mixed}>, childNodes: array<string, string>, references: array<string, mixed>}
+     * @return array{name: string, label: string, abstract: bool, final: bool, superTypes: list<string>, properties: array<string, array{type: string, defaultValue: mixed, label?: string, description?: string}>, childNodes: array<string, string>, references: array<string, mixed>}
      */
     public function getNodeTypeSchema(string $nodeTypeName): array
     {
@@ -74,10 +74,26 @@ final readonly class NodeTypeService
             }
             $configArray = is_array($propertyConfig) ? $propertyConfig : [];
             $type = isset($configArray['type']) && is_string($configArray['type']) ? $configArray['type'] : 'string';
-            $properties[$propertyName] = [
+            $entry = [
                 'type' => $type,
                 'defaultValue' => $configArray['defaultValue'] ?? null,
             ];
+
+            // Surface property-level UI hints from NodeTypes.yaml so the LLM can pick the
+            // right property without trial and error. `ui.label` is the field label the
+            // Neos editor renders above each input; `ui.help.message` is the tooltip
+            // shown on hover. Reusing them means existing content-author guidance flows
+            // through to the LLM unchanged.
+            $uiConfig = is_array($configArray['ui'] ?? null) ? $configArray['ui'] : [];
+            if (isset($uiConfig['label']) && is_string($uiConfig['label']) && $uiConfig['label'] !== '') {
+                $entry['label'] = $uiConfig['label'];
+            }
+            $help = $uiConfig['help'] ?? null;
+            if (is_array($help) && isset($help['message']) && is_string($help['message']) && $help['message'] !== '') {
+                $entry['description'] = $help['message'];
+            }
+
+            $properties[$propertyName] = $entry;
         }
 
         $childNodes = [];

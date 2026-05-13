@@ -116,6 +116,34 @@ class NodeTypeServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function getNodeTypeSchemaIncludesPropertyUiLabelAndDescription(): void
+    {
+        $nodeTypeManager = $this->createNodeTypeManagerWithTypes([
+            'Vendor:Document.Page' => [
+                'properties' => [
+                    'titleOverride' => [
+                        'type' => 'string',
+                        'ui' => [
+                            'label' => 'SEO title',
+                            'help' => ['message' => 'Used for the browser tab and search results. Leave empty to fall back to the regular title.'],
+                        ],
+                    ],
+                    'noHelp' => ['type' => 'string'],
+                ],
+            ],
+        ]);
+
+        $this->contentRepository->method('getNodeTypeManager')->willReturn($nodeTypeManager);
+
+        $result = $this->subject->getNodeTypeSchema('Vendor:Document.Page');
+
+        self::assertSame('SEO title', $result['properties']['titleOverride']['label'] ?? null);
+        self::assertStringContainsString('Used for the browser tab', $result['properties']['titleOverride']['description'] ?? '');
+        self::assertArrayNotHasKey('label', $result['properties']['noHelp']);
+        self::assertArrayNotHasKey('description', $result['properties']['noHelp']);
+    }
+
+    #[Test]
     public function getNodeTypeSchemaThrowsForUnknownType(): void
     {
         $nodeTypeManager = $this->createNodeTypeManagerWithTypes([]);
