@@ -59,6 +59,7 @@ Note: Use `php` (not `php8.4`) inside the Docker container — the container has
 - `McpCommandController` — CLI entry points: `./flow mcp:server` (stdio transport) and `./flow mcp:setup` (creates shared workspace with Neos UI metadata via `WorkspaceService::createSharedWorkspace`).
 - `NodeReadService` / `NodeWriteService` / `NodeTypeService` — domain logic, stateless.
 - MCP tool parameters `properties` and `dimensionSpacePoint` are native objects (with `#[Schema]` attributes), not JSON strings.
+- `getNodeTypeSchema` surfaces per-property `label` and `description` from each property's `ui.label` and `ui.help.message` in NodeTypes.yaml. Add a `ui.help.message` anywhere a hint would help the LLM disambiguate similar properties (e.g. `title` vs `titleOverride`). The same string also renders as a tooltip in the Neos editor, so authoring it once serves both audiences. This package ships a few global hints in `Configuration/NodeTypes.yaml`; site/theme packages should add their own for project-specific properties.
 
 To contribute MCP tools from another Flow package, implement `GesagtGetan\NeosMcp\Tool\McpToolProvider`. The registry will discover and dispatch it automatically — see README "Extending with custom tools".
 
