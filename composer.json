@@ -16,6 +16,9 @@
     "phpunit/phpunit": "^10.5",
     "squizlabs/php_codesniffer": "^4.0"
   },
+  "suggest": {
+    "gesagtgetan/neosmcpimages": "Adds MCP tools to find images in the media library by alt-text and assign them to image properties on nodes"
+  },
   "autoload": {
     "psr-4": {
       "GesagtGetan\\NeosMcp\\": "Classes/"
