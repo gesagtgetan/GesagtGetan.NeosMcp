@@ -33,6 +33,7 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Tests\UnitTestCase;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Serializer\Serializer;
@@ -86,8 +87,12 @@ class NodeWriteServiceTest extends UnitTestCase
         );
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $this->handledCommands[0]);
-        self::assertNotEmpty($result->nodeAggregateId);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('Vendor:Content.Text', $command->nodeTypeName->value);
+        self::assertSame('parent-id', $command->parentNodeAggregateId->value);
+        self::assertSame($command->nodeAggregateId->value, $result->nodeAggregateId);
     }
 
     #[Test]
@@ -111,7 +116,10 @@ class NodeWriteServiceTest extends UnitTestCase
         );
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeProperties::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 
@@ -121,7 +129,13 @@ class NodeWriteServiceTest extends UnitTestCase
         $result = $this->subject->moveNode('node-id', 'new-parent-id');
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(MoveNodeAggregate::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(MoveNodeAggregate::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertSame('new-parent-id', $command->newParentNodeAggregateId?->value);
+        self::assertNull($command->newPrecedingSiblingNodeAggregateId);
+        self::assertNull($command->newSucceedingSiblingNodeAggregateId);
         self::assertSame('node-id', $result->nodeAggregateId);
         self::assertSame('new-parent-id', $result->newParentNodeAggregateId);
     }
@@ -136,7 +150,12 @@ class NodeWriteServiceTest extends UnitTestCase
         );
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(CreateNodeVariant::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeVariant::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertSame(['language' => 'de'], $command->sourceOrigin->coordinates);
+        self::assertSame(['language' => 'en'], $command->targetOrigin->coordinates);
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 
@@ -146,7 +165,11 @@ class NodeWriteServiceTest extends UnitTestCase
         $result = $this->subject->removeNode('node-id');
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(TagSubtree::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertTrue($command->tag->equals(NeosSubtreeTag::removed()));
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 
@@ -156,7 +179,11 @@ class NodeWriteServiceTest extends UnitTestCase
         $result = $this->subject->hideNode('node-id');
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(TagSubtree::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertTrue($command->tag->equals(NeosSubtreeTag::disabled()));
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 
@@ -166,7 +193,11 @@ class NodeWriteServiceTest extends UnitTestCase
         $result = $this->subject->unhideNode('node-id');
 
         self::assertCount(1, $this->handledCommands);
-        self::assertInstanceOf(UntagSubtree::class, $this->handledCommands[0]);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(UntagSubtree::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertTrue($command->tag->equals(NeosSubtreeTag::disabled()));
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 
