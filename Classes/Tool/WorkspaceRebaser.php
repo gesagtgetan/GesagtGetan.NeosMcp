@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\WithRebaseWarning;
 use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Exception\WorkspaceRebaseFailed;
@@ -56,18 +57,14 @@ final readonly class WorkspaceRebaser
     }
 
     /**
-     * @template T of array<string, mixed>
+     * @template T of WithRebaseWarning
      *
      * @param T $result
      *
      * @return T
      */
-    public function withWarning(array $result, ?string $warning): array
+    public function withWarning(WithRebaseWarning $result, ?string $warning): WithRebaseWarning
     {
-        if ($warning !== null) {
-            $result['_rebaseWarning'] = $warning;
-        }
-
-        return $result; // @phpstan-ignore return.type (mutation adds _rebaseWarning but T shape is preserved at call sites)
+        return $warning === null ? $result : $result->withRebaseWarning($warning);
     }
 }

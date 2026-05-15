@@ -58,9 +58,9 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
 
         $result = $this->subject->getWorkspaceStatus();
 
-        self::assertSame('test-workspace', $result['workspaceName']);
-        self::assertSame('not_found', $result['status']);
-        self::assertFalse($result['hasPendingChanges']);
+        self::assertSame('test-workspace', $result->workspaceName);
+        self::assertSame('not_found', $result->status);
+        self::assertFalse($result->hasPendingChanges);
     }
 
     #[Test]
@@ -77,10 +77,10 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
 
         $result = $this->subject->getWorkspaceStatus();
 
-        self::assertSame('test-workspace', $result['workspaceName']);
-        self::assertSame('live', $result['baseWorkspace']);
-        self::assertSame('UP_TO_DATE', $result['status']);
-        self::assertTrue($result['hasPendingChanges']);
+        self::assertSame('test-workspace', $result->workspaceName);
+        self::assertSame('live', $result->baseWorkspace);
+        self::assertSame('UP_TO_DATE', $result->status);
+        self::assertTrue($result->hasPendingChanges);
     }
 
     #[Test]

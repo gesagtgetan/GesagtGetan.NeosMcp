@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tests\Functional\Service;
 
+use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
+use GesagtGetan\NeosMcp\Dto\NodeInfo;
+use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
 use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
@@ -35,13 +38,8 @@ class NodeReadServiceTest extends AbstractFunctionalTest
     {
         $result = $this->nodeReadService->getContentRepositoryInfo();
 
-        self::assertArrayHasKey('contentRepositoryId', $result);
-        self::assertSame('default', $result['contentRepositoryId']);
-        self::assertArrayHasKey('dimensions', $result);
-        self::assertArrayHasKey('workspaces', $result);
-        self::assertArrayHasKey('dimensionSpacePoints', $result);
-        self::assertIsArray($result['workspaces']);
-        self::assertNotEmpty($result['workspaces']);
+        self::assertSame('default', $result->contentRepositoryId);
+        self::assertFalse($result->workspaces->isEmpty());
     }
 
     #[Test]
@@ -49,14 +47,15 @@ class NodeReadServiceTest extends AbstractFunctionalTest
     {
         $this->createTestDocument('test-doc-1', 'Test Page');
 
-        $result = $this->nodeReadService->findNodes(
+        $result = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             searchTerm: 'Test Page',
-        );
+        ));
 
         self::assertCount(1, $result);
-        self::assertSame('test-doc-1', $result[0]['nodeAggregateId']);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result[0]['nodeTypeName']);
-        self::assertSame('Test Page', $result[0]['properties']['title']);
+        $nodes = iterator_to_array($result);
+        self::assertSame('test-doc-1', $nodes[0]->nodeAggregateId);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $nodes[0]->nodeTypeName);
+        self::assertSame('Test Page', $nodes[0]->properties['title']);
     }
 
     #[Test]
@@ -64,12 +63,13 @@ class NodeReadServiceTest extends AbstractFunctionalTest
     {
         $this->createTestDocument('doc-1', 'Page One');
 
-        $result = $this->nodeReadService->findNodes(
+        $result = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
-        );
+        ));
 
         self::assertCount(1, $result);
-        self::assertSame('doc-1', $result[0]['nodeAggregateId']);
+        $nodes = iterator_to_array($result);
+        self::assertSame('doc-1', $nodes[0]->nodeAggregateId);
     }
 
     #[Test]
@@ -80,10 +80,10 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         $result = $this->nodeReadService->getNode('my-doc');
 
         self::assertNotNull($result);
-        self::assertSame('my-doc', $result['nodeAggregateId']);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['nodeTypeName']);
-        self::assertSame('My Document', $result['properties']['title']);
-        self::assertSame('Some text content', $result['properties']['text']);
+        self::assertSame('my-doc', $result->nodeAggregateId);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result->nodeTypeName);
+        self::assertSame('My Document', $result->properties['title']);
+        self::assertSame('Some text content', $result->properties['text']);
     }
 
     #[Test]
@@ -107,7 +107,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         );
 
         self::assertCount(2, $result);
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = self::collectAggregateIds($result);
         self::assertContains('child-1', $ids);
         self::assertContains('child-2', $ids);
     }
@@ -121,7 +121,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         $children = $this->nodeReadService->getChildren('doc-with-content');
         $mainCollection = null;
         foreach ($children as $child) {
-            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
+            if ($child->nodeTypeName === 'Neos.Neos:ContentCollection') {
                 $mainCollection = $child;
                 break;
             }
@@ -129,22 +129,23 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         self::assertNotNull($mainCollection, 'Document must have a tethered ContentCollection');
 
         // Create a text content node inside the collection.
-        $this->createTestContentText('text-1', 'Hello from the content area', $mainCollection['nodeAggregateId']);
+        $this->createTestContentText('text-1', 'Hello from the content area', $mainCollection->nodeAggregateId);
 
         // Read the content node back via getNode.
         $node = $this->nodeReadService->getNode('text-1');
 
         self::assertNotNull($node);
-        self::assertSame('text-1', $node['nodeAggregateId']);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Content.Text', $node['nodeTypeName']);
-        self::assertSame('Hello from the content area', $node['properties']['text']);
+        self::assertSame('text-1', $node->nodeAggregateId);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Content.Text', $node->nodeTypeName);
+        self::assertSame('Hello from the content area', $node->properties['text']);
 
         // Verify it appears in findNodes filtered by content type.
-        $found = $this->nodeReadService->findNodes(
+        $found = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Content.Text',
-        );
+        ));
         self::assertCount(1, $found);
-        self::assertSame('text-1', $found[0]['nodeAggregateId']);
+        $foundNodes = iterator_to_array($found);
+        self::assertSame('text-1', $foundNodes[0]->nodeAggregateId);
     }
 
     // ── Soft-Removal (Trash) Visibility Tests ─────────────────────
@@ -156,11 +157,11 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         $this->createTestDocument('removed-doc', 'Removed');
         $this->softRemoveNode('removed-doc');
 
-        $result = $this->nodeReadService->findNodes(
+        $result = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
-        );
+        ));
 
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = self::collectAggregateIds($result);
         self::assertContains('visible-doc', $ids);
         self::assertNotContains('removed-doc', $ids, 'Soft-removed node must not appear in default findNodes results');
     }
@@ -172,12 +173,12 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         $this->createTestDocument('removed-doc', 'Removed');
         $this->softRemoveNode('removed-doc');
 
-        $result = $this->nodeReadService->findNodes(
+        $result = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
             includeRemoved: true,
-        );
+        ));
 
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = self::collectAggregateIds($result);
         self::assertContains('visible-doc', $ids);
         self::assertContains('removed-doc', $ids, 'Soft-removed node must appear when includeRemoved is true');
     }
@@ -203,7 +204,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
         $result = $this->nodeReadService->getNode('removed-doc', includeRemoved: true);
 
         self::assertNotNull($result, 'Soft-removed node must be returned when includeRemoved is true');
-        self::assertSame('removed-doc', $result['nodeAggregateId']);
+        self::assertSame('removed-doc', $result->nodeAggregateId);
     }
 
     #[Test]
@@ -218,7 +219,7 @@ class NodeReadServiceTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
         );
 
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = self::collectAggregateIds($result);
         self::assertContains('child-visible', $ids);
         self::assertNotContains('child-removed', $ids, 'Soft-removed child must not appear in default getChildren results');
     }
@@ -236,9 +237,34 @@ class NodeReadServiceTest extends AbstractFunctionalTest
             includeRemoved: true,
         );
 
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = self::collectAggregateIds($result);
         self::assertContains('child-visible', $ids);
         self::assertContains('child-removed', $ids, 'Soft-removed child must appear when includeRemoved is true');
+    }
+
+    private static function buildFindNodesRequest(
+        ?string $nodeTypeName = null,
+        ?string $searchTerm = null,
+        ?string $parentNodeAggregateId = null,
+        int $limit = 100,
+        bool $includeRemoved = false,
+    ): FindNodesRequest {
+        return new FindNodesRequest(
+            nodeTypeName: $nodeTypeName,
+            searchTerm: $searchTerm,
+            parentNodeAggregateId: $parentNodeAggregateId,
+            limit: $limit,
+            dimensionSpacePoint: null,
+            includeRemoved: $includeRemoved,
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function collectAggregateIds(NodeInfoCollection $collection): array
+    {
+        return array_map(static fn (NodeInfo $node) => $node->nodeAggregateId, iterator_to_array($collection, false));
     }
 
     private function softRemoveNode(string $nodeAggregateId): void

@@ -42,7 +42,7 @@ class NodeTypeServiceTest extends UnitTestCase
         $result = $this->subject->listNodeTypes();
 
         // NodeTypeManager always includes the built-in Neos.ContentRepository:Root type
-        $names = array_column($result, 'name');
+        $names = array_map(static fn ($summary) => $summary->name, iterator_to_array($result));
         self::assertContains('Vendor:Document.Page', $names);
         self::assertNotContains('Vendor:Mixin.Abstract', $names);
     }
@@ -60,7 +60,8 @@ class NodeTypeServiceTest extends UnitTestCase
         $result = $this->subject->listNodeTypes('document');
 
         self::assertCount(1, $result);
-        self::assertSame('Vendor:Document.Page', $result[0]['name']);
+        $summary = iterator_to_array($result)[0];
+        self::assertSame('Vendor:Document.Page', $summary->name);
     }
 
     #[Test]
@@ -80,15 +81,11 @@ class NodeTypeServiceTest extends UnitTestCase
         $result = $this->subject->listNodeTypes('Vendor:Document');
 
         self::assertCount(1, $result);
-        self::assertArrayHasKey('name', $result[0]);
-        self::assertArrayHasKey('label', $result[0]);
-        self::assertArrayHasKey('abstract', $result[0]);
-        self::assertArrayHasKey('final', $result[0]);
-        self::assertArrayHasKey('superTypes', $result[0]);
-        self::assertArrayHasKey('declaredProperties', $result[0]);
-        self::assertFalse($result[0]['abstract']);
-        self::assertContains('title', $result[0]['declaredProperties']);
-        self::assertContains('body', $result[0]['declaredProperties']);
+        $summary = iterator_to_array($result)[0];
+        self::assertSame('Vendor:Document.Page', $summary->name);
+        self::assertFalse($summary->abstract);
+        self::assertContains('title', $summary->declaredProperties);
+        self::assertContains('body', $summary->declaredProperties);
     }
 
     #[Test]
@@ -106,13 +103,12 @@ class NodeTypeServiceTest extends UnitTestCase
 
         $result = $this->subject->getNodeTypeSchema('Vendor:Document.Page');
 
-        self::assertSame('Vendor:Document.Page', $result['name']);
-        self::assertArrayHasKey('properties', $result);
-        self::assertArrayHasKey('title', $result['properties']);
-        self::assertSame('string', $result['properties']['title']['type']);
-        self::assertSame('Untitled', $result['properties']['title']['defaultValue']);
-        self::assertArrayHasKey('childNodes', $result);
-        self::assertArrayHasKey('references', $result);
+        self::assertSame('Vendor:Document.Page', $result->name);
+        self::assertTrue($result->properties->has('title'));
+        $titleDefinition = $result->properties->get('title');
+        self::assertNotNull($titleDefinition);
+        self::assertSame('string', $titleDefinition->type);
+        self::assertSame('Untitled', $titleDefinition->defaultValue);
     }
 
     #[Test]
@@ -137,10 +133,16 @@ class NodeTypeServiceTest extends UnitTestCase
 
         $result = $this->subject->getNodeTypeSchema('Vendor:Document.Page');
 
-        self::assertSame('SEO title', $result['properties']['titleOverride']['label'] ?? null);
-        self::assertStringContainsString('Used for the browser tab', $result['properties']['titleOverride']['description'] ?? '');
-        self::assertArrayNotHasKey('label', $result['properties']['noHelp']);
-        self::assertArrayNotHasKey('description', $result['properties']['noHelp']);
+        $titleOverride = $result->properties->get('titleOverride');
+        self::assertNotNull($titleOverride);
+        self::assertSame('SEO title', $titleOverride->label);
+        self::assertNotNull($titleOverride->description);
+        self::assertStringContainsString('Used for the browser tab', $titleOverride->description);
+
+        $noHelp = $result->properties->get('noHelp');
+        self::assertNotNull($noHelp);
+        self::assertNull($noHelp->label);
+        self::assertNull($noHelp->description);
     }
 
     #[Test]
@@ -178,17 +180,23 @@ class NodeTypeServiceTest extends UnitTestCase
 
         $result = $this->subject->getNodeTypeSchema('Vendor:Document.Page');
 
+        $titleOverride = $result->properties->get('titleOverride');
+        self::assertNotNull($titleOverride);
         self::assertSame(
             ['StringLength' => ['maximum' => 60], 'NotEmpty' => []],
-            $result['properties']['titleOverride']['validation'] ?? null,
+            $titleOverride->validation,
         );
+
+        $price = $result->properties->get('price');
+        self::assertNotNull($price);
         self::assertSame(
             ['NumberRange' => ['minimum' => 0, 'maximum' => 999]],
-            $result['properties']['price']['validation'] ?? null,
+            $price->validation,
         );
-        self::assertArrayNotHasKey('validation', $result['properties']['noValidation']);
-        self::assertArrayNotHasKey('validation', $result['properties']['wholeBlockDisabled']);
-        self::assertArrayNotHasKey('validation', $result['properties']['singleValidatorDisabled']);
+
+        self::assertNull($result->properties->get('noValidation')?->validation);
+        self::assertNull($result->properties->get('wholeBlockDisabled')?->validation);
+        self::assertNull($result->properties->get('singleValidatorDisabled')?->validation);
     }
 
     #[Test]

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\WorkspaceDiscardResult;
+use GesagtGetan\NeosMcp\Dto\WorkspaceStatus;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\DiscardWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
@@ -44,45 +46,38 @@ final class McpWorkspaceToolProvider implements McpToolProvider
 
     /**
      * Show the workspace status including pending change count.
-     *
-     * @return array{workspaceName: string, baseWorkspace: ?string, status: string, hasPendingChanges: bool}
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
-    public function getWorkspaceStatus(): array
+    public function getWorkspaceStatus(): WorkspaceStatus
     {
         $this->rebaser->rebase();
         $workspace = $this->contentRepository->findWorkspaceByName($this->workspaceName);
         if ($workspace === null) {
-            return [
-                'workspaceName' => $this->workspaceName->value,
-                'baseWorkspace' => null,
-                'status' => 'not_found',
-                'hasPendingChanges' => false,
-            ];
+            return new WorkspaceStatus(
+                workspaceName: $this->workspaceName->value,
+                baseWorkspace: null,
+                status: 'not_found',
+                hasPendingChanges: false,
+            );
         }
 
-        return [
-            'workspaceName' => $workspace->workspaceName->value,
-            'baseWorkspace' => $workspace->baseWorkspaceName?->value,
-            'status' => $workspace->status->value,
-            'hasPendingChanges' => $workspace->hasPublishableChanges(),
-        ];
+        return new WorkspaceStatus(
+            workspaceName: $workspace->workspaceName->value,
+            baseWorkspace: $workspace->baseWorkspaceName?->value,
+            status: $workspace->status->value,
+            hasPendingChanges: $workspace->hasPublishableChanges(),
+        );
     }
 
     /**
      * Discard all pending changes in the workspace.
-     *
-     * @return array{workspaceName: string, success: true}
      */
     #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
-    public function discardWorkspaceChanges(): array
+    public function discardWorkspaceChanges(): WorkspaceDiscardResult
     {
         $this->rebaser->rebase();
         $this->contentRepository->handle(DiscardWorkspace::create($this->workspaceName));
 
-        return [
-            'workspaceName' => $this->workspaceName->value,
-            'success' => true,
-        ];
+        return new WorkspaceDiscardResult(workspaceName: $this->workspaceName->value);
     }
 }

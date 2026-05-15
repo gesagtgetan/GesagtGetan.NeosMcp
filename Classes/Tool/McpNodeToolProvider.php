@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tool;
 
+use GesagtGetan\NeosMcp\Dto\ContentRepositoryInfo;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceResult;
+use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
+use GesagtGetan\NeosMcp\Dto\MoveResult;
+use GesagtGetan\NeosMcp\Dto\NodeInfo;
+use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
+use GesagtGetan\NeosMcp\Dto\NodeTypeSchema;
+use GesagtGetan\NeosMcp\Dto\NodeTypeSummaryCollection;
+use GesagtGetan\NeosMcp\Dto\ReorderNodeRequest;
+use GesagtGetan\NeosMcp\Dto\WriteResult;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
@@ -60,11 +71,9 @@ final class McpNodeToolProvider implements McpToolProvider
 
     /**
      * Returns available dimensions, workspaces, and dimension space points for the content repository.
-     *
-     * @return array<string, mixed>
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
-    public function getContentRepositoryInfo(): array
+    public function getContentRepositoryInfo(): ContentRepositoryInfo
     {
         $warning = $this->rebaser->rebase();
 
@@ -73,11 +82,9 @@ final class McpNodeToolProvider implements McpToolProvider
 
     /**
      * List non-abstract node types with property summaries. Optional filter parameter for name pattern (case-insensitive substring match).
-     *
-     * @return array<int, mixed>
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
-    public function listNodeTypes(?string $filter = null): array
+    public function listNodeTypes(?string $filter = null): NodeTypeSummaryCollection
     {
         $this->rebaser->rebase();
 
@@ -86,11 +93,9 @@ final class McpNodeToolProvider implements McpToolProvider
 
     /**
      * Get full schema for a node type including properties, child nodes, and references.
-     *
-     * @return array<string, mixed>
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
-    public function getNodeTypeSchema(string $nodeTypeName): array
+    public function getNodeTypeSchema(string $nodeTypeName): NodeTypeSchema
     {
         $this->rebaser->rebase();
 
@@ -106,8 +111,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param int $limit Maximum number of results (default: 100)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
-     *
-     * @return array<int, mixed>
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function findNodes(
@@ -118,17 +121,17 @@ final class McpNodeToolProvider implements McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
-    ): array {
+    ): NodeInfoCollection {
         $this->rebaser->rebase();
 
-        return $this->nodeReadService->findNodes(
-            $nodeTypeName,
-            $searchTerm,
-            $parentNodeAggregateId,
-            $limit,
-            $dimensionSpacePoint,
-            $includeRemoved,
-        );
+        return $this->nodeReadService->findNodes(new FindNodesRequest(
+            nodeTypeName: $nodeTypeName,
+            searchTerm: $searchTerm,
+            parentNodeAggregateId: $parentNodeAggregateId,
+            limit: $limit,
+            dimensionSpacePoint: $dimensionSpacePoint,
+            includeRemoved: $includeRemoved,
+        ));
     }
 
     /**
@@ -137,8 +140,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string $nodeAggregateId The node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
-     *
-     * @return array<string, mixed>|null
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function getNode(
@@ -146,7 +147,7 @@ final class McpNodeToolProvider implements McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
-    ): ?array {
+    ): ?NodeInfo {
         $warning = $this->rebaser->rebase();
         $node = $this->nodeReadService->getNode($nodeAggregateId, $dimensionSpacePoint, $includeRemoved);
 
@@ -160,8 +161,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string|null $nodeTypeName Filter children by node type
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
-     *
-     * @return array<int, mixed>
      */
     #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
     public function getChildren(
@@ -170,7 +169,7 @@ final class McpNodeToolProvider implements McpToolProvider
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
-    ): array {
+    ): NodeInfoCollection {
         $this->rebaser->rebase();
 
         return $this->nodeReadService->getChildren(
@@ -186,8 +185,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string $nodeTypeName The node type to create (e.g. 'Neos.Neos:Document')
      * @param array<string, mixed>|null $properties Property values to set on the new node
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
         Create a new node under a parent node in the workspace. The nodeAggregateId is auto-generated and returned in the response — callers cannot specify it.
@@ -204,7 +201,7 @@ final class McpNodeToolProvider implements McpToolProvider
         ?array $properties = null,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
@@ -219,8 +216,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string $nodeAggregateId The node aggregate ID to update
      * @param array<string, mixed> $properties Property values to set (partial update — omitted properties are left unchanged)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool]
     public function setNodeProperties(
@@ -229,7 +224,7 @@ final class McpNodeToolProvider implements McpToolProvider
         array $properties,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         if ($properties === []) {
             throw new \InvalidArgumentException('Properties must be a non-empty JSON object.', 1770740199);
         }
@@ -246,8 +241,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string $nodeAggregateId The node aggregate ID to move
      * @param string $newParentNodeAggregateId The new parent node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
         Move a node to a different parent. The node is appended at the end of the new parent's children.
@@ -259,7 +252,7 @@ final class McpNodeToolProvider implements McpToolProvider
         string $newParentNodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): MoveResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
@@ -273,8 +266,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string|null $placeBeforeNodeAggregateId Place the node directly before this sibling. Provide either this or placeAfterNodeAggregateId (at least one is required).
      * @param string|null $placeAfterNodeAggregateId Place the node directly after this sibling. Provide either this or placeBeforeNodeAggregateId (at least one is required).
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(description: <<<'MCP'
         Change a node's sort order within its current parent by placing it relative to a sibling. The parent does NOT change.
@@ -289,20 +280,16 @@ final class McpNodeToolProvider implements McpToolProvider
         ?string $placeAfterNodeAggregateId = null,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
-        if ($placeBeforeNodeAggregateId === null && $placeAfterNodeAggregateId === null) {
-            throw new \InvalidArgumentException('At least one of placeBeforeNodeAggregateId or placeAfterNodeAggregateId must be provided.', 1779800000);
-        }
-
+    ): WriteResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
-            $this->nodeWriteService->reorderNode(
-                $nodeAggregateId,
-                $placeBeforeNodeAggregateId,
-                $placeAfterNodeAggregateId,
-                $dimensionSpacePoint,
-            ),
+            $this->nodeWriteService->reorderNode(new ReorderNodeRequest(
+                nodeAggregateId: $nodeAggregateId,
+                placeBeforeNodeAggregateId: $placeBeforeNodeAggregateId,
+                placeAfterNodeAggregateId: $placeAfterNodeAggregateId,
+                dimensionSpacePoint: $dimensionSpacePoint,
+            )),
             $warning,
         );
     }
@@ -313,15 +300,13 @@ final class McpNodeToolProvider implements McpToolProvider
      *
      * @param string $nodeAggregateId The node aggregate ID to remove
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
     public function removeNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
@@ -335,15 +320,13 @@ final class McpNodeToolProvider implements McpToolProvider
      *
      * @param string $nodeAggregateId The node aggregate ID to hide
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool]
     public function hideNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
@@ -357,15 +340,13 @@ final class McpNodeToolProvider implements McpToolProvider
      *
      * @param string $nodeAggregateId The node aggregate ID to unhide
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{nodeAggregateId: string, success: true, _rebaseWarning?: string}
      */
     #[McpTool]
     public function unhideNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
@@ -383,8 +364,6 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param string|null $propertyName Optional filter: restrict to this property. Omit to search all string properties of each node.
      * @param bool $dryRun If true, only report matches without making changes (default: false)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
-     *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool, _rebaseWarning?: string}
      */
     #[McpTool]
     public function findAndReplace(
@@ -395,11 +374,18 @@ final class McpNodeToolProvider implements McpToolProvider
         bool $dryRun = false,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): FindAndReplaceResult {
         $warning = $this->rebaser->rebase();
 
         return $this->rebaser->withWarning(
-            $this->nodeWriteService->findAndReplace($search, $replace, $nodeTypeName, $propertyName, $dryRun, $dimensionSpacePoint),
+            $this->nodeWriteService->findAndReplace(new FindAndReplaceRequest(
+                search: $search,
+                replace: $replace,
+                nodeTypeName: $nodeTypeName,
+                propertyName: $propertyName,
+                dryRun: $dryRun,
+                dimensionSpacePoint: $dimensionSpacePoint,
+            )),
             $warning,
         );
     }

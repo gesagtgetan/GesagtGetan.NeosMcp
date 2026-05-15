@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tests\Functional;
 
+use GesagtGetan\NeosMcp\Dto\NodeInfo;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
@@ -53,7 +54,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Published then deleted'],
         );
-        $nodeId = $created['nodeAggregateId'];
+        $nodeId = $created->nodeAggregateId;
 
         $this->contentRepository->handle(
             PublishWorkspace::create($this->workspaceName),
@@ -68,7 +69,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
         );
 
-        $ids = array_column($result, 'nodeAggregateId');
+        $ids = array_map(static fn (NodeInfo $n) => $n->nodeAggregateId, iterator_to_array($result, false));
         self::assertNotContains($nodeId, $ids, 'Node deleted in live must not be visible after tool-triggered rebase');
     }
 
@@ -86,7 +87,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Original'],
         );
-        $nodeId = $created['nodeAggregateId'];
+        $nodeId = $created->nodeAggregateId;
 
         // Rebase the MCP workspace so it sees the live node.
         $this->contentRepository->handle(
@@ -114,8 +115,11 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $result = $this->provider->getNode($nodeId);
 
         self::assertNotNull($result, 'Node should still be visible in stale workspace');
-        self::assertArrayHasKey('_rebaseWarning', $result, 'Tool response must include _rebaseWarning on conflict');
-        self::assertIsString($result['_rebaseWarning']);
-        self::assertStringContainsString('conflicts', strtolower($result['_rebaseWarning']));
+        $warning = $result->getRebaseWarning();
+        self::assertNotNull($warning, 'Tool response must include _rebaseWarning on conflict');
+        self::assertStringContainsString('conflicts', strtolower($warning));
+
+        $serialized = $result->jsonSerialize();
+        self::assertArrayHasKey('_rebaseWarning', $serialized, 'JSON wire output must carry _rebaseWarning');
     }
 }

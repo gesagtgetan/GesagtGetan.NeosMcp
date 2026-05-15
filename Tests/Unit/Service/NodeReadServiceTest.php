@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use Neos\ContentRepository\Core\Dimension\ContentDimensionSourceInterface;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
@@ -140,13 +141,10 @@ class NodeReadServiceTest extends UnitTestCase
 
         $result = $this->subject->getContentRepositoryInfo();
 
-        self::assertArrayHasKey('contentRepositoryId', $result);
-        self::assertSame('default', $result['contentRepositoryId']);
-        self::assertArrayHasKey('dimensions', $result);
-        self::assertArrayHasKey('workspaces', $result);
-        self::assertArrayHasKey('dimensionSpacePoints', $result);
-        self::assertCount(1, $result['workspaces']);
-        self::assertSame('live', $result['workspaces'][0]['name']);
+        self::assertSame('default', $result->contentRepositoryId);
+        self::assertCount(1, $result->workspaces);
+        $workspaces = iterator_to_array($result->workspaces);
+        self::assertSame('live', $workspaces[0]->name);
     }
 
     #[Test]
@@ -173,20 +171,19 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('test-aggregate-id');
 
         self::assertNotNull($result);
-        self::assertSame('test-aggregate-id', $result['nodeAggregateId']);
-        self::assertSame('Vendor:Document.Page', $result['nodeTypeName']);
-        self::assertSame('my-page', $result['nodeName']);
-        self::assertArrayHasKey('properties', $result);
+        self::assertSame('test-aggregate-id', $result->nodeAggregateId);
+        self::assertSame('Vendor:Document.Page', $result->nodeTypeName);
+        self::assertSame('my-page', $result->nodeName);
     }
 
     #[Test]
-    public function findNodesReturnsEmptyArrayWhenNoSitesRoot(): void
+    public function findNodesReturnsEmptyCollectionWhenNoSitesRoot(): void
     {
         $this->subgraph->method('findRootNodeByType')->willReturn(null);
 
-        $result = $this->subject->findNodes();
+        $result = $this->subject->findNodes(self::defaultFindNodesRequest());
 
-        self::assertSame([], $result);
+        self::assertTrue($result->isEmpty());
     }
 
     #[Test]
@@ -201,7 +198,8 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getChildren('parent-id');
 
         self::assertCount(1, $result);
-        self::assertSame('child-1', $result[0]['nodeAggregateId']);
+        $children = iterator_to_array($result);
+        self::assertSame('child-1', $children[0]->nodeAggregateId);
     }
 
     // ── Property Serialization Tests ────────────────────────────────
@@ -220,7 +218,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('dt-node');
 
         self::assertNotNull($result);
-        self::assertSame('2024-01-15T10:30:00+00:00', $result['properties']['createdAt']);
+        self::assertSame('2024-01-15T10:30:00+00:00', $result->properties['createdAt']);
     }
 
     #[Test]
@@ -237,7 +235,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('json-node');
 
         self::assertNotNull($result);
-        self::assertSame(['key' => 'value', 'count' => 42], $result['properties']['metadata']);
+        self::assertSame(['key' => 'value', 'count' => 42], $result->properties['metadata']);
     }
 
     #[Test]
@@ -254,7 +252,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('str-node');
 
         self::assertNotNull($result);
-        self::assertSame('https://example.com', $result['properties']['uri']);
+        self::assertSame('https://example.com', $result->properties['uri']);
     }
 
     #[Test]
@@ -271,7 +269,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('obj-node');
 
         self::assertNotNull($result);
-        self::assertSame('[object:stdClass]', $result['properties']['unknown']);
+        self::assertSame('[object:stdClass]', $result->properties['unknown']);
     }
 
     #[Test]
@@ -288,9 +286,9 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('arr-node');
 
         self::assertNotNull($result);
-        self::assertIsArray($result['properties']['dates']);
-        self::assertSame('2024-01-15T10:00:00+00:00', $result['properties']['dates'][0]);
-        self::assertSame('2024-06-30T18:00:00+00:00', $result['properties']['dates'][1]);
+        self::assertIsArray($result->properties['dates']);
+        self::assertSame('2024-01-15T10:00:00+00:00', $result->properties['dates'][0]);
+        self::assertSame('2024-06-30T18:00:00+00:00', $result->properties['dates'][1]);
     }
 
     // ── Visibility Constraints Tests ────────────────────────────────
@@ -330,7 +328,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('visible-node');
 
         self::assertNotNull($result);
-        self::assertFalse($result['hidden']);
+        self::assertFalse($result->hidden);
     }
 
     #[Test]
@@ -346,7 +344,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('hidden-node');
 
         self::assertNotNull($result);
-        self::assertTrue($result['hidden']);
+        self::assertTrue($result->hidden);
     }
 
     #[Test]
@@ -362,7 +360,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $this->subject->getNode('inherited-hidden-node');
 
         self::assertNotNull($result);
-        self::assertTrue($result['hidden']);
+        self::assertTrue($result->hidden);
     }
 
     // ── Property Truncation Tests ───────────────────────────────────
@@ -387,10 +385,11 @@ class NodeReadServiceTest extends UnitTestCase
         );
         $this->subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
 
-        $result = $service->findNodes();
+        $result = $service->findNodes(self::defaultFindNodesRequest());
 
         self::assertCount(1, $result);
-        $text = $result[0]['properties']['text'];
+        $nodes = iterator_to_array($result);
+        $text = $nodes[0]->properties['text'];
         self::assertIsString($text);
         self::assertSame(31, mb_strlen($text)); // 30 + "…"
         self::assertStringEndsWith('…', $text);
@@ -416,10 +415,11 @@ class NodeReadServiceTest extends UnitTestCase
         );
         $this->subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
 
-        $result = $service->findNodes();
+        $result = $service->findNodes(self::defaultFindNodesRequest());
 
         self::assertCount(1, $result);
-        self::assertSame('Short title', $result[0]['properties']['title']);
+        $nodes = iterator_to_array($result);
+        self::assertSame('Short title', $nodes[0]->properties['title']);
     }
 
     #[Test]
@@ -444,7 +444,7 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $service->getNode('full-node');
 
         self::assertNotNull($result);
-        self::assertSame($longValue, $result['properties']['text']);
+        self::assertSame($longValue, $result->properties['text']);
     }
 
     #[Test]
@@ -467,13 +467,26 @@ class NodeReadServiceTest extends UnitTestCase
         $result = $service->getChildren('parent-id');
 
         self::assertCount(1, $result);
-        $text = $result[0]['properties']['text'];
+        $children = iterator_to_array($result);
+        $text = $children[0]->properties['text'];
         self::assertIsString($text);
         self::assertSame(31, mb_strlen($text));
         self::assertStringEndsWith('…', $text);
     }
 
     // ── Stub Helpers ────────────────────────────────────────────────
+
+    private static function defaultFindNodesRequest(): FindNodesRequest
+    {
+        return new FindNodesRequest(
+            nodeTypeName: null,
+            searchTerm: null,
+            parentNodeAggregateId: null,
+            limit: 100,
+            dimensionSpacePoint: null,
+            includeRemoved: false,
+        );
+    }
 
     private function createStubNode(
         string $aggregateId,

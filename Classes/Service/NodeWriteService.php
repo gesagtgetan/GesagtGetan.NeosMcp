@@ -5,6 +5,13 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceMatch;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceMatchCollection;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceResult;
+use GesagtGetan\NeosMcp\Dto\MoveResult;
+use GesagtGetan\NeosMcp\Dto\ReorderNodeRequest;
+use GesagtGetan\NeosMcp\Dto\WriteResult;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\OriginDimensionSpacePoint;
 use Neos\ContentRepository\Core\Feature\NodeCreation\Command\CreateNodeAggregateWithNode;
@@ -36,15 +43,13 @@ final readonly class NodeWriteService
     /**
      * @param array<string, mixed> $properties
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
      */
     public function createNode(
         string $parentNodeAggregateId,
         string $nodeTypeName,
         array $properties,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $nodeAggregateId = NodeAggregateId::create();
         $originDimensionSpacePoint = $this->resolveOriginDimensionSpacePoint($dimensionSpacePoint);
 
@@ -62,23 +67,18 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId->value,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $nodeAggregateId->value);
     }
 
     /**
      * @param array<string, mixed> $properties
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
      */
     public function setNodeProperties(
         string $nodeAggregateId,
         array $properties,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $originDimensionSpacePoint = $this->resolveOriginDimensionSpacePoint($dimensionSpacePoint);
 
         $command = SetNodeProperties::create(
@@ -90,22 +90,17 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
     }
 
     /**
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, newParentNodeAggregateId: string, success: true}
      */
     public function moveNode(
         string $nodeAggregateId,
         string $newParentNodeAggregateId,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): MoveResult {
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
 
         $command = MoveNodeAggregate::create(
@@ -118,67 +113,49 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'newParentNodeAggregateId' => $newParentNodeAggregateId,
-            'success' => true,
-        ];
+        return new MoveResult(
+            nodeAggregateId: $nodeAggregateId,
+            newParentNodeAggregateId: $newParentNodeAggregateId,
+        );
     }
 
     /**
      * Reorders a node within its current parent by placing it relative to a sibling.
-     * At least one of `$placeBeforeNodeAggregateId` or `$placeAfterNodeAggregateId`
-     * must be provided. The parent is not changed.
-     *
-     * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
+     * The parent is not changed; the {@see ReorderNodeRequest} enforces that at least
+     * one of `placeBeforeNodeAggregateId` or `placeAfterNodeAggregateId` is provided.
      */
-    public function reorderNode(
-        string $nodeAggregateId,
-        ?string $placeBeforeNodeAggregateId = null,
-        ?string $placeAfterNodeAggregateId = null,
-        ?array $dimensionSpacePoint = null,
-    ): array {
-        if ($placeBeforeNodeAggregateId === null && $placeAfterNodeAggregateId === null) {
-            throw new \InvalidArgumentException('At least one of placeBeforeNodeAggregateId or placeAfterNodeAggregateId must be provided.', 1779800000);
-        }
-
-        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+    public function reorderNode(ReorderNodeRequest $request): WriteResult
+    {
+        $dsp = $this->resolveDimensionSpacePoint($request->dimensionSpacePoint);
 
         $command = MoveNodeAggregate::create(
             $this->workspaceName,
             $dsp,
-            NodeAggregateId::fromString($nodeAggregateId),
+            NodeAggregateId::fromString($request->nodeAggregateId),
             RelationDistributionStrategy::default(),
             newParentNodeAggregateId: null,
-            newPrecedingSiblingNodeAggregateId: $placeAfterNodeAggregateId !== null
-                ? NodeAggregateId::fromString($placeAfterNodeAggregateId)
+            newPrecedingSiblingNodeAggregateId: $request->placeAfterNodeAggregateId !== null
+                ? NodeAggregateId::fromString($request->placeAfterNodeAggregateId)
                 : null,
-            newSucceedingSiblingNodeAggregateId: $placeBeforeNodeAggregateId !== null
-                ? NodeAggregateId::fromString($placeBeforeNodeAggregateId)
+            newSucceedingSiblingNodeAggregateId: $request->placeBeforeNodeAggregateId !== null
+                ? NodeAggregateId::fromString($request->placeBeforeNodeAggregateId)
                 : null,
         );
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $request->nodeAggregateId);
     }
 
     /**
      * Soft-removes a node by tagging it as removed (trash). The node can be restored later.
      *
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
      */
     public function removeNode(
         string $nodeAggregateId,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
 
         $command = TagSubtree::create(
@@ -191,23 +168,18 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
     }
 
     /**
      * Hides a node by tagging it as disabled. The node will not be visible on the public site.
      *
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
      */
     public function hideNode(
         string $nodeAggregateId,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
 
         $command = TagSubtree::create(
@@ -220,23 +192,18 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
     }
 
     /**
      * Unhides a previously hidden node by removing the disabled tag.
      *
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, success: true}
      */
     public function unhideNode(
         string $nodeAggregateId,
         ?array $dimensionSpacePoint = null,
-    ): array {
+    ): WriteResult {
         $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
 
         $command = UntagSubtree::create(
@@ -249,50 +216,42 @@ final readonly class NodeWriteService
 
         $this->contentRepository->handle($command);
 
-        return [
-            'nodeAggregateId' => $nodeAggregateId,
-            'success' => true,
-        ];
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
     }
 
     /**
-     * @param array<string, string>|null $dimensionSpacePoint
+     * Find and replace a string across the content tree.
      *
-     * @return array{affectedNodes: int, matches: list<array{nodeAggregateId: string, nodeTypeName: string, propertyName: string, oldValue: string, newValue: string}>, dryRun: bool} oldValue/newValue are context snippets (~80 chars around match), not full values
+     * `oldValue`/`newValue` in each match are context snippets (~80 chars around match),
+     * not full values.
      */
-    public function findAndReplace(
-        string $search,
-        string $replace,
-        ?string $nodeTypeName = null,
-        ?string $propertyName = null,
-        bool $dryRun = false,
-        ?array $dimensionSpacePoint = null,
-    ): array {
-        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+    public function findAndReplace(FindAndReplaceRequest $request): FindAndReplaceResult
+    {
+        $dsp = $this->resolveDimensionSpacePoint($request->dimensionSpacePoint);
         $originDsp = OriginDimensionSpacePoint::fromDimensionSpacePoint($dsp);
         $subgraph = $this->contentRepository->getContentGraph($this->workspaceName)
             ->getSubgraph($dsp, NeosVisibilityConstraints::excludeRemoved());
 
         $sitesRoot = $subgraph->findRootNodeByType(NodeTypeName::fromString('Neos.Neos:Sites'));
         if ($sitesRoot === null) {
-            return ['affectedNodes' => 0, 'matches' => [], 'dryRun' => $dryRun];
+            return new FindAndReplaceResult(matches: new FindAndReplaceMatchCollection(), dryRun: $request->dryRun);
         }
 
-        $filter = FindDescendantNodesFilter::create(nodeTypes: $nodeTypeName);
+        $filter = FindDescendantNodesFilter::create(nodeTypes: $request->nodeTypeName);
         $nodes = $subgraph->findDescendantNodes($sitesRoot->aggregateId, $filter);
 
         $matches = [];
         foreach ($nodes as $node) {
             $propertiesToReplace = [];
 
-            if ($propertyName !== null) {
-                $currentValue = $node->getProperty($propertyName);
-                if (is_string($currentValue) && str_contains($currentValue, $search)) {
-                    $propertiesToReplace[$propertyName] = $currentValue;
+            if ($request->propertyName !== null) {
+                $currentValue = $node->getProperty($request->propertyName);
+                if (is_string($currentValue) && str_contains($currentValue, $request->search)) {
+                    $propertiesToReplace[$request->propertyName] = $currentValue;
                 }
             } else {
                 foreach ($node->properties as $name => $value) {
-                    if (is_string($value) && str_contains($value, $search)) {
+                    if (is_string($value) && str_contains($value, $request->search)) {
                         $propertiesToReplace[$name] = $value;
                     }
                 }
@@ -304,18 +263,18 @@ final readonly class NodeWriteService
 
             $updatedProperties = [];
             foreach ($propertiesToReplace as $name => $currentValue) {
-                $newValue = str_replace($search, $replace, $currentValue);
-                $matches[] = [
-                    'nodeAggregateId' => $node->aggregateId->value,
-                    'nodeTypeName' => $node->nodeTypeName->value,
-                    'propertyName' => $name,
-                    'oldValue' => self::truncateString($currentValue, $this->propertyTruncateLength),
-                    'newValue' => self::truncateString($newValue, $this->propertyTruncateLength),
-                ];
+                $newValue = str_replace($request->search, $request->replace, $currentValue);
+                $matches[] = new FindAndReplaceMatch(
+                    nodeAggregateId: $node->aggregateId->value,
+                    nodeTypeName: $node->nodeTypeName->value,
+                    propertyName: $name,
+                    oldValue: self::truncateString($currentValue, $this->propertyTruncateLength),
+                    newValue: self::truncateString($newValue, $this->propertyTruncateLength),
+                );
                 $updatedProperties[$name] = $newValue;
             }
 
-            if (!$dryRun) {
+            if (!$request->dryRun) {
                 $command = SetNodeProperties::create(
                     $this->workspaceName,
                     $node->aggregateId,
@@ -327,11 +286,10 @@ final readonly class NodeWriteService
             }
         }
 
-        return [
-            'affectedNodes' => count($matches),
-            'matches' => $matches,
-            'dryRun' => $dryRun,
-        ];
+        return new FindAndReplaceResult(
+            matches: new FindAndReplaceMatchCollection(...$matches),
+            dryRun: $request->dryRun,
+        );
     }
 
     private static function truncateString(string $value, ?int $maxLength): string

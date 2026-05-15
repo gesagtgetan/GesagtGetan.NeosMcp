@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tests\Functional\Service;
 
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceMatch;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
+use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
+use GesagtGetan\NeosMcp\Dto\NodeInfo;
+use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
@@ -37,14 +42,13 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'Created by test'],
         );
 
-        self::assertTrue($result['success']);
-        self::assertNotEmpty($result['nodeAggregateId']);
+        self::assertNotEmpty($result->nodeAggregateId);
 
-        $node = $this->nodeReadService->getNode($result['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($result->nodeAggregateId);
 
         self::assertNotNull($node);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $node['nodeTypeName']);
-        self::assertSame('Created by test', $node['properties']['title']);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $node->nodeTypeName);
+        self::assertSame('Created by test', $node->properties['title']);
     }
 
     #[Test]
@@ -57,14 +61,14 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         );
 
         $this->nodeWriteService->setNodeProperties(
-            $createResult['nodeAggregateId'],
+            $createResult->nodeAggregateId,
             ['title' => 'Updated'],
         );
 
-        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
 
         self::assertNotNull($node);
-        self::assertSame('Updated', $node['properties']['title']);
+        self::assertSame('Updated', $node->properties['title']);
     }
 
     #[Test]
@@ -76,14 +80,14 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'To Remove'],
         );
 
-        $this->nodeWriteService->removeNode($createResult['nodeAggregateId']);
+        $this->nodeWriteService->removeNode($createResult->nodeAggregateId);
 
-        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
         self::assertNull($node, 'Soft-removed node must not be returned by default');
 
-        $trashedNode = $this->nodeReadService->getNode($createResult['nodeAggregateId'], includeRemoved: true);
+        $trashedNode = $this->nodeReadService->getNode($createResult->nodeAggregateId, includeRemoved: true);
         self::assertNotNull($trashedNode, 'Soft-removed node must still be accessible with includeRemoved: true');
-        self::assertSame('To Remove', $trashedNode['properties']['title']);
+        self::assertSame('To Remove', $trashedNode->properties['title']);
     }
 
     #[Test]
@@ -102,28 +106,28 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         );
 
         $child = $this->nodeWriteService->createNode(
-            $parent1['nodeAggregateId'],
+            $parent1->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Child'],
         );
 
         $this->nodeWriteService->moveNode(
-            $child['nodeAggregateId'],
-            $parent2['nodeAggregateId'],
+            $child->nodeAggregateId,
+            $parent2->nodeAggregateId,
         );
 
         $parent1Children = $this->nodeReadService->getChildren(
-            $parent1['nodeAggregateId'],
+            $parent1->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Document',
         );
         self::assertCount(0, $parent1Children);
 
         $parent2Children = $this->nodeReadService->getChildren(
-            $parent2['nodeAggregateId'],
+            $parent2->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Document',
         );
         self::assertCount(1, $parent2Children);
-        self::assertSame($child['nodeAggregateId'], $parent2Children[0]['nodeAggregateId']);
+        self::assertSame($child->nodeAggregateId, iterator_to_array($parent2Children)[0]->nodeAggregateId);
     }
 
     #[Test]
@@ -141,19 +145,20 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'No Match Here'],
         );
 
-        $result = $this->nodeWriteService->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->nodeWriteService->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
             propertyName: 'title',
-        );
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertFalse($result['dryRun']);
-        self::assertSame('Hello World', $result['matches'][0]['oldValue']);
-        self::assertSame('Hi World', $result['matches'][0]['newValue']);
-        self::assertSame('title', $result['matches'][0]['propertyName']);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
+        self::assertSame(1, $result->affectedNodes);
+        self::assertFalse($result->dryRun);
+        $match = iterator_to_array($result->matches)[0];
+        self::assertSame('Hello World', $match->oldValue);
+        self::assertSame('Hi World', $match->newValue);
+        self::assertSame('title', $match->propertyName);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $match->nodeTypeName);
     }
 
     #[Test]
@@ -167,47 +172,38 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         );
 
         // Find the tethered "main" ContentCollection child.
-        $documentChildren = $this->nodeReadService->getChildren($document['nodeAggregateId']);
-        $mainCollection = null;
-        foreach ($documentChildren as $child) {
-            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
-                $mainCollection = $child;
-                break;
-            }
-        }
+        $mainCollection = self::findContentCollectionChild(
+            $this->nodeReadService->getChildren($document->nodeAggregateId),
+        );
         self::assertNotNull($mainCollection, 'Document must have a tethered "main" ContentCollection');
 
         // Create three text content nodes inside the collection.
-        $text1 = $this->nodeWriteService->createNode(
-            $mainCollection['nodeAggregateId'],
+        $this->nodeWriteService->createNode(
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
             ['text' => 'First paragraph'],
         );
-        $text2 = $this->nodeWriteService->createNode(
-            $mainCollection['nodeAggregateId'],
+        $this->nodeWriteService->createNode(
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
             ['text' => 'Second paragraph'],
         );
-        $text3 = $this->nodeWriteService->createNode(
-            $mainCollection['nodeAggregateId'],
+        $this->nodeWriteService->createNode(
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
             ['text' => 'Third paragraph'],
         );
 
-        self::assertTrue($text1['success']);
-        self::assertTrue($text2['success']);
-        self::assertTrue($text3['success']);
-
         // Verify all three appear as children of the collection.
         $contentChildren = $this->nodeReadService->getChildren(
-            $mainCollection['nodeAggregateId'],
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
         );
         self::assertCount(3, $contentChildren);
 
         $texts = [];
         foreach ($contentChildren as $node) {
-            $text = $node['properties']['text'] ?? null;
+            $text = $node->properties['text'] ?? null;
             self::assertIsString($text);
             $texts[] = $text;
         }
@@ -216,9 +212,9 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         self::assertContains('Third paragraph', $texts);
 
         // Verify they also appear via findNodes from the site root.
-        $found = $this->nodeReadService->findNodes(
+        $found = $this->nodeReadService->findNodes(self::buildFindNodesRequest(
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Content.Text',
-        );
+        ));
         self::assertCount(3, $found);
     }
 
@@ -231,20 +227,20 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'Replace Me'],
         );
 
-        $result = $this->nodeWriteService->findAndReplace(
-            'Replace',
-            'Changed',
+        $result = $this->nodeWriteService->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Replace',
+            replace: 'Changed',
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
             propertyName: 'title',
             dryRun: true,
-        );
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertTrue($result['dryRun']);
+        self::assertSame(1, $result->affectedNodes);
+        self::assertTrue($result->dryRun);
 
-        $node = $this->nodeReadService->getNode($created['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($created->nodeAggregateId);
         self::assertNotNull($node);
-        self::assertSame('Replace Me', $node['properties']['title']);
+        self::assertSame('Replace Me', $node->properties['title']);
     }
 
     #[Test]
@@ -262,32 +258,28 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Container'],
         );
-        $documentChildren = $this->nodeReadService->getChildren($document['nodeAggregateId']);
-        $mainCollection = null;
-        foreach ($documentChildren as $child) {
-            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
-                $mainCollection = $child;
-                break;
-            }
-        }
+        $mainCollection = self::findContentCollectionChild(
+            $this->nodeReadService->getChildren($document->nodeAggregateId),
+        );
         self::assertNotNull($mainCollection);
 
         $this->nodeWriteService->createNode(
-            $mainCollection['nodeAggregateId'],
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
             ['text' => 'Hello Content'],
         );
 
-        $result = $this->nodeWriteService->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->nodeWriteService->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             propertyName: 'title',
             dryRun: true,
-        );
+        ));
 
         // Only the Document matches — Content.Text has no "title" property
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $result['matches'][0]['nodeTypeName']);
+        self::assertSame(1, $result->affectedNodes);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $matches[0]->nodeTypeName);
     }
 
     #[Test]
@@ -299,16 +291,19 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'Hello Title', 'text' => 'Hello Body'],
         );
 
-        $result = $this->nodeWriteService->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->nodeWriteService->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             nodeTypeName: 'GesagtGetan.NeosMcp:Testing.Document',
             dryRun: true,
+        ));
+
+        self::assertSame(2, $result->affectedNodes);
+
+        $propertyNames = array_map(
+            static fn (FindAndReplaceMatch $m) => $m->propertyName,
+            iterator_to_array($result->matches, false),
         );
-
-        self::assertSame(2, $result['affectedNodes']);
-
-        $propertyNames = array_column($result['matches'], 'propertyName');
         self::assertContains('title', $propertyNames);
         self::assertContains('text', $propertyNames);
     }
@@ -327,29 +322,30 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Container'],
         );
-        $documentChildren = $this->nodeReadService->getChildren($document['nodeAggregateId']);
-        $mainCollection = null;
-        foreach ($documentChildren as $child) {
-            if ($child['nodeTypeName'] === 'Neos.Neos:ContentCollection') {
-                $mainCollection = $child;
-                break;
-            }
-        }
+        $mainCollection = self::findContentCollectionChild(
+            $this->nodeReadService->getChildren($document->nodeAggregateId),
+        );
         self::assertNotNull($mainCollection);
 
         $this->nodeWriteService->createNode(
-            $mainCollection['nodeAggregateId'],
+            $mainCollection->nodeAggregateId,
             'GesagtGetan.NeosMcp:Testing.Content.Text',
             ['text' => 'Foo Content'],
         );
 
         // No nodeTypeName, no propertyName — full wildcard
-        $result = $this->nodeWriteService->findAndReplace('Foo', 'Bar');
+        $result = $this->nodeWriteService->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Foo',
+            replace: 'Bar',
+        ));
 
-        self::assertSame(2, $result['affectedNodes']);
-        self::assertFalse($result['dryRun']);
+        self::assertSame(2, $result->affectedNodes);
+        self::assertFalse($result->dryRun);
 
-        $nodeTypeNames = array_column($result['matches'], 'nodeTypeName');
+        $nodeTypeNames = array_map(
+            static fn (FindAndReplaceMatch $m) => $m->nodeTypeName,
+            iterator_to_array($result->matches, false),
+        );
         self::assertContains('GesagtGetan.NeosMcp:Testing.Document', $nodeTypeNames);
         self::assertContains('GesagtGetan.NeosMcp:Testing.Content.Text', $nodeTypeNames);
     }
@@ -363,12 +359,12 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'To Hide'],
         );
 
-        $this->nodeWriteService->hideNode($createResult['nodeAggregateId']);
+        $this->nodeWriteService->hideNode($createResult->nodeAggregateId);
 
-        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
         self::assertNotNull($node);
-        self::assertTrue($node['hidden'], 'Hidden node must have hidden: true');
-        self::assertSame('To Hide', $node['properties']['title']);
+        self::assertTrue($node->hidden, 'Hidden node must have hidden: true');
+        self::assertSame('To Hide', $node->properties['title']);
     }
 
     #[Test]
@@ -380,12 +376,12 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             ['title' => 'To Toggle'],
         );
 
-        $this->nodeWriteService->hideNode($createResult['nodeAggregateId']);
-        $this->nodeWriteService->unhideNode($createResult['nodeAggregateId']);
+        $this->nodeWriteService->hideNode($createResult->nodeAggregateId);
+        $this->nodeWriteService->unhideNode($createResult->nodeAggregateId);
 
-        $node = $this->nodeReadService->getNode($createResult['nodeAggregateId']);
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
         self::assertNotNull($node);
-        self::assertFalse($node['hidden'], 'Unhidden node must have hidden: false');
+        self::assertFalse($node->hidden, 'Unhidden node must have hidden: false');
     }
 
     /**
@@ -403,7 +399,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Published then deleted'],
         );
-        $nodeId = $created['nodeAggregateId'];
+        $nodeId = $created->nodeAggregateId;
 
         $this->contentRepository->handle(
             PublishWorkspace::create(WorkspaceName::fromString('test-workspace')),
@@ -430,7 +426,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
             'GesagtGetan.NeosMcp:Testing.Document',
             ['title' => 'Published then deleted'],
         );
-        $nodeId = $created['nodeAggregateId'];
+        $nodeId = $created->nodeAggregateId;
 
         $this->contentRepository->handle(
             PublishWorkspace::create(WorkspaceName::fromString('test-workspace')),
@@ -447,5 +443,47 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
 
         // After rebase, the node must be gone.
         self::assertNull($this->nodeReadService->getNode($nodeId), 'Node deleted in live must not be visible after rebase');
+    }
+
+    private static function findContentCollectionChild(NodeInfoCollection $children): ?NodeInfo
+    {
+        foreach ($children as $child) {
+            if ($child->nodeTypeName === 'Neos.Neos:ContentCollection') {
+                return $child;
+            }
+        }
+
+        return null;
+    }
+
+    private static function buildFindAndReplaceRequest(
+        string $search,
+        string $replace,
+        ?string $nodeTypeName = null,
+        ?string $propertyName = null,
+        bool $dryRun = false,
+    ): FindAndReplaceRequest {
+        return new FindAndReplaceRequest(
+            search: $search,
+            replace: $replace,
+            nodeTypeName: $nodeTypeName,
+            propertyName: $propertyName,
+            dryRun: $dryRun,
+            dimensionSpacePoint: null,
+        );
+    }
+
+    private static function buildFindNodesRequest(
+        ?string $nodeTypeName = null,
+        ?string $searchTerm = null,
+    ): FindNodesRequest {
+        return new FindNodesRequest(
+            nodeTypeName: $nodeTypeName,
+            searchTerm: $searchTerm,
+            parentNodeAggregateId: null,
+            limit: 100,
+            dimensionSpacePoint: null,
+            includeRemoved: false,
+        );
     }
 }
