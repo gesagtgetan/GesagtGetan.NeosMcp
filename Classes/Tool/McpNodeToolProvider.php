@@ -66,7 +66,7 @@ final class McpNodeToolProvider implements McpToolProvider
 
         $container->set(self::class, $this);
 
-        return McpToolReflector::register($builder, self::class);
+        return McpToolReflector::register($builder, self::class, $context->disabledTools);
     }
 
     #[McpTool(
@@ -283,10 +283,7 @@ final class McpNodeToolProvider implements McpToolProvider
      */
     #[McpTool(description: <<<'MCP'
         Materialize an existing node into a different dimension space point so it can be written to or read from that DSP.
-
         The Content Repository does NOT auto-create nodes in every dimension. Calling `setNodeProperties`, `getNode`, or `findNodes` against a DSP where the node has no variant yet fails with "Dimension space point ... is not yet occupied by node aggregate". Call this tool first to materialize the node into the target DSP, then write to it.
-
-        The CR picks the variant strategy (peer / specialize / generalize) from the configured dimension topology — callers don't choose it.
         MCP)]
     public function createNodeVariant(
         string $nodeAggregateId,

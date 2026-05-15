@@ -18,10 +18,17 @@ use Neos\Flow\Annotations as Flow;
 #[Flow\Proxy(false)]
 final readonly class McpRequestContext
 {
+    /**
+     * @param ContentRepositoryFacade $contentRepository
+     * @param WorkspaceName $workspaceName
+     * @param int|null $propertyTruncateLength
+     * @param list<string> $disabledTools
+     */
     public function __construct(
         public ContentRepositoryFacade $contentRepository,
         public WorkspaceName $workspaceName,
         public ?int $propertyTruncateLength = null,
+        public array $disabledTools = [],
     ) {
     }
 }

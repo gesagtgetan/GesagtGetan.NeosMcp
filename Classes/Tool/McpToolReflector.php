@@ -22,12 +22,16 @@ final class McpToolReflector
 {
     /**
      * @param class-string $handlerClassName
+     * @param list<string> $disabledTools `#[McpTool]` method names to skip
      */
-    public static function register(ServerBuilder $builder, string $handlerClassName): ServerBuilder
+    public static function register(ServerBuilder $builder, string $handlerClassName, array $disabledTools = []): ServerBuilder
     {
         foreach ((new \ReflectionClass($handlerClassName))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
             $attributes = $method->getAttributes(McpTool::class);
             if ($attributes === []) {
+                continue;
+            }
+            if (in_array($method->getName(), $disabledTools, true)) {
                 continue;
             }
 
