@@ -262,6 +262,37 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
+     * @param string $nodeAggregateId The node aggregate ID to vary
+     * @param array<string, string> $sourceDimensionSpacePoint The DSP the node currently exists in, e.g. {"language":"de"}
+     * @param array<string, string> $targetDimensionSpacePoint The DSP to materialize the variant into, e.g. {"language":"en"}
+     */
+    #[McpTool(description: <<<'MCP'
+        Materialize an existing node into a different dimension space point so it can be written to or read from that DSP.
+
+        The Content Repository does NOT auto-create nodes in every dimension. Calling `setNodeProperties`, `getNode`, or `findNodes` against a DSP where the node has no variant yet fails with "Dimension space point ... is not yet occupied by node aggregate". Call this tool first to materialize the node into the target DSP, then write to it.
+
+        The CR picks the variant strategy (peer / specialize / generalize) from the configured dimension topology — callers don't choose it.
+        MCP)]
+    public function createNodeVariant(
+        string $nodeAggregateId,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        array $sourceDimensionSpacePoint,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        array $targetDimensionSpacePoint,
+    ): WriteResult {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeWriteService->createNodeVariant(
+                $nodeAggregateId,
+                $sourceDimensionSpacePoint,
+                $targetDimensionSpacePoint,
+            ),
+            $warning,
+        );
+    }
+
+    /**
      * @param string $nodeAggregateId The node aggregate ID to reorder
      * @param string|null $placeBeforeNodeAggregateId Place the node directly before this sibling. Provide either this or placeAfterNodeAggregateId (at least one is required).
      * @param string|null $placeAfterNodeAggregateId Place the node directly after this sibling. Provide either this or placeBeforeNodeAggregateId (at least one is required).

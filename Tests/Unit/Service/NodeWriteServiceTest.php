@@ -15,6 +15,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValue;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
+use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
 use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
@@ -123,6 +124,20 @@ class NodeWriteServiceTest extends UnitTestCase
         self::assertInstanceOf(MoveNodeAggregate::class, $this->handledCommands[0]);
         self::assertSame('node-id', $result->nodeAggregateId);
         self::assertSame('new-parent-id', $result->newParentNodeAggregateId);
+    }
+
+    #[Test]
+    public function createNodeVariantCallsHandleWithCreateNodeVariantCommand(): void
+    {
+        $result = $this->subject->createNodeVariant(
+            'node-id',
+            ['language' => 'de'],
+            ['language' => 'en'],
+        );
+
+        self::assertCount(1, $this->handledCommands);
+        self::assertInstanceOf(CreateNodeVariant::class, $this->handledCommands[0]);
+        self::assertSame('node-id', $result->nodeAggregateId);
     }
 
     #[Test]
