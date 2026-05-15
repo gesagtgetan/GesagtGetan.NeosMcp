@@ -243,6 +243,10 @@ final readonly class EchoToolProvider implements McpToolProvider
 
 If your tools need per-request workspace/CR state, build a small handler from `McpRequestContext` inside `registerTools()` (the way `McpNodeToolProvider` does) — singletons should not hold per-request state directly.
 
+## Companion Packages
+
+- **`gesagtgetan/neosmcpimages`** — contributes `findImagesByAltText` and `setImageProperty` so the LLM can pick existing media-library images by their alt-text description and assign them to `ImageInterface`-typed node properties. Pairs with `gesagtgetan/imagealttext`, the Neos-side bridge that keeps the alt-text table populated from the external Altaca service.
+
 ## Development
 
 All commands run from the package directory (`DistributionPackages/GesagtGetan.NeosMcp/`). Requires [Just](https://just.systems/) >= 1.38.0.
