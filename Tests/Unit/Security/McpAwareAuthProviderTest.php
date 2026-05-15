@@ -89,7 +89,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         $workspaceName = WorkspaceName::fromString('user-test');
         $expected = Privilege::granted('test');
-        $this->inner->method('canReadNodesFromWorkspace')->with($workspaceName)->willReturn($expected);
+        $this->inner->expects(self::once())->method('canReadNodesFromWorkspace')->with($workspaceName)->willReturn($expected);
 
         self::assertSame($expected, $this->subject->canReadNodesFromWorkspace($workspaceName));
     }
@@ -99,7 +99,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         $workspaceName = WorkspaceName::fromString('user-test');
         $expected = VisibilityConstraints::default();
-        $this->inner->method('getVisibilityConstraints')->with($workspaceName)->willReturn($expected);
+        $this->inner->expects(self::once())->method('getVisibilityConstraints')->with($workspaceName)->willReturn($expected);
 
         self::assertSame($expected, $this->subject->getVisibilityConstraints($workspaceName));
     }
@@ -109,7 +109,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         $command = $this->createMock(CommandInterface::class);
         $expected = Privilege::granted('test');
-        $this->inner->method('canExecuteCommand')->with($command)->willReturn($expected);
+        $this->inner->expects(self::once())->method('canExecuteCommand')->with($command)->willReturn($expected);
 
         self::assertSame($expected, $this->subject->canExecuteCommand($command));
     }
