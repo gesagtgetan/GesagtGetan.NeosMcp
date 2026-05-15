@@ -19,6 +19,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\NodeMove\Dto\RelationDistributionStrategy;
+use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
@@ -117,6 +118,34 @@ final readonly class NodeWriteService
             nodeAggregateId: $nodeAggregateId,
             newParentNodeAggregateId: $newParentNodeAggregateId,
         );
+    }
+
+    /**
+     * Materialize a node into a different dimension space point.
+     *
+     * Required before writes against a target DSP can succeed if the node does
+     * not yet exist as a variant there. The CR picks the variant strategy
+     * (peer / specialize / generalize) from the dimension topology — callers
+     * don't choose.
+     *
+     * @param array<string, string> $sourceDimensionSpacePoint
+     * @param array<string, string> $targetDimensionSpacePoint
+     */
+    public function createNodeVariant(
+        string $nodeAggregateId,
+        array $sourceDimensionSpacePoint,
+        array $targetDimensionSpacePoint,
+    ): WriteResult {
+        $command = CreateNodeVariant::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            OriginDimensionSpacePoint::fromArray($sourceDimensionSpacePoint),
+            OriginDimensionSpacePoint::fromArray($targetDimensionSpacePoint),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
     }
 
     /**
