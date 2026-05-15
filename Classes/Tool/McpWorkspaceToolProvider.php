@@ -44,10 +44,12 @@ final class McpWorkspaceToolProvider implements McpToolProvider
         return McpToolReflector::register($builder, self::class);
     }
 
-    /**
-     * Show the workspace status including pending change count.
-     */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Show the workspace status including pending change count.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function getWorkspaceStatus(): WorkspaceStatus
     {
         $this->rebaser->rebase();
@@ -69,10 +71,12 @@ final class McpWorkspaceToolProvider implements McpToolProvider
         );
     }
 
-    /**
-     * Discard all pending changes in the workspace.
-     */
-    #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Discard all pending changes in the workspace.
+            MCP,
+        annotations: new ToolAnnotations(destructiveHint: true),
+    )]
     public function discardWorkspaceChanges(): WorkspaceDiscardResult
     {
         $this->rebaser->rebase();

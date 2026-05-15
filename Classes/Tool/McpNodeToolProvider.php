@@ -69,10 +69,12 @@ final class McpNodeToolProvider implements McpToolProvider
         return McpToolReflector::register($builder, self::class);
     }
 
-    /**
-     * Returns available dimensions, workspaces, and dimension space points for the content repository.
-     */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Returns available dimensions, workspaces, and dimension space points for the content repository.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function getContentRepositoryInfo(): ContentRepositoryInfo
     {
         $warning = $this->rebaser->rebase();
@@ -80,10 +82,12 @@ final class McpNodeToolProvider implements McpToolProvider
         return $this->rebaser->withWarning($this->nodeReadService->getContentRepositoryInfo(), $warning);
     }
 
-    /**
-     * List non-abstract node types with property summaries. Optional filter parameter for name pattern (case-insensitive substring match).
-     */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            List non-abstract node types with property summaries. Optional filter parameter for name pattern (case-insensitive substring match).
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function listNodeTypes(?string $filter = null): NodeTypeSummaryCollection
     {
         $this->rebaser->rebase();
@@ -91,10 +95,12 @@ final class McpNodeToolProvider implements McpToolProvider
         return $this->nodeTypeService->listNodeTypes($filter);
     }
 
-    /**
-     * Get full schema for a node type including properties, child nodes, and references.
-     */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Get full schema for a node type including properties, child nodes, and references.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function getNodeTypeSchema(string $nodeTypeName): NodeTypeSchema
     {
         $this->rebaser->rebase();
@@ -103,8 +109,6 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Search for nodes by type and/or search term. Returns matching nodes with all properties.
-     *
      * @param string|null $nodeTypeName Filter by node type (e.g. 'Neos.Neos:Document')
      * @param string|null $searchTerm Full-text search term — searches across all string properties of matching nodes
      * @param string|null $parentNodeAggregateId Limit search to descendants of this node
@@ -112,7 +116,12 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Search for nodes by type and/or search term. Returns matching nodes with all properties.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function findNodes(
         ?string $nodeTypeName = null,
         ?string $searchTerm = null,
@@ -135,13 +144,16 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Get a single node with all its properties by its aggregate ID.
-     *
      * @param string $nodeAggregateId The node aggregate ID
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Get a single node with all its properties by its aggregate ID.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function getNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
@@ -155,14 +167,17 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * List child nodes of a parent node. Optionally filter by node type.
-     *
      * @param string $parentNodeAggregateId The parent node aggregate ID
      * @param string|null $nodeTypeName Filter children by node type
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      * @param bool $includeRemoved Include soft-removed (trashed) nodes that are normally hidden (default: false)
      */
-    #[McpTool(annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            List child nodes of a parent node. Optionally filter by node type.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
     public function getChildren(
         string $parentNodeAggregateId,
         ?string $nodeTypeName = null,
@@ -211,13 +226,13 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Update properties on an existing node. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
-     *
      * @param string $nodeAggregateId The node aggregate ID to update
      * @param array<string, mixed> $properties Property values to set (partial update — omitted properties are left unchanged)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Update properties on an existing node. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
+        MCP)]
     public function setNodeProperties(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: true)]
@@ -326,13 +341,17 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Remove a node. This is a soft-delete (trash) — the node can be restored later.
-     * Use findNodes or getNode with includeRemoved: true to find trashed nodes.
-     *
      * @param string $nodeAggregateId The node aggregate ID to remove
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      */
-    #[McpTool(annotations: new ToolAnnotations(destructiveHint: true))]
+    #[McpTool(
+        description: <<<'MCP'
+            Remove a node. This is a soft-delete (trash) — the node can be restored later.
+
+            Use findNodes or getNode with includeRemoved: true to find trashed nodes.
+            MCP,
+        annotations: new ToolAnnotations(destructiveHint: true),
+    )]
     public function removeNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
@@ -347,12 +366,12 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Hide a node so it is not visible on the public site. This is reversible — use unhideNode to make it visible again.
-     *
      * @param string $nodeAggregateId The node aggregate ID to hide
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Hide a node so it is not visible on the public site. This is reversible — use unhideNode to make it visible again.
+        MCP)]
     public function hideNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
@@ -367,12 +386,12 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Unhide a previously hidden node so it becomes visible on the public site again.
-     *
      * @param string $nodeAggregateId The node aggregate ID to unhide
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Unhide a previously hidden node so it becomes visible on the public site again.
+        MCP)]
     public function unhideNode(
         string $nodeAggregateId,
         #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
@@ -387,8 +406,6 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
-     * Find and replace a string across the content tree. Without filters, searches all node types and all string properties. Use nodeTypeName and/or propertyName to narrow scope.
-     *
      * @param string $search The string to search for
      * @param string $replace The replacement string
      * @param string|null $nodeTypeName Optional filter: restrict to this node type (e.g. 'Neos.Neos:Document'). Omit to search all node types.
@@ -396,7 +413,9 @@ final class McpNodeToolProvider implements McpToolProvider
      * @param bool $dryRun If true, only report matches without making changes (default: false)
      * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
      */
-    #[McpTool]
+    #[McpTool(description: <<<'MCP'
+        Find and replace a string across the content tree. Without filters, searches all node types and all string properties. Use nodeTypeName and/or propertyName to narrow scope.
+        MCP)]
     public function findAndReplace(
         string $search,
         string $replace,
