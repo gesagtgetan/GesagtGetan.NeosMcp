@@ -66,6 +66,12 @@ class McpCommandController extends CommandController
     protected ?int $propertyTruncateLength;
 
     /**
+     * @var list<string>
+     */
+    #[Flow\InjectConfiguration(path: 'disabledTools', package: 'GesagtGetan.NeosMcp')]
+    protected array $disabledTools = [];
+
+    /**
      * Set up the MCP stdio workspace with proper Neos metadata.
      *
      * Creates a shared workspace visible in the Neos UI. Run once during setup.
@@ -134,7 +140,7 @@ class McpCommandController extends CommandController
         }
 
         $facade = new DefaultContentRepositoryFacade($contentRepository);
-        $context = new McpRequestContext($facade, $workspaceName, $this->propertyTruncateLength);
+        $context = new McpRequestContext($facade, $workspaceName, $this->propertyTruncateLength, $this->disabledTools);
 
         $container = new BasicContainer();
 

@@ -41,7 +41,7 @@ final class McpWorkspaceToolProvider implements McpToolProvider
 
         $container->set(self::class, $this);
 
-        return McpToolReflector::register($builder, self::class);
+        return McpToolReflector::register($builder, self::class, $context->disabledTools);
     }
 
     #[McpTool(

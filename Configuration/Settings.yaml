@@ -26,6 +26,9 @@ GesagtGetan:
     # Max chars for string properties in multi-node responses (findNodes, getChildren).
     # getNode always returns full values. Set to null to disable truncation.
     propertyTruncateLength: 150
+    # `#[McpTool]` method names to skip during registration.
+    # Example: disabledTools: [findAndReplace, removeNode]
+    disabledTools: []
     stdioWorkspaceName: 'llm-review'
     stdioWorkspaceTitle: 'MCP Stdio'
     stdioWorkspaceDescription: 'Shared workspace for MCP stdio transport'
