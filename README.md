@@ -73,7 +73,9 @@ This creates the shared stdio workspace, generates OAuth RSA keys, and registers
 ./flow mcp:server
 ```
 
-Flow command that reads MCP requests from stdin and writes responses to stdout. Requires the stdio workspace to exist — run `mcp:setup` first. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that need to see and manage the MCP workspace in the Neos UI.
+Flow command that reads MCP requests from stdin and writes responses to stdout. Requires the stdio workspace to exist — run `mcp:setup` first.
+
+Content writes from the stdio transport land in the shared stdio workspace (`stdioWorkspaceName` in `Settings.yaml`, default `llm-review`) and are not live until published. To review or publish them in the Neos backend, assign the `GesagtGetan.NeosMcp:McpUser` role to the relevant Neos accounts — otherwise the workspace exists but is invisible in the editor UI.
 
 ### Claude Code Configuration 
 
@@ -270,3 +272,5 @@ Functional tests need a MySQL/MariaDB test database (configured in the host proj
 ### Tip: Connect the MCP server while developing
 
 When working on this package with an MCP-capable coding agent (e.g. Claude Code), connect it to a running instance of the MCP server — locally via stdio or remotely via the HTTP transport — so it can query actual nodes, inspect workspace state, and verify tool behavior against real data. (After local code changes, reconnect the MCP server — e.g. via `/mcp` in Claude Code — so the agent picks up the updated PHP files.)
+
+For a faster feedback loop after tool changes, pipe JSON-RPC directly into `./flow mcp:server` instead of reconnecting the MCP client — every invocation reads the current PHP files, so you can run a quick `initialize` → `notifications/initialized` → `tools/call` sequence to verify the tool's raw `TextContent` JSON output. Writes land in the same stdio workspace as the connected-client flow.

@@ -6,11 +6,17 @@ Repo: `git@github.com:gesagtgetan/GesagtGetan.NeosMcp.git` (separate git repo in
 
 ## Using the MCP Server While Developing
 
-When working on this package, connect to a running instance of the MCP server (locally via stdio or remotely via HTTP) so you can query actual nodes, inspect workspace state, and verify tool behavior against real data. (After local code changes, reconnect the MCP server — e.g. via `/mcp` in Claude Code — so the agent picks up the updated PHP files.) This lets you:
+The agent can drive the MCP tools end-to-end by piping JSON-RPC into `./flow mcp:server` directly — the stdio transport accepts the standard MCP handshake (`initialize` → `notifications/initialized` → `tools/call`) and returns each tool's raw `TextContent` JSON. **This is the preferred dev loop**: every invocation reads the current PHP files, so there is no reconnect dance after a code change, and the agent can script a batch of tool calls in one go (byte-shape parity checks after a refactor, or `findNodes` → `getNode` → `setNodeProperties` → `getNode` to verify a write round-trip).
+
+For interactive exploration, the dev can also connect the stdio MCP server as a regular client in Claude Code — but every PHP change requires a `/mcp` reconnect before the client picks up the new code, so this path is best for one-off exploration rather than tight iteration.
+
+Writes from either path land in the shared stdio workspace (see README "CLI Transport" for details). Use `getWorkspaceStatus` to see what has accumulated and `discardWorkspaceChanges` to reset between iterations so test runs don't pollute each other.
+
+This lets you:
 
 - **Validate changes**: After modifying tool descriptions or schemas, call the tools to confirm they work as expected.
 - **Explore the content tree**: Use `findNodes`, `getChildren`, `getNodeTypeSchema` to understand how node types are structured in practice — tethered child nodes, content collections, property values.
-- **Test write operations**: Create, update, and remove nodes in the review workspace to verify write tools behave correctly. Use `getWorkspaceStatus` and `discardWorkspaceChanges` to inspect and clean up after testing.
+- **Test write operations**: Create, update, and remove nodes in the stdio workspace to verify write tools behave correctly.
 
 ## Open TODOs
 
