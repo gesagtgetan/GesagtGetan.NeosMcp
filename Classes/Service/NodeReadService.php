@@ -5,6 +5,15 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\ContentRepositoryInfo;
+use GesagtGetan\NeosMcp\Dto\DimensionInfo;
+use GesagtGetan\NeosMcp\Dto\DimensionMap;
+use GesagtGetan\NeosMcp\Dto\DimensionSpacePointList;
+use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
+use GesagtGetan\NeosMcp\Dto\NodeInfo;
+use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
+use GesagtGetan\NeosMcp\Dto\WorkspaceInfo;
+use GesagtGetan\NeosMcp\Dto\WorkspaceInfoCollection;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
@@ -29,10 +38,7 @@ final readonly class NodeReadService
     ) {
     }
 
-    /**
-     * @return array{contentRepositoryId: string, dimensions: array<string, array{values: list<string>}>, workspaces: list<array{name: string, baseWorkspace: ?string, status: string}>, dimensionSpacePoints: list<array<string, string>>}
-     */
-    public function getContentRepositoryInfo(): array
+    public function getContentRepositoryInfo(): ContentRepositoryInfo
     {
         $dimensionSource = $this->contentRepository->getContentDimensionSource();
         $dimensions = [];
@@ -41,7 +47,7 @@ final readonly class NodeReadService
             foreach ($dimension->values as $dimensionValue) {
                 $values[] = $dimensionValue->value;
             }
-            $dimensions[$dimension->id->value] = ['values' => $values];
+            $dimensions[] = new DimensionInfo(id: $dimension->id->value, values: $values);
         }
 
         $dimensionSpacePoints = [];
@@ -51,48 +57,37 @@ final readonly class NodeReadService
 
         $workspaces = [];
         foreach ($this->contentRepository->findWorkspaces() as $workspace) {
-            $workspaces[] = [
-                'name' => $workspace->workspaceName->value,
-                'baseWorkspace' => $workspace->baseWorkspaceName?->value,
-                'status' => $workspace->status->value,
-            ];
+            $workspaces[] = new WorkspaceInfo(
+                name: $workspace->workspaceName->value,
+                baseWorkspace: $workspace->baseWorkspaceName?->value,
+                status: $workspace->status->value,
+            );
         }
 
-        return [
-            'contentRepositoryId' => $this->contentRepository->getId()->value,
-            'dimensions' => $dimensions,
-            'workspaces' => $workspaces,
-            'dimensionSpacePoints' => $dimensionSpacePoints,
-        ];
+        return new ContentRepositoryInfo(
+            contentRepositoryId: $this->contentRepository->getId()->value,
+            dimensions: new DimensionMap(...$dimensions),
+            workspaces: new WorkspaceInfoCollection(...$workspaces),
+            dimensionSpacePoints: new DimensionSpacePointList($dimensionSpacePoints),
+        );
     }
 
-    /**
-     * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
-     */
-    public function findNodes(
-        ?string $nodeTypeName = null,
-        ?string $searchTerm = null,
-        ?string $parentNodeAggregateId = null,
-        int $limit = 100,
-        ?array $dimensionSpacePoint = null,
-        bool $includeRemoved = false,
-    ): array {
-        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
+    public function findNodes(FindNodesRequest $request): NodeInfoCollection
+    {
+        $subgraph = $this->getSubgraph($request->dimensionSpacePoint, $request->includeRemoved);
 
-        $entryNodeId = $parentNodeAggregateId !== null
-            ? NodeAggregateId::fromString($parentNodeAggregateId)
+        $entryNodeId = $request->parentNodeAggregateId !== null
+            ? NodeAggregateId::fromString($request->parentNodeAggregateId)
             : $this->findSitesRootNodeId($subgraph);
 
         if ($entryNodeId === null) {
-            return [];
+            return new NodeInfoCollection();
         }
 
         $filter = FindDescendantNodesFilter::create(
-            nodeTypes: $nodeTypeName,
-            searchTerm: $searchTerm,
-            pagination: Pagination::fromLimitAndOffset($limit, 0),
+            nodeTypes: $request->nodeTypeName,
+            searchTerm: $request->searchTerm,
+            pagination: Pagination::fromLimitAndOffset($request->limit, 0),
         );
 
         $nodes = $subgraph->findDescendantNodes($entryNodeId, $filter);
@@ -102,10 +97,8 @@ final readonly class NodeReadService
 
     /**
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}|null
      */
-    public function getNode(string $nodeAggregateId, ?array $dimensionSpacePoint = null, bool $includeRemoved = false): ?array
+    public function getNode(string $nodeAggregateId, ?array $dimensionSpacePoint = null, bool $includeRemoved = false): ?NodeInfo
     {
         $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
         $node = $subgraph->findNodeById(NodeAggregateId::fromString($nodeAggregateId));
@@ -119,15 +112,13 @@ final readonly class NodeReadService
 
     /**
      * @param array<string, string>|null $dimensionSpacePoint
-     *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
     public function getChildren(
         string $parentNodeAggregateId,
         ?string $nodeTypeName = null,
         ?array $dimensionSpacePoint = null,
         bool $includeRemoved = false,
-    ): array {
+    ): NodeInfoCollection {
         $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
 
         $filter = FindChildNodesFilter::create(
@@ -177,36 +168,31 @@ final readonly class NodeReadService
 
     /**
      * @param iterable<Node> $nodes
-     *
-     * @return list<array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}>
      */
-    private function serializeNodes(iterable $nodes, ?int $truncateStringsAt = null): array
+    private function serializeNodes(iterable $nodes, ?int $truncateStringsAt = null): NodeInfoCollection
     {
         $result = [];
         foreach ($nodes as $node) {
             $result[] = $this->serializeNode($node, $truncateStringsAt);
         }
 
-        return $result;
+        return new NodeInfoCollection(...$result);
     }
 
-    /**
-     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>}
-     */
-    private function serializeNode(Node $node, ?int $truncateStringsAt = null): array
+    private function serializeNode(Node $node, ?int $truncateStringsAt = null): NodeInfo
     {
         $properties = [];
         foreach ($node->properties as $propertyName => $propertyValue) {
             $properties[$propertyName] = $this->serializePropertyValue($propertyValue, $truncateStringsAt);
         }
 
-        return [
-            'nodeAggregateId' => $node->aggregateId->value,
-            'nodeTypeName' => $node->nodeTypeName->value,
-            'nodeName' => $node->name?->value,
-            'hidden' => $node->tags->contain(NeosSubtreeTag::disabled()),
-            'properties' => $properties,
-        ];
+        return new NodeInfo(
+            nodeAggregateId: $node->aggregateId->value,
+            nodeTypeName: $node->nodeTypeName->value,
+            nodeName: $node->name?->value,
+            hidden: $node->tags->contain(NeosSubtreeTag::disabled()),
+            properties: $properties,
+        );
     }
 
     private function serializePropertyValue(mixed $value, ?int $truncateStringsAt = null): mixed

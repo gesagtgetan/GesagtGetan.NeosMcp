@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
@@ -85,8 +86,7 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(CreateNodeAggregateWithNode::class, $this->handledCommands[0]);
-        self::assertTrue($result['success']);
-        self::assertNotEmpty($result['nodeAggregateId']);
+        self::assertNotEmpty($result->nodeAggregateId);
     }
 
     #[Test]
@@ -94,11 +94,10 @@ class NodeWriteServiceTest extends UnitTestCase
     {
         $result = $this->subject->createNode('parent-id', 'Vendor:Content.Text', []);
 
-        self::assertArrayHasKey('nodeAggregateId', $result);
-        self::assertNotEmpty($result['nodeAggregateId']);
+        self::assertNotEmpty($result->nodeAggregateId);
         self::assertMatchesRegularExpression(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/',
-            $result['nodeAggregateId'],
+            $result->nodeAggregateId,
         );
     }
 
@@ -112,8 +111,7 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
-        self::assertSame('node-id', $result['nodeAggregateId']);
-        self::assertTrue($result['success']);
+        self::assertSame('node-id', $result->nodeAggregateId);
     }
 
     #[Test]
@@ -123,9 +121,8 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(MoveNodeAggregate::class, $this->handledCommands[0]);
-        self::assertSame('node-id', $result['nodeAggregateId']);
-        self::assertSame('new-parent-id', $result['newParentNodeAggregateId']);
-        self::assertTrue($result['success']);
+        self::assertSame('node-id', $result->nodeAggregateId);
+        self::assertSame('new-parent-id', $result->newParentNodeAggregateId);
     }
 
     #[Test]
@@ -135,8 +132,7 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
-        self::assertSame('node-id', $result['nodeAggregateId']);
-        self::assertTrue($result['success']);
+        self::assertSame('node-id', $result->nodeAggregateId);
     }
 
     #[Test]
@@ -146,8 +142,7 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(TagSubtree::class, $this->handledCommands[0]);
-        self::assertSame('node-id', $result['nodeAggregateId']);
-        self::assertTrue($result['success']);
+        self::assertSame('node-id', $result->nodeAggregateId);
     }
 
     #[Test]
@@ -157,8 +152,7 @@ class NodeWriteServiceTest extends UnitTestCase
 
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(UntagSubtree::class, $this->handledCommands[0]);
-        self::assertSame('node-id', $result['nodeAggregateId']);
-        self::assertTrue($result['success']);
+        self::assertSame('node-id', $result->nodeAggregateId);
     }
 
     #[Test]
@@ -182,22 +176,23 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace(
-            'Old',
-            'New',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Old',
+            replace: 'New',
             nodeTypeName: 'Vendor:Content.Text',
             propertyName: 'title',
             dryRun: true,
-        );
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertTrue($result['dryRun']);
+        self::assertSame(1, $result->affectedNodes);
+        self::assertTrue($result->dryRun);
         self::assertCount(0, $this->handledCommands);
-        self::assertSame('matching-node', $result['matches'][0]['nodeAggregateId']);
-        self::assertSame('Vendor:Content.Text', $result['matches'][0]['nodeTypeName']);
-        self::assertSame('title', $result['matches'][0]['propertyName']);
-        self::assertSame('Old Title', $result['matches'][0]['oldValue']);
-        self::assertSame('New Title', $result['matches'][0]['newValue']);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('matching-node', $matches[0]->nodeAggregateId);
+        self::assertSame('Vendor:Content.Text', $matches[0]->nodeTypeName);
+        self::assertSame('title', $matches[0]->propertyName);
+        self::assertSame('Old Title', $matches[0]->oldValue);
+        self::assertSame('New Title', $matches[0]->newValue);
     }
 
     #[Test]
@@ -218,15 +213,15 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             nodeTypeName: 'Vendor:Content.Text',
             propertyName: 'text',
-        );
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertFalse($result['dryRun']);
+        self::assertSame(1, $result->affectedNodes);
+        self::assertFalse($result->dryRun);
         self::assertCount(1, $this->handledCommands);
         self::assertInstanceOf(SetNodeProperties::class, $this->handledCommands[0]);
     }
@@ -249,27 +244,29 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             propertyName: 'text',
             dryRun: true,
-        );
+        ));
 
         // Only node-1 matches because node-2's matching property is "title", not "text"
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertSame('Vendor:Content.Text', $result['matches'][0]['nodeTypeName']);
+        self::assertSame(1, $result->affectedNodes);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('Vendor:Content.Text', $matches[0]->nodeTypeName);
 
         // Now search without propertyName filter — both nodes match
-        $result = $this->subject->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             dryRun: true,
-        );
+        ));
 
-        self::assertSame(2, $result['affectedNodes']);
-        self::assertSame('Vendor:Content.Text', $result['matches'][0]['nodeTypeName']);
-        self::assertSame('Vendor:Content.Headline', $result['matches'][1]['nodeTypeName']);
+        self::assertSame(2, $result->affectedNodes);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('Vendor:Content.Text', $matches[0]->nodeTypeName);
+        self::assertSame('Vendor:Content.Headline', $matches[1]->nodeTypeName);
     }
 
     #[Test]
@@ -292,17 +289,18 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             dryRun: true,
-        );
+        ));
 
-        self::assertSame(2, $result['affectedNodes']);
-        self::assertSame('title', $result['matches'][0]['propertyName']);
-        self::assertSame('Hi Title', $result['matches'][0]['newValue']);
-        self::assertSame('text', $result['matches'][1]['propertyName']);
-        self::assertSame('Hi Body', $result['matches'][1]['newValue']);
+        self::assertSame(2, $result->affectedNodes);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('title', $matches[0]->propertyName);
+        self::assertSame('Hi Title', $matches[0]->newValue);
+        self::assertSame('text', $matches[1]->propertyName);
+        self::assertSame('Hi Body', $matches[1]->newValue);
     }
 
     #[Test]
@@ -325,14 +323,15 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace(
-            'Hello',
-            'Hi',
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Hello',
+            replace: 'Hi',
             dryRun: true,
-        );
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        self::assertSame('title', $result['matches'][0]['propertyName']);
+        self::assertSame(1, $result->affectedNodes);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('title', $matches[0]->propertyName);
     }
 
     #[Test]
@@ -353,13 +352,17 @@ class NodeWriteServiceTest extends UnitTestCase
 
         $this->handledCommands = [];
 
-        $result = $this->subject->findAndReplace('Foo', 'Baz');
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Foo',
+            replace: 'Baz',
+        ));
 
-        self::assertSame(2, $result['affectedNodes']);
-        self::assertFalse($result['dryRun']);
+        self::assertSame(2, $result->affectedNodes);
+        self::assertFalse($result->dryRun);
         self::assertCount(2, $this->handledCommands);
-        self::assertSame('Baz bar', $result['matches'][0]['newValue']);
-        self::assertSame('Baz page', $result['matches'][1]['newValue']);
+        $matches = iterator_to_array($result->matches);
+        self::assertSame('Baz bar', $matches[0]->newValue);
+        self::assertSame('Baz page', $matches[1]->newValue);
     }
 
     #[Test]
@@ -384,16 +387,20 @@ class NodeWriteServiceTest extends UnitTestCase
         $node = $this->createStubNodeWithProperties('node-1', 'Vendor:Content.Text', ['text' => $longValue]);
         $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
 
-        $result = $service->findAndReplace('Pellets', 'Holzpellets', dryRun: true);
+        $result = $service->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'Pellets',
+            replace: 'Holzpellets',
+            dryRun: true,
+        ));
 
-        self::assertSame(1, $result['affectedNodes']);
-        $match = $result['matches'][0];
+        self::assertSame(1, $result->affectedNodes);
+        $match = iterator_to_array($result->matches)[0];
 
         // Both old and new values are truncated to 30 + "…"
-        self::assertSame(31, mb_strlen($match['oldValue']));
-        self::assertStringEndsWith('…', $match['oldValue']);
-        self::assertSame(31, mb_strlen($match['newValue']));
-        self::assertStringEndsWith('…', $match['newValue']);
+        self::assertSame(31, mb_strlen($match->oldValue));
+        self::assertStringEndsWith('…', $match->oldValue);
+        self::assertSame(31, mb_strlen($match->newValue));
+        self::assertStringEndsWith('…', $match->newValue);
     }
 
     #[Test]
@@ -413,10 +420,32 @@ class NodeWriteServiceTest extends UnitTestCase
         $subgraph->method('findDescendantNodes')->willReturn(Nodes::fromArray([$node]));
 
         // Default subject has no truncation configured
-        $result = $this->subject->findAndReplace('A', 'B', dryRun: true);
+        $result = $this->subject->findAndReplace(self::buildFindAndReplaceRequest(
+            search: 'A',
+            replace: 'B',
+            dryRun: true,
+        ));
 
-        self::assertSame(300, mb_strlen($result['matches'][0]['oldValue']));
-        self::assertSame(300, mb_strlen($result['matches'][0]['newValue']));
+        $matches = iterator_to_array($result->matches);
+        self::assertSame(300, mb_strlen($matches[0]->oldValue));
+        self::assertSame(300, mb_strlen($matches[0]->newValue));
+    }
+
+    private static function buildFindAndReplaceRequest(
+        string $search,
+        string $replace,
+        ?string $nodeTypeName = null,
+        ?string $propertyName = null,
+        bool $dryRun = false,
+    ): FindAndReplaceRequest {
+        return new FindAndReplaceRequest(
+            search: $search,
+            replace: $replace,
+            nodeTypeName: $nodeTypeName,
+            propertyName: $propertyName,
+            dryRun: $dryRun,
+            dimensionSpacePoint: null,
+        );
     }
 
     private function createStubNode(string $aggregateId, string $nodeTypeName): Node

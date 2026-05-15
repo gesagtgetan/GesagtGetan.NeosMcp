@@ -65,7 +65,7 @@ class McpNodeToolProviderTest extends UnitTestCase
     public function reorderNodeRejectsMissingPlacement(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionCode(1779800000);
+        $this->expectExceptionCode(1779900021);
 
         $this->subject->reorderNode('node-id');
     }
@@ -90,7 +90,7 @@ class McpNodeToolProviderTest extends UnitTestCase
         $result = $this->subject->listNodeTypes();
 
         // NodeTypeManager always includes built-in Neos.ContentRepository:Root
-        $names = array_column($result, 'name');
+        $names = array_map(static fn ($summary) => $summary->name, iterator_to_array($result));
         self::assertContains('Neos.ContentRepository:Root', $names);
     }
 
@@ -105,7 +105,7 @@ class McpNodeToolProviderTest extends UnitTestCase
 
         $result = $this->subject->findNodes(dimensionSpacePoint: null);
 
-        self::assertSame([], $result);
+        self::assertTrue($result->isEmpty());
     }
 
     #[Test]
@@ -119,6 +119,6 @@ class McpNodeToolProviderTest extends UnitTestCase
 
         $result = $this->subject->findNodes(dimensionSpacePoint: ['language' => 'de']);
 
-        self::assertSame([], $result);
+        self::assertTrue($result->isEmpty());
     }
 }

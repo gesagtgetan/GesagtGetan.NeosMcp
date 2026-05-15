@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\NodeTypeSchema;
+use GesagtGetan\NeosMcp\Dto\NodeTypeSummary;
+use GesagtGetan\NeosMcp\Dto\NodeTypeSummaryCollection;
+use GesagtGetan\NeosMcp\Dto\PropertyDefinition;
+use GesagtGetan\NeosMcp\Dto\PropertyDefinitionCollection;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\Flow\Annotations as Flow;
 
@@ -16,15 +21,12 @@ final readonly class NodeTypeService
     ) {
     }
 
-    /**
-     * @return array<int, array{name: string, label: string, abstract: bool, final: bool, superTypes: list<string>, declaredProperties: list<string>}>
-     */
-    public function listNodeTypes(?string $filter = null): array
+    public function listNodeTypes(?string $filter = null): NodeTypeSummaryCollection
     {
         $nodeTypeManager = $this->contentRepository->getNodeTypeManager();
         $nodeTypes = $nodeTypeManager->getNodeTypes(includeAbstractNodeTypes: false);
 
-        $result = [];
+        $summaries = [];
         foreach ($nodeTypes as $nodeType) {
             if ($filter !== null && !str_contains(strtolower($nodeType->name->value), strtolower($filter))) {
                 continue;
@@ -37,23 +39,20 @@ final readonly class NodeTypeService
                 $superTypeNames[] = $superType->name->value;
             }
 
-            $result[] = [
-                'name' => $nodeType->name->value,
-                'label' => $nodeType->getLabel(),
-                'abstract' => $nodeType->isAbstract(),
-                'final' => $nodeType->isFinal(),
-                'superTypes' => $superTypeNames,
-                'declaredProperties' => $properties,
-            ];
+            $summaries[] = new NodeTypeSummary(
+                name: $nodeType->name->value,
+                label: $nodeType->getLabel(),
+                abstract: $nodeType->isAbstract(),
+                final: $nodeType->isFinal(),
+                superTypes: $superTypeNames,
+                declaredProperties: $properties,
+            );
         }
 
-        return $result;
+        return new NodeTypeSummaryCollection(...$summaries);
     }
 
-    /**
-     * @return array{name: string, label: string, abstract: bool, final: bool, superTypes: list<string>, properties: array<string, array{type: string, defaultValue: mixed, label?: string, description?: string, validation?: array<string, mixed>}>, childNodes: array<string, string>, references: array<string, mixed>}
-     */
-    public function getNodeTypeSchema(string $nodeTypeName): array
+    public function getNodeTypeSchema(string $nodeTypeName): NodeTypeSchema
     {
         $nodeTypeManager = $this->contentRepository->getNodeTypeManager();
         $nodeType = $nodeTypeManager->getNodeType(NodeTypeName::fromString($nodeTypeName));
@@ -67,17 +66,13 @@ final readonly class NodeTypeService
             $superTypeNames[] = $superType->name->value;
         }
 
-        $properties = [];
+        $propertyDefinitions = [];
         foreach ($nodeType->getProperties() as $propertyName => $propertyConfig) {
             if (!is_string($propertyName)) {
                 continue;
             }
             $configArray = is_array($propertyConfig) ? $propertyConfig : [];
             $type = isset($configArray['type']) && is_string($configArray['type']) ? $configArray['type'] : 'string';
-            $entry = [
-                'type' => $type,
-                'defaultValue' => $configArray['defaultValue'] ?? null,
-            ];
 
             // Surface property-level UI hints from NodeTypes.yaml so the LLM can pick the
             // right property without trial and error. `ui.label` is the field label the
@@ -85,12 +80,14 @@ final readonly class NodeTypeService
             // shown on hover. Reusing them means existing content-author guidance flows
             // through to the LLM unchanged.
             $uiConfig = is_array($configArray['ui'] ?? null) ? $configArray['ui'] : [];
+            $label = null;
             if (isset($uiConfig['label']) && is_string($uiConfig['label']) && $uiConfig['label'] !== '') {
-                $entry['label'] = $uiConfig['label'];
+                $label = $uiConfig['label'];
             }
+            $description = null;
             $help = $uiConfig['help'] ?? null;
             if (is_array($help) && isset($help['message']) && is_string($help['message']) && $help['message'] !== '') {
-                $entry['description'] = $help['message'];
+                $description = $help['message'];
             }
 
             // Pass validator declarations through 1:1, shortening the validator name to its
@@ -116,11 +113,15 @@ final readonly class NodeTypeService
                 }
                 $validation[$shortName] = $options;
             }
-            if ($validation !== []) {
-                $entry['validation'] = $validation;
-            }
 
-            $properties[$propertyName] = $entry;
+            $propertyDefinitions[] = new PropertyDefinition(
+                name: $propertyName,
+                type: $type,
+                defaultValue: $configArray['defaultValue'] ?? null,
+                label: $label,
+                description: $description,
+                validation: $validation === [] ? null : $validation,
+            );
         }
 
         $childNodes = [];
@@ -128,15 +129,15 @@ final readonly class NodeTypeService
             $childNodes[$tetheredNodeTypeDefinition->name->value] = $tetheredNodeTypeDefinition->nodeTypeName->value;
         }
 
-        return [
-            'name' => $nodeType->name->value,
-            'label' => $nodeType->getLabel(),
-            'abstract' => $nodeType->isAbstract(),
-            'final' => $nodeType->isFinal(),
-            'superTypes' => $superTypeNames,
-            'properties' => $properties,
-            'childNodes' => $childNodes,
-            'references' => $nodeType->getReferences(),
-        ];
+        return new NodeTypeSchema(
+            name: $nodeType->name->value,
+            label: $nodeType->getLabel(),
+            abstract: $nodeType->isAbstract(),
+            final: $nodeType->isFinal(),
+            superTypes: $superTypeNames,
+            properties: new PropertyDefinitionCollection(...$propertyDefinitions),
+            childNodes: $childNodes,
+            references: $nodeType->getReferences(),
+        );
     }
 }

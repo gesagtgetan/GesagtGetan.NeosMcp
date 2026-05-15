@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Dto\WriteResult;
 use GesagtGetan\NeosMcp\Tool\WorkspaceRebaser;
 use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
@@ -42,18 +43,25 @@ class WorkspaceRebaserTest extends UnitTestCase
     }
 
     #[Test]
-    public function withWarningAddsKeyWhenWarningProvided(): void
+    public function withWarningAttachesWarningWhenProvided(): void
     {
-        $result = $this->subject->withWarning(['x' => 1], 'something went wrong');
+        $input = new WriteResult(nodeAggregateId: 'node-1');
 
-        self::assertSame(['x' => 1, '_rebaseWarning' => 'something went wrong'], $result);
+        $result = $this->subject->withWarning($input, 'something went wrong');
+
+        self::assertInstanceOf(WriteResult::class, $result);
+        self::assertSame('something went wrong', $result->getRebaseWarning());
+        self::assertSame('node-1', $result->nodeAggregateId);
     }
 
     #[Test]
     public function withWarningReturnsResultUnchangedWhenWarningIsNull(): void
     {
-        $result = $this->subject->withWarning(['x' => 1], null);
+        $input = new WriteResult(nodeAggregateId: 'node-1');
 
-        self::assertSame(['x' => 1], $result);
+        $result = $this->subject->withWarning($input, null);
+
+        self::assertSame($input, $result);
+        self::assertNull($result->getRebaseWarning());
     }
 }
