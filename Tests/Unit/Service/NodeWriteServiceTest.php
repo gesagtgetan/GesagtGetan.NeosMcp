@@ -15,6 +15,7 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValue;
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
+use Neos\ContentRepository\Core\Feature\NodeReferencing\Command\SetNodeReferences;
 use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
@@ -475,6 +476,106 @@ class NodeWriteServiceTest extends UnitTestCase
         $matches = iterator_to_array($result->matches);
         self::assertSame(300, mb_strlen($matches[0]->oldValue));
         self::assertSame(300, mb_strlen($matches[0]->newValue));
+    }
+
+    #[Test]
+    public function setNodeReferenceDispatchesSetNodeReferencesCommand(): void
+    {
+        $result = $this->subject->setNodeReference(
+            'source-id',
+            'authors',
+            [
+                ['target' => 'author-1'],
+                ['target' => 'author-2'],
+            ],
+        );
+
+        self::assertCount(1, $this->handledCommands);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeReferences::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('source-id', $command->sourceNodeAggregateId->value);
+        self::assertSame(['language' => 'de'], $command->sourceOriginDimensionSpacePoint->coordinates);
+
+        $referencesForName = $command->references->referencesForName;
+        self::assertArrayHasKey('authors', $referencesForName);
+        $targetIds = array_map(
+            static fn ($ref): string => $ref->targetNodeAggregateId->value,
+            $referencesForName['authors']->references,
+        );
+        self::assertSame(['author-1', 'author-2'], $targetIds);
+        self::assertSame('source-id', $result->nodeAggregateId);
+    }
+
+    #[Test]
+    public function setNodeReferenceWithReferencePropertiesPassesPropertiesThrough(): void
+    {
+        $this->subject->setNodeReference(
+            'source-id',
+            'highlight',
+            [
+                ['target' => 'asset-id', 'properties' => ['caption' => 'Cover', 'priority' => 1]],
+            ],
+        );
+
+        self::assertCount(1, $this->handledCommands);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeReferences::class, $command);
+
+        $reference = $command->references->referencesForName['highlight']->references[0];
+        self::assertSame('asset-id', $reference->targetNodeAggregateId->value);
+        self::assertSame('Cover', $reference->properties->values['caption']);
+        self::assertSame(1, $reference->properties->values['priority']);
+    }
+
+    #[Test]
+    public function setNodeReferenceWithEmptyTargetsDeletesAllReferencesForThatName(): void
+    {
+        $this->subject->setNodeReference('source-id', 'authors', []);
+
+        self::assertCount(1, $this->handledCommands);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeReferences::class, $command);
+
+        $referencesForName = $command->references->referencesForName;
+        self::assertArrayHasKey('authors', $referencesForName);
+        self::assertSame([], $referencesForName['authors']->references);
+    }
+
+    #[Test]
+    public function setNodeReferenceThrowsOnEmptyReferenceName(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1779900200);
+
+        $this->subject->setNodeReference('source-id', '', [['target' => 'x']]);
+    }
+
+    #[Test]
+    public function setNodeReferenceThrowsWhenTargetEntryMissingTargetField(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1779900202);
+
+        $this->subject->setNodeReference('source-id', 'authors', [['properties' => []]]); // @phpstan-ignore argument.type
+    }
+
+    #[Test]
+    public function setNodeReferenceThrowsOnEmptyTargetId(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1779900202);
+
+        $this->subject->setNodeReference('source-id', 'authors', [['target' => '']]);
+    }
+
+    #[Test]
+    public function setNodeReferenceThrowsWhenPropertiesIsNotAnObject(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1779900203);
+
+        $this->subject->setNodeReference('source-id', 'authors', [['target' => 'x', 'properties' => 'not-an-object']]); // @phpstan-ignore argument.type
     }
 
     private static function buildFindAndReplaceRequest(

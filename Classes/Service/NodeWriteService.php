@@ -19,6 +19,10 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Command\SetNodeProperti
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\PropertyValuesToWrite;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\NodeMove\Dto\RelationDistributionStrategy;
+use Neos\ContentRepository\Core\Feature\NodeReferencing\Command\SetNodeReferences;
+use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferencesForName;
+use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferencesToWrite;
+use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferenceToWrite;
 use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
@@ -26,6 +30,7 @@ use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindDescendantNodesFilter;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeVariantSelectionStrategy;
+use Neos\ContentRepository\Core\SharedModel\Node\ReferenceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
@@ -246,6 +251,78 @@ final readonly class NodeWriteService
         $this->contentRepository->handle($command);
 
         return new WriteResult(nodeAggregateId: $nodeAggregateId);
+    }
+
+    /**
+     * Replaces all outgoing references for a single reference name on the source
+     * node. The CR's `SetNodeReferences` command treats per-name writes as
+     * full replacements — passing an empty `$targets` array deletes every
+     * reference under `$referenceName` for this node.
+     *
+     * Each target entry is an object with `target` (the destination aggregate ID)
+     * and optional `properties` (edge-properties on the reference itself,
+     * only meaningful when the reference type declares them).
+     *
+     * @param list<array{target: string, properties?: array<string, mixed>}> $targets
+     * @param array<string, string>|null $dimensionSpacePoint
+     */
+    public function setNodeReference(
+        string $nodeAggregateId,
+        string $referenceName,
+        array $targets,
+        ?array $dimensionSpacePoint = null,
+    ): WriteResult {
+        if ($referenceName === '') {
+            throw new \InvalidArgumentException('Reference name must not be empty.', 1779900200);
+        }
+
+        $name = ReferenceName::fromString($referenceName);
+        $originDimensionSpacePoint = $this->resolveOriginDimensionSpacePoint($dimensionSpacePoint);
+
+        $referencesForName = $targets === []
+            ? NodeReferencesForName::createEmpty($name)
+            : NodeReferencesForName::fromReferences($name, $this->buildReferenceTargets($targets));
+
+        $command = SetNodeReferences::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            $originDimensionSpacePoint,
+            NodeReferencesToWrite::create($referencesForName),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
+    }
+
+    /**
+     * @param list<array{target: string, properties?: array<string, mixed>}> $targets
+     *
+     * @return list<NodeReferenceToWrite>
+     */
+    private function buildReferenceTargets(array $targets): array
+    {
+        $built = [];
+        foreach ($targets as $index => $entry) {
+            if (!is_array($entry)) {
+                throw new \InvalidArgumentException(sprintf('Target entry at index %d must be an object with a "target" key.', $index), 1779900201);
+            }
+            if (!isset($entry['target']) || !is_string($entry['target']) || $entry['target'] === '') {
+                throw new \InvalidArgumentException(sprintf('Target entry at index %d must include a non-empty "target" aggregate id.', $index), 1779900202);
+            }
+
+            $properties = $entry['properties'] ?? [];
+            if (!is_array($properties)) {
+                throw new \InvalidArgumentException(sprintf('Target entry at index %d "properties" must be an object.', $index), 1779900203);
+            }
+
+            $built[] = NodeReferenceToWrite::fromTargetAndProperties(
+                NodeAggregateId::fromString($entry['target']),
+                PropertyValuesToWrite::fromArray($properties),
+            );
+        }
+
+        return $built;
     }
 
     /**

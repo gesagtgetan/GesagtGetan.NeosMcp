@@ -18,16 +18,21 @@ use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindBackReferencesFilter;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindReferencesFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Nodes;
 use Neos\ContentRepository\Core\Projection\ContentGraph\NodeTags;
 use Neos\ContentRepository\Core\Projection\ContentGraph\PropertyCollection;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Reference;
+use Neos\ContentRepository\Core\Projection\ContentGraph\References;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Timestamps;
 use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeName;
+use Neos\ContentRepository\Core\SharedModel\Node\ReferenceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\ContentStreamId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
@@ -472,6 +477,96 @@ class NodeReadServiceTest extends UnitTestCase
         self::assertIsString($text);
         self::assertSame(31, mb_strlen($text));
         self::assertStringEndsWith('…', $text);
+    }
+
+    // ── Reference Tests ─────────────────────────────────────────────
+
+    #[Test]
+    public function findReferencesReturnsSerializedReferences(): void
+    {
+        $target = $this->createStubNode('target-id', 'Vendor:Document.Page', 'target-page');
+        $references = References::fromArray([
+            new Reference($target, ReferenceName::fromString('authors'), null),
+        ]);
+        $this->subgraph->method('findReferences')->willReturn($references);
+
+        $result = $this->subject->findReferences('source-id');
+
+        self::assertCount(1, $result);
+        $items = iterator_to_array($result);
+        self::assertSame('authors', $items[0]->referenceName);
+        self::assertSame('target-id', $items[0]->target->nodeAggregateId);
+        self::assertSame([], $items[0]->properties);
+    }
+
+    #[Test]
+    public function findReferencesSerializesEdgeProperties(): void
+    {
+        $target = $this->createStubNode('target-id', 'Vendor:Asset');
+        $edgeProperties = new PropertyCollection(
+            SerializedPropertyValues::fromArray([
+                'caption' => SerializedPropertyValue::create('Cover', 'string'),
+            ]),
+            $this->propertyConverter,
+        );
+        $references = References::fromArray([
+            new Reference($target, ReferenceName::fromString('highlight'), $edgeProperties),
+        ]);
+        $this->subgraph->method('findReferences')->willReturn($references);
+
+        $result = $this->subject->findReferences('source-id');
+
+        $items = iterator_to_array($result);
+        self::assertSame(['caption' => 'Cover'], $items[0]->properties);
+    }
+
+    #[Test]
+    public function findReferencesAppliesReferenceNameFilter(): void
+    {
+        $this->subgraph->expects(self::once())
+            ->method('findReferences')
+            ->with(
+                self::callback(static fn (mixed $id): bool => $id instanceof NodeAggregateId && $id->value === 'source-id'),
+                self::callback(static fn (mixed $filter): bool => $filter instanceof FindReferencesFilter
+                    && $filter->referenceName instanceof ReferenceName
+                    && $filter->referenceName->value === 'authors'),
+            )
+            ->willReturn(References::fromArray([]));
+
+        $this->subject->findReferences('source-id', 'authors');
+    }
+
+    #[Test]
+    public function findBackReferencesReturnsSerializedReferences(): void
+    {
+        $source = $this->createStubNode('source-id', 'Vendor:Document.Page');
+        $references = References::fromArray([
+            new Reference($source, ReferenceName::fromString('relatedTo'), null),
+        ]);
+        $this->subgraph->method('findBackReferences')->willReturn($references);
+
+        $result = $this->subject->findBackReferences('target-id');
+
+        self::assertCount(1, $result);
+        $items = iterator_to_array($result);
+        self::assertSame('relatedTo', $items[0]->referenceName);
+        self::assertSame('source-id', $items[0]->target->nodeAggregateId);
+    }
+
+    #[Test]
+    public function findBackReferencesAppliesReferenceNameFilter(): void
+    {
+        $this->subgraph->expects(self::once())
+            ->method('findBackReferences')
+            ->with(
+                self::callback(static fn (mixed $id): bool => $id instanceof NodeAggregateId && $id->value === 'target-id'),
+                self::callback(static fn (mixed $filter): bool => $filter instanceof FindBackReferencesFilter
+                    && $filter->referenceName instanceof ReferenceName
+                    && $filter->referenceName->value === 'relatedTo'),
+            )
+            ->willReturn(References::fromArray([]));
+
+        $this->subject->findBackReferences('target-id', 'relatedTo');
     }
 
     // ── Stub Helpers ────────────────────────────────────────────────
