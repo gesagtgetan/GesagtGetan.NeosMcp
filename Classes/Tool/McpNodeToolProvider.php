@@ -13,6 +13,7 @@ use GesagtGetan\NeosMcp\Dto\NodeInfo;
 use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
 use GesagtGetan\NeosMcp\Dto\NodeTypeSchema;
 use GesagtGetan\NeosMcp\Dto\NodeTypeSummaryCollection;
+use GesagtGetan\NeosMcp\Dto\ReferenceInfoCollection;
 use GesagtGetan\NeosMcp\Dto\ReorderNodeRequest;
 use GesagtGetan\NeosMcp\Dto\WriteResult;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
@@ -192,6 +193,103 @@ final class McpNodeToolProvider implements McpToolProvider
             $nodeTypeName,
             $dimensionSpacePoint,
             $includeRemoved,
+        );
+    }
+
+    /**
+     * @param string $nodeAggregateId The source node aggregate ID
+     * @param string|null $referenceName Optional filter — return only references with this name
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
+     * @param bool $includeRemoved Include references from/to soft-removed (trashed) nodes (default: false)
+     */
+    #[McpTool(
+        description: <<<'MCP'
+            Get outgoing references for a node — which nodes does this node point at? Returns each reference's name, target node, and any edge-properties declared by the reference type.
+
+            References in Neos 9 are graph edges stored separately from a node's scalar properties — getNode() does NOT return them. Use getNodeTypeSchema() to discover which reference names a node type declares.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
+    public function getNodeReferences(
+        string $nodeAggregateId,
+        ?string $referenceName = null,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
+    ): ReferenceInfoCollection {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeReadService->findReferences($nodeAggregateId, $referenceName, $dimensionSpacePoint, $includeRemoved),
+            $warning,
+        );
+    }
+
+    /**
+     * @param string $nodeAggregateId The node aggregate ID to look up back-references for
+     * @param string|null $referenceName Optional filter — return only incoming references with this name
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
+     * @param bool $includeRemoved Include incoming references from soft-removed (trashed) source nodes (default: false)
+     */
+    #[McpTool(
+        description: <<<'MCP'
+            Get incoming references for a node — which other nodes point AT this one? Useful for impact analysis before deletes or moves ("what links to this asset?").
+
+            Each result's `target` field is the SOURCE of the incoming reference (the node doing the pointing). Optional `referenceName` filters to one reference name.
+            MCP,
+        annotations: new ToolAnnotations(readOnlyHint: true),
+    )]
+    public function getNodeBackReferences(
+        string $nodeAggregateId,
+        ?string $referenceName = null,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
+    ): ReferenceInfoCollection {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeReadService->findBackReferences($nodeAggregateId, $referenceName, $dimensionSpacePoint, $includeRemoved),
+            $warning,
+        );
+    }
+
+    /**
+     * @param string $nodeAggregateId The source node aggregate ID
+     * @param string $referenceName The reference name to set (must be declared in the source node type)
+     * @param list<array{target: string, properties?: array<string, mixed>}> $targets Targets for this reference name. Empty array deletes all references for this name. Each entry is {target: "aggregate-id", properties: {...}}.
+     * @param array<string, string>|null $dimensionSpacePoint Dimension space point, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
+     */
+    #[McpTool(description: <<<'MCP'
+        Set the references for one reference name on a node. References for this name are REPLACED (not merged) — pass an empty `targets` array to delete all references for this name.
+
+        Each target is an object with `target` (required: the destination node aggregate ID) and optional `properties` (only used when the reference type declares edge-properties on the reference itself; usually omitted).
+
+        Check getNodeTypeSchema() for the source node type to see which reference names are declared and whether they accept edge-properties. To read the current state, use getNodeReferences().
+        MCP)]
+    public function setNodeReference(
+        string $nodeAggregateId,
+        string $referenceName,
+        #[Schema(
+            type: 'array',
+            items: [
+                'type' => 'object',
+                'properties' => [
+                    'target' => ['type' => 'string'],
+                    'properties' => ['type' => 'object', 'additionalProperties' => true],
+                ],
+                'required' => ['target'],
+            ],
+        )]
+        array $targets,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+    ): WriteResult {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeWriteService->setNodeReference($nodeAggregateId, $referenceName, $targets, $dimensionSpacePoint),
+            $warning,
         );
     }
 

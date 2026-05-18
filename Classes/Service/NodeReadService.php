@@ -12,15 +12,21 @@ use GesagtGetan\NeosMcp\Dto\DimensionSpacePointList;
 use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
 use GesagtGetan\NeosMcp\Dto\NodeInfo;
 use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
+use GesagtGetan\NeosMcp\Dto\ReferenceInfo;
+use GesagtGetan\NeosMcp\Dto\ReferenceInfoCollection;
 use GesagtGetan\NeosMcp\Dto\WorkspaceInfo;
 use GesagtGetan\NeosMcp\Dto\WorkspaceInfoCollection;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindBackReferencesFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindChildNodesFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindDescendantNodesFilter;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindReferencesFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\Pagination\Pagination;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Reference;
+use Neos\ContentRepository\Core\Projection\ContentGraph\References;
 use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
@@ -134,6 +140,52 @@ final readonly class NodeReadService
     }
 
     /**
+     * Outgoing references — which nodes does the source node point at? Reference
+     * properties (when the reference type declares them) are surfaced alongside
+     * each target. Missing source nodes yield an empty collection rather than an
+     * error, matching how {@see findNodes()} handles a missing entry point.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     */
+    public function findReferences(
+        string $nodeAggregateId,
+        ?string $referenceName = null,
+        ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
+    ): ReferenceInfoCollection {
+        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
+
+        $references = $subgraph->findReferences(
+            NodeAggregateId::fromString($nodeAggregateId),
+            FindReferencesFilter::create(referenceName: $referenceName),
+        );
+
+        return $this->serializeReferences($references);
+    }
+
+    /**
+     * Incoming references — which nodes point at the target node? Useful for
+     * impact analysis before deletes or moves.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     */
+    public function findBackReferences(
+        string $nodeAggregateId,
+        ?string $referenceName = null,
+        ?array $dimensionSpacePoint = null,
+        bool $includeRemoved = false,
+    ): ReferenceInfoCollection {
+        $subgraph = $this->getSubgraph($dimensionSpacePoint, $includeRemoved);
+
+        $references = $subgraph->findBackReferences(
+            NodeAggregateId::fromString($nodeAggregateId),
+            FindBackReferencesFilter::create(referenceName: $referenceName),
+        );
+
+        return $this->serializeReferences($references);
+    }
+
+    /**
      * @param array<string, string>|null $dimensionSpacePoint
      */
     private function getSubgraph(?array $dimensionSpacePoint = null, bool $includeRemoved = false): ContentSubgraphInterface
@@ -164,6 +216,32 @@ final readonly class NodeReadService
         $rootNode = $subgraph->findRootNodeByType(NodeTypeName::fromString('Neos.Neos:Sites'));
 
         return $rootNode?->aggregateId;
+    }
+
+    private function serializeReferences(References $references): ReferenceInfoCollection
+    {
+        $items = [];
+        foreach ($references as $reference) {
+            $items[] = $this->serializeReference($reference);
+        }
+
+        return ReferenceInfoCollection::create(...$items);
+    }
+
+    private function serializeReference(Reference $reference): ReferenceInfo
+    {
+        $properties = [];
+        if ($reference->properties !== null) {
+            foreach ($reference->properties as $propertyName => $propertyValue) {
+                $properties[$propertyName] = $this->serializePropertyValue($propertyValue, $this->propertyTruncateLength);
+            }
+        }
+
+        return new ReferenceInfo(
+            referenceName: $reference->name->value,
+            target: $this->serializeNode($reference->node, $this->propertyTruncateLength),
+            properties: $properties,
+        );
     }
 
     /**

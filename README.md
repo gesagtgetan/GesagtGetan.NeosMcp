@@ -118,12 +118,15 @@ GesagtGetan:
 - `findNodes` — search by type and/or search term
 - `getNode` — get a single node with all properties
 - `getChildren` — list child nodes, optionally filtered by type
+- `getNodeReferences` — outgoing references (which nodes does this node point at?). References live outside `properties` in Neos 9, so `getNode` does NOT return them.
+- `getNodeBackReferences` — incoming references (which nodes point at this one?). Useful for impact analysis before deletes/moves.
 - `getWorkspaceStatus` — workspace status including pending change count
 
 ### Write (staged in workspace, requires human publishing)
 
 - `createNode` — create a node under a parent (ID auto-generated)
 - `setNodeProperties` — partial property update
+- `setNodeReference` — replace all references for one reference name (empty `targets` deletes them)
 - `moveNode` — move to new parent
 - `hideNode` — hide a node from the public site (reversible)
 - `unhideNode` — unhide a previously hidden node
