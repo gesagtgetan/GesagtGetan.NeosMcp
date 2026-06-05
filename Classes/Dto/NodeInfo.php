@@ -43,13 +43,14 @@ final readonly class NodeInfo implements \JsonSerializable, WithRebaseWarning
     }
 
     /**
-     * @return array{nodeAggregateId: string, nodeTypeName: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>, _rebaseWarning?: string}
+     * @return array{nodeAggregateId: string, nodeTypeName: string, displayTitle: string, nodeName: ?string, hidden: bool, properties: array<string, mixed>, _rebaseWarning?: string}
      */
     public function jsonSerialize(): array
     {
         $payload = [
             'nodeAggregateId' => $this->nodeAggregateId,
             'nodeTypeName' => $this->nodeTypeName,
+            'displayTitle' => $this->displayTitle(),
             'nodeName' => $this->nodeName,
             'hidden' => $this->hidden,
             'properties' => $this->properties,
@@ -60,5 +61,14 @@ final readonly class NodeInfo implements \JsonSerializable, WithRebaseWarning
         }
 
         return $payload;
+    }
+
+    private function displayTitle(): string
+    {
+        $title = $this->properties['title'] ?? null;
+
+        return is_string($title) && $title !== ''
+            ? sprintf('%s - %s', $this->nodeTypeName, $title)
+            : $this->nodeTypeName;
     }
 }
