@@ -306,6 +306,8 @@ final class McpNodeToolProvider implements McpToolProvider
         1. Call getNodeTypeSchema() for the parent's node type. Check the `childNodes` field — these are auto-created (tethered) child nodes that already exist when the parent is created. You cannot create them again; use setNodeProperties() to populate their properties instead.
         2. Call getChildren() on the parent to see all current children. Content collections (e.g. a "main" content area) may already contain nodes with empty/null properties. Populate these with setNodeProperties() instead of creating duplicates.
         3. Only call createNode() when a genuinely new node is needed.
+
+        To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
         MCP)]
     public function createNode(
         string $parentNodeAggregateId,
@@ -330,6 +332,8 @@ final class McpNodeToolProvider implements McpToolProvider
      */
     #[McpTool(description: <<<'MCP'
         Update properties on an existing node. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
+
+        To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
         MCP)]
     public function setNodeProperties(
         string $nodeAggregateId,
