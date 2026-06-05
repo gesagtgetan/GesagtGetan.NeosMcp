@@ -119,7 +119,7 @@ final class McpNodeToolProvider implements McpToolProvider
      */
     #[McpTool(
         description: <<<'MCP'
-            Search for nodes by type and/or search term. Returns matching nodes with all properties.
+            Search for nodes by type and/or search term. Returns a preview — long string values are truncated. Use getNode() for a node's full, untruncated properties.
             MCP,
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]
