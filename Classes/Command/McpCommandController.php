@@ -147,7 +147,7 @@ class McpCommandController extends CommandController
         $builder = Server::make()
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', InstalledVersions::getPrettyVersion('gesagtgetan/neos-mcp') ?? 'dev')
-            ->withInstructions(McpToolProviderRegistry::INSTRUCTIONS);
+            ->withInstructions($this->toolProviderRegistry->buildInstructions());
 
         $builder = $this->toolProviderRegistry->registerAll($builder, $container, $context);
 

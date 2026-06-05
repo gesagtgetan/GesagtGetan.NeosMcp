@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\Tool;
 
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Reflection\ReflectionService;
@@ -34,7 +35,20 @@ final readonly class McpToolProviderRegistry
     public function __construct(
         private ReflectionService $reflectionService,
         private ObjectManagerInterface $objectManager,
+        private VersionCheckService $versionCheckService,
     ) {
+    }
+
+    /**
+     * The static {@see INSTRUCTIONS}, plus a one-line update notice appended when
+     * a newer release is available. Falls back to the base instructions if the
+     * version check fails for any reason — it must never break the handshake.
+     */
+    public function buildInstructions(): string
+    {
+        $notice = $this->versionCheckService->getUpdateNotice();
+
+        return $notice === null ? self::INSTRUCTIONS : self::INSTRUCTIONS . "\n\n" . $notice;
     }
 
     public function registerAll(
