@@ -1,0 +1,5 @@
+GesagtGetan_NeosMcp_VersionCheck:
+  frontend: Neos\Cache\Frontend\VariableFrontend
+  backend: Neos\Cache\Backend\FileBackend
+  backendOptions:
+    defaultLifetime: 14400 # 4 hours — throttles the latest-version lookup so the network is hit at most once per window, not per connect

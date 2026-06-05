@@ -1,0 +1,5 @@
+# GuzzleHttp\Client is a third-party class Flow cannot autowire as a constructor
+# dependency. Bind its interface to the concrete client so VersionCheckService can
+# receive one (and tests can pass a mock).
+GuzzleHttp\ClientInterface:
+  className: GuzzleHttp\Client

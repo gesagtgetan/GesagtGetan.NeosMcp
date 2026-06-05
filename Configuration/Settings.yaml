@@ -29,6 +29,12 @@ GesagtGetan:
     # `#[McpTool]` method names to skip during registration.
     # Example: disabledTools: [findAndReplace, removeNode]
     disabledTools: []
+    versionCheck:
+      # Notify (via the MCP `initialize` instructions) when a newer stable
+      # release is available. Disable for air-gapped installs to skip the
+      # outbound lookup entirely.
+      enabled: true
+      repositoryUrl: 'https://repo.packagist.org'
     stdioWorkspaceName: 'llm-review'
     stdioWorkspaceTitle: 'MCP Stdio'
     stdioWorkspaceDescription: 'Shared workspace for MCP stdio transport'

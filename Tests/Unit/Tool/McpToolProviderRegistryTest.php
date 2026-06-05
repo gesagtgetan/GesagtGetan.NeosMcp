@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use GesagtGetan\NeosMcp\Tool\McpToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpToolProviderRegistry;
+use GuzzleHttp\Client;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Flow\Cache\CacheManager;
+use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Reflection\ReflectionService;
 use Neos\Flow\Tests\UnitTestCase;
@@ -64,7 +68,7 @@ class McpToolProviderRegistryTest extends UnitTestCase
             default => throw new \RuntimeException('unexpected ' . $name),
         });
 
-        $registry = new McpToolProviderRegistry($reflectionService, $objectManager);
+        $registry = new McpToolProviderRegistry($reflectionService, $objectManager, $this->versionCheckService());
 
         $facade = $this->createMock(ContentRepositoryFacade::class);
         $context = new McpRequestContext($facade, WorkspaceName::fromString('ws'));
@@ -88,7 +92,7 @@ class McpToolProviderRegistryTest extends UnitTestCase
         $objectManager = $this->createMock(ObjectManagerInterface::class);
         $objectManager->method('get')->willReturn(new \stdClass());
 
-        $registry = new McpToolProviderRegistry($reflectionService, $objectManager);
+        $registry = new McpToolProviderRegistry($reflectionService, $objectManager, $this->versionCheckService());
 
         $facade = $this->createMock(ContentRepositoryFacade::class);
         $builder = Server::make()->withServerInfo('t', '0.0.0');
@@ -100,5 +104,19 @@ class McpToolProviderRegistryTest extends UnitTestCase
         );
 
         self::assertSame($builder, $result);
+    }
+
+    /**
+     * A disabled, inert VersionCheckService — the registry only needs an instance
+     * to construct; these tests exercise registerAll(), not the version notice.
+     * VersionCheckService is final readonly and cannot be mocked.
+     */
+    private function versionCheckService(): VersionCheckService
+    {
+        return new VersionCheckService(
+            new Client(),
+            $this->createMock(CacheManager::class),
+            $this->createMock(ConfigurationManager::class),
+        );
     }
 }
