@@ -514,6 +514,8 @@ final class McpNodeToolProvider implements McpToolProvider
      */
     #[McpTool(description: <<<'MCP'
         Find and replace a string across the content tree. Without filters, searches all node types and all string properties. Use nodeTypeName and/or propertyName to narrow scope.
+
+        The search is a plain substring (replacing 'cat' also hits 'category'), so it can touch more nodes than intended. Always run dryRun: true first to review the matches, narrow with nodeTypeName/propertyName where possible, and confirm before a broad replace.
         MCP)]
     public function findAndReplace(
         string $search,
