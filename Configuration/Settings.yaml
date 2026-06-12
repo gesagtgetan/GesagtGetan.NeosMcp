@@ -10,15 +10,6 @@ Neos:
       routes:
         GesagtGetan.NeosMcp:
           position: start
-    security:
-      authentication:
-        providers:
-          'GesagtGetan.SingleSignOn:Backend':
-            requestPatterns:
-              'GesagtGetan.NeosMcp:OAuthAuthorize':
-                pattern: 'ControllerObjectName'
-                patternOptions:
-                  controllerObjectNamePattern: 'GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController'
 
 GesagtGetan:
   NeosMcp:
