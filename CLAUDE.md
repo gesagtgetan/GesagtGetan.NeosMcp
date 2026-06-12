@@ -18,15 +18,6 @@ This lets you:
 - **Explore the content tree**: Use `findNodes`, `getChildren`, `getNodeTypeSchema` to understand how node types are structured in practice — tethered child nodes, content collections, property values.
 - **Test write operations**: Create, update, and remove nodes in the stdio workspace to verify write tools behave correctly.
 
-## Open TODOs
-
-- **Test tool descriptions with ChatGPT** — ChatGPT is familiar with the Neos 9 Content Repository. Connect it as an MCP client and gather feedback on whether the tool descriptions need further refinement for non-Claude models.
-- **Offer pagination instead of hard limits** — When tools return lists of results, prefer cursor/offset-based pagination over fixed limits. This lets the LLM request "next page" instead of silently missing results beyond the limit. Affected tools:
-  - `findNodes` — has `limit` (default 100) but offset is hardcoded to `0`; add an `offset` parameter and return `total`, `count`, and `hasMore` in the response so the LLM knows whether results were truncated and can decide to paginate or refine the search.
-  - `getChildren` — returns all children with no pagination; add `limit`/`offset` for nodes with many children.
-  - `listNodeTypes` — returns all non-abstract node types; add pagination for large schemas.
-- **Lazy/deferred tool loading** — Currently all 17 tool schemas are loaded into context on every turn. Claude.ai supports deferred loading for its managed MCP servers (Notion, Slack), but not for custom servers. Claude Code has open feature requests (https://github.com/anthropics/claude-code/issues/3036, https://github.com/anthropics/claude-code/issues/7336, https://github.com/anthropics/claude-code/issues/23508) for lazy tool loading; community workarounds exist (e.g. [claude-lazy-loading](https://github.com/machjesusmoto/claude-lazy-loading)). Revisit when the MCP protocol or Claude Code adds native support.
-
 ## Commands
 
 All commands run from this directory (`DistributionPackages/GesagtGetan.NeosMcp/`):
@@ -39,13 +30,7 @@ just test-functional  # Functional tests (needs test DB)
 just test             # Both
 ```
 
-Functional tests need a reachable MySQL/MariaDB test database (see host project's `Configuration/Testing/Settings.yaml`). If the test DB is only reachable inside a Docker network, run functional tests from within the container:
-
-```bash
-docker exec --user www-data --interactive --workdir /var/www/FireXYZCom/DistributionPackages/GesagtGetan.NeosMcp firexyz-web-server php ../../bin/phpunit -c phpunit-functional.xml.dist
-```
-
-Note: Use `php` (not `php8.4`) inside the Docker container — the container has `php` on PATH but not the versioned binary.
+Functional tests need a reachable MySQL/MariaDB test database (see host project's `Configuration/Testing/Settings.yaml`).
 
 ## Architecture
 
@@ -72,7 +57,7 @@ OAuth architecture: see [`Documentation/oauth.md`](Documentation/oauth.md)
 - **Service/Controller logic** → unit tests are usually sufficient.
 - **Always run `just check`** (phpcs + php-cs-fixer + phpstan) before considering work finished.
 - **Validate tests catch failures** — after writing non-trivial tests, temporarily break the implementation and verify the tests actually fail. This catches false positives (tests that always pass regardless of implementation).
-- Functional tests need Docker. If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
+- If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
 
 Testing gotchas and dev dependencies: see [`Documentation/testing.md`](Documentation/testing.md)
 
