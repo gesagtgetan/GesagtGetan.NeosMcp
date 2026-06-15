@@ -13,7 +13,13 @@ Neos:
     security:
       authentication:
         providers:
-          'Vendor.SingleSignOn:Backend':
+          # Extend the default Neos backend provider so the logged-in editor is
+          # recognized on the OAuth consent controller (route `api/mcp`). Without
+          # this, the scoped `Neos.Neos:Backend` provider is inactive there and
+          # the consent screen shows the user as logged out.
+          # Custom backend providers (e.g. SSO) need the same
+          # pattern added to themselves in the project's own Settings.yaml.
+          'Neos.Neos:Backend':
             requestPatterns:
               'GesagtGetan.NeosMcp:OAuthAuthorize':
                 pattern: 'ControllerObjectName'
