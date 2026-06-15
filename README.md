@@ -37,15 +37,26 @@ Each authenticated user has their own personal workspace (the same one they use 
 
 5. Assign the `GesagtGetan.NeosMcp:McpUser` role to Neos accounts that should be able to authorize MCP access.
 
-6. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
-
-   For example, to bypass basic auth on staging domains, add this to `Web/.htaccess`:
-   ```apache
-   # Bypass basic auth for OAuth/MCP endpoints so Claude can reach them without credentials.
-   <If "(%{HTTP_HOST} =~ /\.staging\.example\.com/ || %{HTTP_HOST} =~ /\.example\.org/) && %{THE_REQUEST} !~ m#(GET|POST|OPTIONS) /(\.well-known/oauth-|oauth/token|api/mcp)#">
+6. (Only for custom backend logins) The OAuth consent screen identifies the logged-in backend user through the Flow security context. The default `Neos.Neos:Backend` provider is scoped via `requestPatterns` to the Neos backend and service controllers, so it would be inactive on the authorize controller. This package ships a request pattern that also activates it there, so plain Neos installations work without extra configuration. If your backend login uses a custom authentication provider (e.g. a single sign-on package) instead of the default one, that provider is scoped to its own controllers and stays inactive on the consent screen, so the user appears logged out. In that case, add the same request pattern to your provider in your project's `Settings.yaml`, for example:
+   ```yaml
+   Neos:
+     Flow:
+       security:
+         authentication:
+           providers:
+             'Vendor.SingleSignOn:Backend':
+               requestPatterns:
+                 'GesagtGetan.NeosMcp:OAuthAuthorize':
+                   pattern: 'ControllerObjectName'
+                   patternOptions:
+                     controllerObjectNamePattern: 'GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController'
    ```
 
-7. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
+7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+
+   How you exempt them depends on your server (for example a conditional in your virtual host or `Web/.htaccess`). Match these paths precisely so you do not unintentionally widen public access beyond them.
+
+8. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
    ```apache
    # Forward the Authorization header to PHP — Apache mod_proxy_fcgi strips it otherwise.
    RewriteCond %{HTTP:Authorization} .
@@ -53,7 +64,7 @@ Each authenticated user has their own personal workspace (the same one they use 
    ```
    This copies the `Authorization` header into the `HTTP_AUTHORIZATION` environment variable so PHP can read it. The `RewriteCond` ensures it only fires when the header is present.
 
-8. Connect the MCP server in Claude.ai or ChatGPT and test with a prompt like "List all node types for the connected Neos website" to verify the connection works end-to-end.
+9. Connect the MCP server in Claude.ai or ChatGPT and test with a prompt like "List all node types for the connected Neos website" to verify the connection works end-to-end.
 
 ## CLI Transport (stdio, optional)
 

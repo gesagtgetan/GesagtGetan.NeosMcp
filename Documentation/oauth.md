@@ -15,4 +15,4 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 
 **Security** (`Policy.yaml`): `McpUser` role (extends `AbstractEditor`) required for authorization endpoint. All other OAuth endpoints are public (Everybody).
 
-**Staging basic auth** (`Web/.htaccess`): The staging-host or example.org domains require HTTP basic auth. OAuth/MCP routes are exempted via a `%{THE_REQUEST}` exclusion in the `<If>` condition so Claude can reach `/.well-known/oauth-*`, `/oauth/token`, and `/api/mcp` without basic auth credentials. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+**Staging basic auth** (`Web/.htaccess`): If your environment puts the site behind HTTP basic auth, the OAuth/MCP routes (`/.well-known/oauth-*`, `/oauth/token`, `/api/mcp`) must be exempted so Claude can reach them without credentials. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
