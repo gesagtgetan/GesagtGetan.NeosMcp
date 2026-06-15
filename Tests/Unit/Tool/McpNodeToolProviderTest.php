@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
+use GuzzleHttp\ClientInterface;
 use Neos\ContentRepository\Core\Dimension\ContentDimensionSourceInterface;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
@@ -16,6 +18,8 @@ use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Flow\Cache\CacheManager;
+use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
@@ -53,7 +57,14 @@ class McpNodeToolProviderTest extends UnitTestCase
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $this->contentRepository->method('getContentDimensionSource')->willReturn($dimensionSource);
 
-        $this->subject = new McpNodeToolProvider();
+        // VersionCheckService is final (not mockable); a real disabled instance suffices —
+        // getServerVersion() returns null, so getContentRepositoryInfo() omits the version block.
+        $versionCheck = new VersionCheckService(
+            $this->createMock(ClientInterface::class),
+            $this->createMock(CacheManager::class),
+            $this->createMock(ConfigurationManager::class),
+        );
+        $this->subject = new McpNodeToolProvider($versionCheck);
         $this->subject->registerTools(
             Server::make()->withServerInfo('test', '0.0.0'),
             new BasicContainer(),

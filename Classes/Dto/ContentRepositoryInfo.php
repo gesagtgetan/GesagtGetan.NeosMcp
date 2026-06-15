@@ -15,6 +15,7 @@ final readonly class ContentRepositoryInfo implements \JsonSerializable, WithReb
         public WorkspaceInfoCollection $workspaces,
         public DimensionSpacePointList $dimensionSpacePoints,
         public ?string $rebaseWarning = null,
+        public ?McpServerVersion $serverVersion = null,
     ) {
     }
 
@@ -26,6 +27,25 @@ final readonly class ContentRepositoryInfo implements \JsonSerializable, WithReb
             $this->workspaces,
             $this->dimensionSpacePoints,
             $warning,
+            $this->serverVersion,
+        );
+    }
+
+    /**
+     * A copy carrying the installed and latest-known server version.
+     * getContentRepositoryInfo() attaches it here, on the orientation call the
+     * agent makes first, so the version is visible via a tool result regardless
+     * of whether the client relays the server `instructions`.
+     */
+    public function withServerVersion(?McpServerVersion $serverVersion): self
+    {
+        return new self(
+            $this->contentRepositoryId,
+            $this->dimensions,
+            $this->workspaces,
+            $this->dimensionSpacePoints,
+            $this->rebaseWarning,
+            $serverVersion,
         );
     }
 
@@ -35,7 +55,7 @@ final readonly class ContentRepositoryInfo implements \JsonSerializable, WithReb
     }
 
     /**
-     * @return array{contentRepositoryId: string, dimensions: DimensionMap, workspaces: WorkspaceInfoCollection, dimensionSpacePoints: DimensionSpacePointList, _rebaseWarning?: string}
+     * @return array{contentRepositoryId: string, dimensions: DimensionMap, workspaces: WorkspaceInfoCollection, dimensionSpacePoints: DimensionSpacePointList, serverVersion?: McpServerVersion, _rebaseWarning?: string}
      */
     public function jsonSerialize(): array
     {
@@ -45,6 +65,10 @@ final readonly class ContentRepositoryInfo implements \JsonSerializable, WithReb
             'workspaces' => $this->workspaces,
             'dimensionSpacePoints' => $this->dimensionSpacePoints,
         ];
+
+        if ($this->serverVersion !== null) {
+            $payload['serverVersion'] = $this->serverVersion;
+        }
 
         if ($this->rebaseWarning !== null) {
             $payload['_rebaseWarning'] = $this->rebaseWarning;

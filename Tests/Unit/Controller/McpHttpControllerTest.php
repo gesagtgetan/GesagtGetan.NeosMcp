@@ -8,9 +8,11 @@ use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Controller\McpHttpController;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GesagtGetan\NeosMcp\Security\McpUserContext;
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use GesagtGetan\NeosMcp\Tool\McpWorkspaceToolProvider;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
@@ -19,6 +21,8 @@ use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
 use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Flow\Cache\CacheManager;
+use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Tests\UnitTestCase;
@@ -200,6 +204,19 @@ class McpHttpControllerTest extends UnitTestCase
     }
 
     /**
+     * VersionCheckService is final (not mockable); a real disabled instance is enough
+     * for the node provider, which only needs it for getContentRepositoryInfo().
+     */
+    private function disabledVersionCheck(): VersionCheckService
+    {
+        return new VersionCheckService(
+            $this->createMock(ClientInterface::class),
+            $this->createMock(CacheManager::class),
+            $this->createMock(ConfigurationManager::class),
+        );
+    }
+
+    /**
      * Creates a controller subclass with buildServer() and resolveWorkspaceName()
      * overridden to avoid final-class mocking.
      */
@@ -223,7 +240,7 @@ class McpHttpControllerTest extends UnitTestCase
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
 
-        $builder = (new McpNodeToolProvider())->registerTools($builder, $container, $context);
+        $builder = (new McpNodeToolProvider($this->disabledVersionCheck()))->registerTools($builder, $container, $context);
         $builder = (new McpWorkspaceToolProvider())->registerTools($builder, $container, $context);
 
         $server = $builder->build();

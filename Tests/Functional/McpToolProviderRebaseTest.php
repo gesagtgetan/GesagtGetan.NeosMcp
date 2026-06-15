@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\Tests\Functional;
 
 use GesagtGetan\NeosMcp\Dto\NodeInfo;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use Neos\ContentRepository\Core\Feature\NodeRemoval\Command\RemoveNodeAggregate;
@@ -32,7 +33,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $this->workspaceName = WorkspaceName::fromString('test-mcp-workspace');
         $this->createTestWorkspace($this->workspaceName);
 
-        $this->provider = new McpNodeToolProvider();
+        $this->provider = new McpNodeToolProvider($this->objectManager->get(VersionCheckService::class));
         $this->provider->registerTools(
             Server::make()->withServerInfo('test', '0.0.0'),
             new BasicContainer(),

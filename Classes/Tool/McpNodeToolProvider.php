@@ -19,6 +19,7 @@ use GesagtGetan\NeosMcp\Dto\WriteResult;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
+use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use Neos\Flow\Annotations as Flow;
 use PhpMcp\Schema\ToolAnnotations;
 use PhpMcp\Server\Attributes\McpTool;
@@ -46,6 +47,16 @@ final class McpNodeToolProvider implements McpToolProvider
     private NodeWriteService $nodeWriteService;
     private NodeTypeService $nodeTypeService;
     private WorkspaceRebaser $rebaser;
+
+    /**
+     * The version check is a singleton with a request-independent result, so it is
+     * constructor-injected rather than built from the request context like the
+     * services above.
+     */
+    public function __construct(
+        private readonly VersionCheckService $versionCheckService,
+    ) {
+    }
 
     public function registerTools(
         ServerBuilder $builder,
@@ -79,8 +90,10 @@ final class McpNodeToolProvider implements McpToolProvider
     public function getContentRepositoryInfo(): ContentRepositoryInfo
     {
         $warning = $this->rebaser->rebase();
+        $repositoryInfo = $this->nodeReadService->getContentRepositoryInfo()
+            ->withServerVersion($this->versionCheckService->getServerVersion());
 
-        return $this->rebaser->withWarning($this->nodeReadService->getContentRepositoryInfo(), $warning);
+        return $this->rebaser->withWarning($repositoryInfo, $warning);
     }
 
     #[McpTool(

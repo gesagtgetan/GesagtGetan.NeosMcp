@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\Service;
 
 use Composer\InstalledVersions;
 use Composer\Semver\VersionParser;
+use GesagtGetan\NeosMcp\Dto\McpServerVersion;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Neos\Flow\Annotations as Flow;
@@ -66,6 +67,36 @@ final readonly class VersionCheckService
             }
 
             return $this->buildNotice($installed, $this->latestStableVersion());
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The installed and latest-known version, but only when both are comparable
+     * stable releases — i.e. when the two numbers alone are enough to tell
+     * whether the install is current. Returns null for a dev/branch checkout, or
+     * when the latest lookup is disabled or fails, since currency cannot be
+     * determined from the version numbers in those cases.
+     */
+    public function getServerVersion(): ?McpServerVersion
+    {
+        if (!$this->enabled) {
+            return null;
+        }
+
+        try {
+            $current = $this->installedStableVersion();
+            if ($current === null) {
+                return null;
+            }
+
+            $latest = $this->latestStableVersion();
+            if ($latest === null) {
+                return null;
+            }
+
+            return new McpServerVersion($current, $latest);
         } catch (\Throwable) {
             return null;
         }
