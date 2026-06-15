@@ -46,7 +46,7 @@ final class McpWorkspaceToolProvider implements McpToolProvider
 
     #[McpTool(
         description: <<<'MCP'
-            Show the workspace status including pending change count.
+            Show the workspace status, including its base workspace, sync status, and whether it has pending unpublished changes.
             MCP,
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]

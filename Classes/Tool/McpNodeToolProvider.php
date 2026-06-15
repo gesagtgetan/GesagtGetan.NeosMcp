@@ -83,7 +83,7 @@ final class McpNodeToolProvider implements McpToolProvider
 
     #[McpTool(
         description: <<<'MCP'
-            Returns available dimensions, workspaces, and dimension space points for the content repository.
+            Returns available dimensions, workspaces, and dimension space points for the content repository, plus the MCP server version when known.
             MCP,
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]
