@@ -15,14 +15,14 @@ Each authenticated user has their own personal workspace (the same one they use 
    openssl rand -hex 16   # client_id
    openssl rand -hex 32   # client_secret
    ```
-2. Enter them in the Claude.ai or ChatGPT connector's settings along with the MCP endpoint URL: `https://your-domain.com/api/mcp`.
+2. Enter them in the Claude.ai or ChatGPT connector's settings along with the MCP endpoint URL: `https://example.com/api/mcp`.
 3. Configure `Configuration/Production/Settings.yaml`:
    ```yaml
    GesagtGetan:
      NeosMcp:
        oauth:
          enabled: true
-         issuer: 'https://your-domain.com'
+         issuer: 'https://example.com'
          client:
            id: '<generated client_id>'
            secret: '<generated client_secret>'
