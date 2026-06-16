@@ -126,7 +126,8 @@ final readonly class VersionCheckService
 
     /**
      * Pure selection: the highest stable version in a Composer p2 metadata
-     * payload, ignoring dev/pre-release entries. Null if none.
+     * payload, ignoring dev/pre-release entries and anything that is not a plain
+     * version number. Null if none.
      *
      * @param array<mixed, mixed> $payload
      */
@@ -141,7 +142,7 @@ final readonly class VersionCheckService
         $latest = null;
         foreach ($releases as $release) {
             $version = is_array($release) ? ($release['version'] ?? null) : null;
-            if (!is_string($version) || VersionParser::parseStability($version) !== 'stable') {
+            if (!is_string($version) || !$this->isPlainVersionNumber($version) || VersionParser::parseStability($version) !== 'stable') {
                 continue;
             }
 
@@ -151,6 +152,21 @@ final readonly class VersionCheckService
         }
 
         return $latest;
+    }
+
+    /**
+     * Whether a version string is a bare version number (optionally `v`-prefixed,
+     * with an optional `+build` metadata suffix) and nothing else. The selected
+     * version is interpolated verbatim into the agent-facing update notice, which
+     * the MCP client feeds to the LLM as `initialize` instructions, so a crafted
+     * payload must not be able to smuggle arbitrary text through the `version`
+     * field. A stable release never carries a pre-release suffix, so disallowing
+     * everything but digits, dots and an optional build tag rejects nothing
+     * legitimate.
+     */
+    private function isPlainVersionNumber(string $version): bool
+    {
+        return preg_match('/^v?\d+(?:\.\d+){0,3}(?:\+[A-Za-z0-9._-]+)?$/', $version) === 1;
     }
 
     /**
