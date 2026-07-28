@@ -16,6 +16,12 @@ use Neos\Flow\Utility\Algorithms;
  * Implements PersistenceMagicInterface explicitly because Proxy(false) bypasses
  * AOP introduction. Without it, PersistenceManager::update() rejects the entity.
  *
+ * The unique index on `clientId` is declared via `unique=true`, which makes Doctrine
+ * derive a hashed index name. Naming it explicitly is not an option: Flow's
+ * FlowAnnotationDriver discards the name of an `@ORM\UniqueConstraint`. Migration
+ * Version20260727170000 renames the hand-picked names to the derived ones so
+ * `doctrine:migrationgenerate` stays quiet.
+ *
  * @Flow\Entity
  *
  * @ORM\Table(name="gesagtgetan_neosmcp_oauth_client")
@@ -55,10 +61,10 @@ class OAuthClient implements ClientEntityInterface, PersistenceMagicInterface
      */
     protected array $grantTypes = [];
 
-    /** @ORM\Column(length=50) */
+    /** @ORM\Column(length=50, options={"default": "none"}) */
     protected string $tokenEndpointAuthMethod = 'none';
 
-    /** @ORM\Column(type="boolean") */
+    /** @ORM\Column(type="boolean", options={"default": 0}) */
     protected bool $isConfidential = false;
 
     /** @ORM\Column(type="datetime_immutable") */
