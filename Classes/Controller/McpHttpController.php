@@ -151,13 +151,11 @@ class McpHttpController extends ActionController
 
     private function unauthorizedResponse(): ResponseInterface
     {
-        $issuer = $this->oauthServerFactory->getIssuer();
-
         return new Response(
             status: 401,
             headers: [
                 'Content-Type' => 'application/json',
-                'WWW-Authenticate' => 'Bearer resource_metadata="' . $issuer . '/.well-known/oauth-protected-resource"',
+                'WWW-Authenticate' => $this->oauthServerFactory->getWwwAuthenticateChallenge(),
             ] + $this->corsHeaders(),
             body: json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR),
         );

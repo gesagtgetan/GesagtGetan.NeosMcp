@@ -317,6 +317,11 @@ HTML;
         );
     }
 
+    /**
+     * Shares the URI with the MCP transport (GET vs. POST /api/mcp), so an MCP client probing
+     * the endpoint may land here. The WWW-Authenticate challenge lets it discover OAuth the
+     * same way as on the transport's 401, while a browser still gets the HTML login hint.
+     */
     private function loginRequiredResponse(): ResponseInterface
     {
         $currentUrl = htmlspecialchars(
@@ -325,7 +330,7 @@ HTML;
             'UTF-8',
         );
 
-        return $this->htmlErrorResponse(
+        $response = $this->htmlErrorResponse(
             401,
             'Neos Login Required',
             <<<BODY
@@ -339,6 +344,8 @@ HTML;
             </div>
             BODY,
         );
+
+        return $response->withHeader('WWW-Authenticate', $this->oauthServerFactory->getWwwAuthenticateChallenge());
     }
 
     private function htmlErrorResponse(int $statusCode, string $title, string $body): ResponseInterface

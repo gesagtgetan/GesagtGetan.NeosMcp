@@ -61,7 +61,8 @@ class McpHttpControllerTest extends UnitTestCase
 
         $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
-        $this->oauthServerFactory->method('getIssuer')->willReturn('https://example.com');
+        $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
+            ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"');
 
         $this->resourceServer = $this->createMock(ResourceServer::class);
         $this->oauthServerFactory->method('createResourceServer')->willReturn($this->resourceServer);
@@ -97,7 +98,7 @@ class McpHttpControllerTest extends UnitTestCase
         $body = $this->decodeJsonBody((string) $response->getBody());
         self::assertSame('Unauthorized', $body['error']);
         self::assertSame(
-            'Bearer resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
+            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
             $response->getHeaderLine('WWW-Authenticate'),
         );
     }

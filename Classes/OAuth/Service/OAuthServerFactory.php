@@ -61,6 +61,16 @@ class OAuthServerFactory
     }
 
     /**
+     * WWW-Authenticate value for 401 responses. MCP clients use the resource_metadata
+     * pointer to discover that OAuth is required and where the authorization server lives,
+     * see https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/authorization.
+     */
+    public function getWwwAuthenticateChallenge(): string
+    {
+        return 'Bearer realm="mcp", resource_metadata="' . $this->getIssuer() . '/.well-known/oauth-protected-resource"';
+    }
+
+    /**
      * Returns the CORS Access-Control-Allow-Origin value for the given request origin.
      * Returns null if the origin is not allowed.
      */

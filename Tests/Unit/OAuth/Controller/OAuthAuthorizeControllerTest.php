@@ -39,7 +39,8 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
         $this->oauthServerFactory->method('isClientRegistered')->willReturn(true);
-        $this->oauthServerFactory->method('getIssuer')->willReturn('https://example.com');
+        $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
+            ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"');
 
         $this->authorizationServer = $this->createMock(AuthorizationServer::class);
         $this->oauthServerFactory->method('createAuthorizationServer')->willReturn($this->authorizationServer);
@@ -83,6 +84,20 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertSame(401, $response->getStatusCode());
         self::assertStringContainsString('text/html', $response->getHeaderLine('Content-Type'));
         self::assertStringContainsString('Neos Login Required', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function authorize401CarriesWwwAuthenticateChallengeForMcpClients(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn(null);
+        $this->injectGetRequest([]);
+
+        $response = $this->subject->authorizeAction();
+
+        self::assertSame(
+            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
+            $response->getHeaderLine('WWW-Authenticate'),
+        );
     }
 
     #[Test]
