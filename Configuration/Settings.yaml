@@ -58,6 +58,7 @@ GesagtGetan:
           - 'https://claude.com/api/mcp/auth_callback'
           - 'https://chatgpt.com/connector_platform_oauth_redirect'
           - 'https://platform.openai.com/apps-manage/oauth'
+          - 'https://chat.9brains.de/api/v1/oauth/callback'
       accessTokenLifetime: 3600
       refreshTokenLifetime: 604800
       authorizationCodeLifetime: 600
