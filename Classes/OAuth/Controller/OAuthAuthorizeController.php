@@ -405,9 +405,11 @@ HTML;
 
                 if ($client !== null) {
                     return sprintf(
-                        'The redirect URI provided for client "%s" does not match any registered URI.'
+                        'The redirect URI "%s" provided for client "%s" does not match any registered URI (registered: %s).'
                         . ' If you recently updated knownRedirectUris in Settings.yaml, re-run ./flow mcp:setup to sync them to the database.',
+                        $requestedRedirectUri,
                         $clientId,
+                        implode(', ', (array) $client->getRedirectUri()),
                     );
                 }
 

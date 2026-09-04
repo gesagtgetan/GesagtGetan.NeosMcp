@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Controller;
 
 use GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController;
+use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\AuthorizationServer;
@@ -290,6 +291,35 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'nonexistent']);
 
         $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
+
+        $this->subject->authorizeAction();
+    }
+
+    #[Test]
+    public function authorizeNamesRequestedAndRegisteredUrisOnRedirectUriMismatch(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+        $this->authorizationServer->method('validateAuthorizationRequest')
+            ->willThrowException(OAuthServerException::invalidClient(new ServerRequest('GET', '/')));
+
+        $client = $this->createMock(ClientEntityInterface::class);
+        $client->method('getRedirectUri')->willReturn(['https://example.com/callback', 'http://localhost:3000/callback']);
+        $clientRepository = $this->createMock(OAuthClientRepository::class);
+        $clientRepository->expects(self::once())->method('getClientEntity')->with('known-client')->willReturn($client);
+        $this->inject($this->subject, 'clientRepository', $clientRepository);
+
+        $this->injectGetRequest([
+            'response_type' => 'code',
+            'client_id' => 'known-client',
+            'redirect_uri' => 'https://example.org/other-callback',
+        ]);
+
+        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
+        $this->expectExceptionMessage(
+            'The redirect URI "https://example.org/other-callback" provided for client "known-client" does not match any registered URI'
+            . ' (registered: https://example.com/callback, http://localhost:3000/callback).'
+        );
 
         $this->subject->authorizeAction();
     }
