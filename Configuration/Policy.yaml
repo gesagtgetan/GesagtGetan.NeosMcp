@@ -4,7 +4,7 @@ privilegeTargets:
 
     'GesagtGetan.NeosMcp:HttpTransportAccess':
       label: Public access to the MCP HTTP transport endpoint
-      matcher: 'method(GesagtGetan\NeosMcp\Controller\McpHttpController->(handleAction|preflightAction)())'
+      matcher: 'method(GesagtGetan\NeosMcp\Controller\McpHttpController->handleAction())'
 
     'GesagtGetan.NeosMcp:OAuthMetadataAccess':
       label: Public access to OAuth discovery endpoints
@@ -12,7 +12,7 @@ privilegeTargets:
 
     'GesagtGetan.NeosMcp:OAuthTokenAccess':
       label: Public access to OAuth token endpoint
-      matcher: 'method(GesagtGetan\NeosMcp\OAuth\Controller\OAuthTokenController->(tokenAction|preflightAction)())'
+      matcher: 'method(GesagtGetan\NeosMcp\OAuth\Controller\OAuthTokenController->tokenAction())'
 
     'GesagtGetan.NeosMcp:OAuthAuthorizeAccess':
       label: Access to OAuth authorization and consent endpoints

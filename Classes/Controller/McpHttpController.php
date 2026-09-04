@@ -79,11 +79,6 @@ class McpHttpController extends ActionController
     #[Flow\InjectConfiguration(path: 'disabledTools', package: 'GesagtGetan.NeosMcp')]
     protected array $disabledTools = [];
 
-    public function preflightAction(): ResponseInterface
-    {
-        return new Response(204, $this->corsHeaders());
-    }
-
     public function handleAction(): ResponseInterface
     {
         if (!$this->oauthServerFactory->isEnabled()) {
@@ -124,7 +119,7 @@ class McpHttpController extends ActionController
             }
 
             if ($message instanceof Notification) {
-                return new Response(204, $this->corsHeaders());
+                return new Response(204);
             }
 
             if (!$message instanceof Request) {
@@ -156,7 +151,7 @@ class McpHttpController extends ActionController
             headers: [
                 'Content-Type' => 'application/json',
                 'WWW-Authenticate' => $this->oauthServerFactory->getWwwAuthenticateChallenge(),
-            ] + $this->corsHeaders(),
+            ],
             body: json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR),
         );
     }
@@ -233,29 +228,12 @@ class McpHttpController extends ActionController
         return $builder->build();
     }
 
-    /** @return array<string, string> */
-    private function corsHeaders(): array
-    {
-        $origin = $this->request->getHttpRequest()->getHeaderLine('Origin');
-        $allowed = $this->oauthServerFactory->getCorsAllowedOrigin($origin);
-
-        if ($allowed === null) {
-            return [];
-        }
-
-        return [
-            'Access-Control-Allow-Origin' => $allowed,
-            'Access-Control-Allow-Methods' => 'POST',
-            'Access-Control-Allow-Headers' => 'Authorization, Content-Type',
-        ];
-    }
-
     /** @param array<mixed> $data */
     private function jsonResponse(int $statusCode, array $data): ResponseInterface
     {
         return new Response(
             status: $statusCode,
-            headers: ['Content-Type' => 'application/json'] + $this->corsHeaders(),
+            headers: ['Content-Type' => 'application/json'],
             body: json_encode($data, JSON_THROW_ON_ERROR),
         );
     }

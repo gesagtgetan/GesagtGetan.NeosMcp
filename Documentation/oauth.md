@@ -11,7 +11,7 @@ Built on `league/oauth2-server` ^8.5. Implements the OAuth 2.0 authorization cod
 | Service | `OAuthServerFactory` — creates league's `AuthorizationServer` + `ResourceServer`, auto-generates RSA keys | Keys stored in `Data/Persistent/GesagtGetan.NeosMcp/` |
 | Controllers | `OAuthMetadataController` (.well-known), `OAuthAuthorizeController` (consent), `OAuthTokenController` (token exchange) | All under `OAuth\Controller` subpackage |
 
-**Configuration** (`Settings.yaml`): `GesagtGetan.NeosMcp.oauth.enabled` (default false), `.issuer`, `.client.id`, `.client.secret`, `.client.knownRedirectUris`, `.corsAllowedOrigins`, `.accessTokenLifetime`.
+**Configuration** (`Settings.yaml`): `GesagtGetan.NeosMcp.oauth.enabled` (default false), `.issuer`, `.client.id`, `.client.secret`, `.client.knownRedirectUris`, `.accessTokenLifetime`.
 
 **Security** (`Policy.yaml`): `McpUser` role (extends `AbstractEditor`) required for authorization endpoint. All other OAuth endpoints are public (Everybody).
 

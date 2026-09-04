@@ -65,4 +65,3 @@ GesagtGetan:
       privateKeyFile: 'oauth-private.key'
       publicKeyFile: 'oauth-public.key'
       encryptionKeyFile: 'oauth-encryption.key'
-      corsAllowedOrigins: ['https://claude.ai', 'https://claude.com', 'https://chatgpt.com', 'https://chat.openai.com']

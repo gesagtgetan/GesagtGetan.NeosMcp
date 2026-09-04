@@ -46,7 +46,7 @@ class OAuthServerFactory
     #[Flow\Inject]
     protected PersistenceManagerInterface $persistenceManager;
 
-    /** @var array{enabled?: bool, issuer?: string|null, client?: array{id?: string|null, secret?: string|null, knownRedirectUris?: array<string>}, accessTokenLifetime?: int, refreshTokenLifetime?: int, authorizationCodeLifetime?: int, privateKeyFile?: string, publicKeyFile?: string, encryptionKeyFile?: string, corsAllowedOrigins?: array<string>} */
+    /** @var array{enabled?: bool, issuer?: string|null, client?: array{id?: string|null, secret?: string|null, knownRedirectUris?: array<string>}, accessTokenLifetime?: int, refreshTokenLifetime?: int, authorizationCodeLifetime?: int, privateKeyFile?: string, publicKeyFile?: string, encryptionKeyFile?: string} */
     #[Flow\InjectConfiguration(path: 'oauth', package: 'GesagtGetan.NeosMcp')]
     protected array $settings;
 
@@ -68,25 +68,6 @@ class OAuthServerFactory
     public function getWwwAuthenticateChallenge(): string
     {
         return 'Bearer realm="mcp", resource_metadata="' . $this->getIssuer() . '/.well-known/oauth-protected-resource"';
-    }
-
-    /**
-     * Returns the CORS Access-Control-Allow-Origin value for the given request origin.
-     * Returns null if the origin is not allowed.
-     */
-    public function getCorsAllowedOrigin(string $requestOrigin): ?string
-    {
-        $allowed = $this->settings['corsAllowedOrigins'] ?? ['*'];
-
-        if (in_array('*', $allowed, true)) {
-            return '*';
-        }
-
-        if (in_array($requestOrigin, $allowed, true)) {
-            return $requestOrigin;
-        }
-
-        return null;
     }
 
     public function getConfiguredClientId(): string

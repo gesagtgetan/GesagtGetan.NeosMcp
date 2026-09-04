@@ -21,17 +21,6 @@
     '@format': 'json'
 
 -
-  name: 'OAuth Token Preflight'
-  uriPattern: 'oauth/token'
-  httpMethods: ['OPTIONS']
-  defaults:
-    '@package': 'GesagtGetan.NeosMcp'
-    '@subpackage': 'OAuth'
-    '@controller': 'OAuthToken'
-    '@action': 'preflight'
-    '@format': 'json'
-
--
   name: 'OAuth Token'
   uriPattern: 'oauth/token'
   httpMethods: ['POST']
@@ -61,16 +50,6 @@
     '@subpackage': 'OAuth'
     '@controller': 'OAuthAuthorize'
     '@action': 'grant'
-
--
-  name: 'MCP HTTP Transport Preflight'
-  uriPattern: 'api/mcp'
-  httpMethods: ['OPTIONS']
-  defaults:
-    '@package': 'GesagtGetan.NeosMcp'
-    '@controller': 'McpHttp'
-    '@action': 'preflight'
-    '@format': 'json'
 
 -
   name: 'MCP HTTP Transport'
