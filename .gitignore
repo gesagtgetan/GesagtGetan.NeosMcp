@@ -1,2 +1,15 @@
-.php-cs-fixer.cache
-.phpunit.result.cache
+vendor
+Packages
+.idea
+/.test-distribution/
+/.docker/*/data/
+
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+/phpstan.neon
+/phpunit.xml
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpcs-cache
+/phpcs.xml
+/composer.lock

@@ -20,21 +20,21 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 
-class McpNodeToolProviderTest extends UnitTestCase
+class McpNodeToolProviderTest extends TestCase
 {
     private McpNodeToolProvider $subject;
-    private ContentRepositoryFacade&MockObject $contentRepository;
+    private ContentRepositoryFacade&Stub $contentRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->contentRepository = self::createStub(ContentRepositoryFacade::class);
 
         // Rebase commands trigger WorkspaceCommandSkipped (the "already up-to-date"
         // happy path); other commands are ignored — these tests don't exercise writes.
@@ -53,16 +53,16 @@ class McpNodeToolProviderTest extends UnitTestCase
         $nodeTypeManager = NodeTypeManager::createFromArrayConfiguration([]);
         $this->contentRepository->method('getNodeTypeManager')->willReturn($nodeTypeManager);
 
-        $dimensionSource = $this->createMock(ContentDimensionSourceInterface::class);
+        $dimensionSource = self::createStub(ContentDimensionSourceInterface::class);
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $this->contentRepository->method('getContentDimensionSource')->willReturn($dimensionSource);
 
         // VersionCheckService is final (not mockable); a real disabled instance suffices —
         // getServerVersion() returns null, so getContentRepositoryInfo() omits the version block.
         $versionCheck = new VersionCheckService(
-            $this->createMock(ClientInterface::class),
-            $this->createMock(CacheManager::class),
-            $this->createMock(ConfigurationManager::class),
+            self::createStub(ClientInterface::class),
+            self::createStub(CacheManager::class),
+            self::createStub(ConfigurationManager::class),
         );
         $this->subject = new McpNodeToolProvider($versionCheck);
         $this->subject->registerTools(
@@ -84,8 +84,8 @@ class McpNodeToolProviderTest extends UnitTestCase
     #[Test]
     public function setNodePropertiesRejectsEmptyProperties(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -108,8 +108,8 @@ class McpNodeToolProviderTest extends UnitTestCase
     #[Test]
     public function findNodesHandlesNullDimensionSpacePoint(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
         $subgraph->method('findRootNodeByType')->willReturn(null);
@@ -122,8 +122,8 @@ class McpNodeToolProviderTest extends UnitTestCase
     #[Test]
     public function findNodesAcceptsDimensionSpacePointArray(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
         $subgraph->method('findRootNodeByType')->willReturn(null);

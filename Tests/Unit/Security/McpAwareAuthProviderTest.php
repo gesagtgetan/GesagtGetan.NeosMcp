@@ -12,13 +12,13 @@ use Neos\ContentRepository\Core\Feature\Security\Dto\Privilege;
 use Neos\ContentRepository\Core\Feature\Security\Dto\UserId;
 use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 
-class McpAwareAuthProviderTest extends UnitTestCase
+class McpAwareAuthProviderTest extends TestCase
 {
-    private AuthProviderInterface&MockObject $inner;
+    private AuthProviderInterface&Stub $inner;
     private McpUserContext $mcpUserContext;
     private McpAwareAuthProvider $subject;
 
@@ -26,7 +26,7 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         parent::setUp();
 
-        $this->inner = $this->createMock(AuthProviderInterface::class);
+        $this->inner = self::createStub(AuthProviderInterface::class);
         $this->mcpUserContext = new McpUserContext();
         $this->subject = new McpAwareAuthProvider($this->inner, $this->mcpUserContext);
     }
@@ -89,9 +89,11 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         $workspaceName = WorkspaceName::fromString('user-test');
         $expected = Privilege::granted('test');
-        $this->inner->expects(self::once())->method('canReadNodesFromWorkspace')->with($workspaceName)->willReturn($expected);
+        $inner = $this->createMock(AuthProviderInterface::class);
+        $inner->expects(self::once())->method('canReadNodesFromWorkspace')->with($workspaceName)->willReturn($expected);
+        $subject = new McpAwareAuthProvider($inner, $this->mcpUserContext);
 
-        self::assertSame($expected, $this->subject->canReadNodesFromWorkspace($workspaceName));
+        self::assertSame($expected, $subject->canReadNodesFromWorkspace($workspaceName));
     }
 
     #[Test]
@@ -99,18 +101,22 @@ class McpAwareAuthProviderTest extends UnitTestCase
     {
         $workspaceName = WorkspaceName::fromString('user-test');
         $expected = VisibilityConstraints::default();
-        $this->inner->expects(self::once())->method('getVisibilityConstraints')->with($workspaceName)->willReturn($expected);
+        $inner = $this->createMock(AuthProviderInterface::class);
+        $inner->expects(self::once())->method('getVisibilityConstraints')->with($workspaceName)->willReturn($expected);
+        $subject = new McpAwareAuthProvider($inner, $this->mcpUserContext);
 
-        self::assertSame($expected, $this->subject->getVisibilityConstraints($workspaceName));
+        self::assertSame($expected, $subject->getVisibilityConstraints($workspaceName));
     }
 
     #[Test]
     public function delegatesCanExecuteCommand(): void
     {
-        $command = $this->createMock(CommandInterface::class);
+        $command = self::createStub(CommandInterface::class);
         $expected = Privilege::granted('test');
-        $this->inner->expects(self::once())->method('canExecuteCommand')->with($command)->willReturn($expected);
+        $inner = $this->createMock(AuthProviderInterface::class);
+        $inner->expects(self::once())->method('canExecuteCommand')->with($command)->willReturn($expected);
+        $subject = new McpAwareAuthProvider($inner, $this->mcpUserContext);
 
-        self::assertSame($expected, $this->subject->canExecuteCommand($command));
+        self::assertSame($expected, $subject->canExecuteCommand($command));
     }
 }

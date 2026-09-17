@@ -33,16 +33,16 @@ use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryI
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\Serializer;
 
-class NodeWriteServiceTest extends UnitTestCase
+class NodeWriteServiceTest extends TestCase
 {
     private NodeWriteService $subject;
-    private ContentRepositoryFacade&MockObject $contentRepository;
+    private ContentRepositoryFacade&Stub $contentRepository;
     private PropertyConverter $propertyConverter;
 
     /** @var list<object> */
@@ -51,7 +51,7 @@ class NodeWriteServiceTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->contentRepository = self::createStub(ContentRepositoryFacade::class);
         $this->handledCommands = [];
 
         $this->contentRepository->method('handle')->willReturnCallback(
@@ -64,9 +64,7 @@ class NodeWriteServiceTest extends UnitTestCase
         $this->contentRepository->method('getDimensionSpacePoints')
             ->willReturn(new DimensionSpacePointSet([$dsp]));
 
-        $serializer = $this->getMockBuilder(Serializer::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $serializer = self::createStub(Serializer::class);
         $serializer->method('denormalize')->willReturnCallback(
             static fn (mixed $data): mixed => $data,
         );
@@ -205,8 +203,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceDryRunDoesNotCallHandle(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -245,8 +243,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceAppliesReplacements(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -276,8 +274,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceWithoutNodeTypeNameSearchesAllTypes(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -319,8 +317,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceWithoutPropertyNameSearchesAllStringProperties(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -353,8 +351,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceWithoutPropertyNameSkipsNonStringProperties(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -384,8 +382,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceWithBothFiltersOmitted(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -421,8 +419,8 @@ class NodeWriteServiceTest extends UnitTestCase
             propertyTruncateLength: 30,
         );
 
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 
@@ -453,8 +451,8 @@ class NodeWriteServiceTest extends UnitTestCase
     #[Test]
     public function findAndReplaceDoesNotTruncateWithoutSetting(): void
     {
-        $contentGraph = $this->createMock(ContentGraphInterface::class);
-        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
         $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
         $contentGraph->method('getSubgraph')->willReturn($subgraph);
 

@@ -7,6 +7,7 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Controller;
 use GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
+use GesagtGetan\NeosMcp\Tests\Unit\AbstractUnitTest;
 use GuzzleHttp\Psr7\ServerRequest;
 use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
@@ -16,42 +17,41 @@ use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Account;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Session\SessionInterface;
-use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Domain\Model\User;
 use Neos\Neos\Domain\Model\UserId;
 use Neos\Neos\Domain\Service\UserService;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Log\NullLogger;
 
-class OAuthAuthorizeControllerTest extends UnitTestCase
+class OAuthAuthorizeControllerTest extends AbstractUnitTest
 {
     private OAuthAuthorizeController $subject;
-    private OAuthServerFactory&MockObject $oauthServerFactory;
-    private SecurityContext&MockObject $securityContext;
-    private AuthorizationServer&MockObject $authorizationServer;
-    private SessionInterface&MockObject $session;
+    private OAuthServerFactory&Stub $oauthServerFactory;
+    private SecurityContext&Stub $securityContext;
+    private AuthorizationServer&Stub $authorizationServer;
+    private SessionInterface&Stub $session;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->subject = new OAuthAuthorizeController();
-        $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
+        $this->oauthServerFactory = self::createStub(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
         $this->oauthServerFactory->method('isClientRegistered')->willReturn(true);
         $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
             ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"');
 
-        $this->authorizationServer = $this->createMock(AuthorizationServer::class);
+        $this->authorizationServer = self::createStub(AuthorizationServer::class);
         $this->oauthServerFactory->method('createAuthorizationServer')->willReturn($this->authorizationServer);
 
-        $this->securityContext = $this->createMock(SecurityContext::class);
-        $this->session = $this->createMock(SessionInterface::class);
+        $this->securityContext = self::createStub(SecurityContext::class);
+        $this->session = self::createStub(SessionInterface::class);
 
-        $user = $this->createMock(User::class);
+        $user = self::createStub(User::class);
         $user->method('getId')->willReturn(new UserId('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));
-        $userService = $this->createMock(UserService::class);
+        $userService = self::createStub(UserService::class);
         $userService->method('getUser')->willReturn($user);
 
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
@@ -64,7 +64,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     #[Test]
     public function authorizeReturns503WhenDisabled(): void
     {
-        $factory = $this->createMock(OAuthServerFactory::class);
+        $factory = self::createStub(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
         $this->inject($this->subject, 'oauthServerFactory', $factory);
         $this->injectGetRequest([]);
@@ -112,9 +112,11 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('hasRole')->willReturn(true);
         $this->securityContext->method('getCsrfProtectionToken')->willReturn('flow-csrf-token');
         $this->oauthServerFactory->method('getConfiguredClientId')->willReturn('configured-id');
-        $this->session->expects(self::once())->method('putData');
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('putData');
+        $this->inject($this->subject, 'session', $session);
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getName')->willReturn('Unknown App');
         $client->method('getIdentifier')->willReturn('abc123');
 
@@ -153,7 +155,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('getCsrfProtectionToken')->willReturn('flow-csrf-token');
         $this->oauthServerFactory->method('getConfiguredClientId')->willReturn('configured-id');
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getIdentifier')->willReturn('configured-id');
         $client->method('getName')->willReturn('Test Client');
 
@@ -176,7 +178,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     #[Test]
     public function grantReturns503WhenDisabled(): void
     {
-        $factory = $this->createMock(OAuthServerFactory::class);
+        $factory = self::createStub(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
         $this->inject($this->subject, 'oauthServerFactory', $factory);
         $this->injectPostRequest('approve=1');
@@ -231,7 +233,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
         $this->session->method('getData')->willReturn('valid-csrf-token');
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getName')->willReturn('Test');
 
         $authRequest = $this->createAuthorizationRequest($client);
@@ -257,7 +259,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
         $this->session->method('getData')->willReturn('valid-csrf-token');
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getName')->willReturn('Test');
 
         $authRequest = $this->createAuthorizationRequest($client);
@@ -316,7 +318,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
         $this->securityContext->method('hasRole')->willReturn(true);
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getIdentifier')->willReturn('abc123');
 
         $authRequest = new AuthorizationRequest();
@@ -342,7 +344,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
         $this->securityContext->method('hasRole')->willReturn(true);
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getIdentifier')->willReturn('abc123');
 
         $authRequest = new AuthorizationRequest();
@@ -383,7 +385,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->authorizationServer->method('validateAuthorizationRequest')
             ->willThrowException(OAuthServerException::invalidClient(new ServerRequest('GET', '/')));
 
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getRedirectUri')->willReturn(['https://example.com/callback', 'http://localhost:3000/callback']);
         $clientRepository = $this->createMock(OAuthClientRepository::class);
         $clientRepository->expects(self::once())->method('getClientEntity')->with('known-client')->willReturn($client);
@@ -414,7 +416,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     {
         $httpRequest = new ServerRequest('GET', 'http://localhost/oauth/authorize');
         $httpRequest = $httpRequest->withQueryParams($queryParams);
-        $actionRequest = $this->createMock(ActionRequest::class);
+        $actionRequest = self::createStub(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
         $this->inject($this->subject, 'request', $actionRequest);
     }
@@ -422,7 +424,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     private function injectPostRequest(string $body): void
     {
         $httpRequest = new ServerRequest('POST', 'http://localhost/oauth/grant', [], $body);
-        $actionRequest = $this->createMock(ActionRequest::class);
+        $actionRequest = self::createStub(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
         $this->inject($this->subject, 'request', $actionRequest);
     }
@@ -438,9 +440,9 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         return $authRequest;
     }
 
-    private function createAccount(string $identifier): Account&MockObject
+    private function createAccount(string $identifier): Account&Stub
     {
-        $account = $this->createMock(Account::class);
+        $account = self::createStub(Account::class);
         $account->method('getAccountIdentifier')->willReturn($identifier);
         $account->method('getAuthenticationProviderName')->willReturn('Neos.Neos:Backend');
 

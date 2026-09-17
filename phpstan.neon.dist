@@ -6,12 +6,12 @@ parameters:
     - Tests
 
   scanDirectories:
-    - ../../Packages/Framework/Neos.Flow/Tests
+    - Packages/Framework/Neos.Flow/Tests
 
   checkTooWideReturnTypesInProtectedAndPublicMethods: true
   treatPhpDocTypesAsCertain: false
 
 includes:
-  - ../../Packages/Libraries/phpstan/phpstan-phpunit/extension.neon
-  - ../../Packages/Libraries/phpstan/phpstan-phpunit/rules.neon
-  - ../../Packages/Libraries/phpstan/phpstan-strict-rules/rules.neon
+  - vendor/phpstan/phpstan-phpunit/extension.neon
+  - vendor/phpstan/phpstan-phpunit/rules.neon
+  - vendor/phpstan/phpstan-strict-rules/rules.neon

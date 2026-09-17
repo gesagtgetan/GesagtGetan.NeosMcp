@@ -1,24 +1,15 @@
-<?xml version="1.0"?>
-<!--
-  Unit test config. Uses Flow's lightweight UnitTestBootstrap (no framework boot).
-
-  Usage:
-    bin/phpunit -c Packages/Application/GesagtGetan.NeosMcp/phpunit.xml.dist
-
-  For functional tests, use phpunit-functional.xml.dist instead.
--->
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="../../Build/BuildEssentials/PhpUnit/UnitTestBootstrap.php" beStrictAboutChangesToGlobalState="true" beStrictAboutOutputDuringTests="true">
-  <testsuites>
-    <testsuite name="unit">
-      <directory>Tests/Unit</directory>
-    </testsuite>
-  </testsuites>
-  <php>
-    <ini name="date.timezone" value="Europe/Vienna"/>
-  </php>
-  <source>
-    <include>
-      <directory>Classes</directory>
-    </include>
-  </source>
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.5/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>Tests/Unit</directory>
+            <!-- PHPUnit warns about abstract classes found during directory scanning
+                 and treats warnings as a failure. Exclude the base class explicitly. -->
+            <exclude>Tests/Unit/AbstractUnitTest.php</exclude>
+        </testsuite>
+    </testsuites>
 </phpunit>

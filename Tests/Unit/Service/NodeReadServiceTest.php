@@ -38,37 +38,29 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\Workspaces;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
-use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\Serializer;
 
-class NodeReadServiceTest extends UnitTestCase
+class NodeReadServiceTest extends TestCase
 {
     private NodeReadService $subject;
-    private ContentRepositoryFacade&MockObject $contentRepository;
-    private ContentGraphInterface&MockObject $contentGraph;
-    private ContentSubgraphInterface&MockObject $subgraph;
+    private ContentRepositoryFacade&Stub $contentRepository;
+    private ContentGraphInterface&Stub $contentGraph;
+    private ContentSubgraphInterface&Stub $subgraph;
     private PropertyConverter $propertyConverter;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
-        $this->contentGraph = $this->createMock(ContentGraphInterface::class);
-        $this->subgraph = $this->createMock(ContentSubgraphInterface::class);
-
-        $this->contentRepository->method('getContentGraph')->willReturn($this->contentGraph);
+        $this->subgraph = self::createStub(ContentSubgraphInterface::class);
+        $this->contentGraph = self::createStub(ContentGraphInterface::class);
         $this->contentGraph->method('getSubgraph')->willReturn($this->subgraph);
+        $this->contentRepository = $this->createContentRepository($this->contentGraph);
 
-        $dsp = DimensionSpacePoint::fromArray(['language' => 'de']);
-        $this->contentRepository->method('getDimensionSpacePoints')
-            ->willReturn(new DimensionSpacePointSet([$dsp]));
-
-        $serializer = $this->getMockBuilder(Serializer::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $serializer = self::createStub(Serializer::class);
         $serializer->method('denormalize')->willReturnCallback(
             static function (mixed $data, string $type): mixed {
                 if ($type === \DateTimeImmutable::class && is_string($data)) {
@@ -116,16 +108,46 @@ class NodeReadServiceTest extends UnitTestCase
         );
         $this->propertyConverter = new PropertyConverter($serializer);
 
-        $this->subject = new NodeReadService(
-            $this->contentRepository,
-            WorkspaceName::fromString('test-workspace'),
-        );
+        $this->subject = $this->createSubject($this->contentRepository);
+    }
+
+    /**
+     * Builds a facade stub that serves the given graph and a single "de" dimension.
+     * Tests that need call expectations on the graph or subgraph wire their own mock
+     * through here instead of using the shared stubs from setUp().
+     */
+    private function createContentRepository(ContentGraphInterface $contentGraph): ContentRepositoryFacade&Stub
+    {
+        $contentRepository = self::createStub(ContentRepositoryFacade::class);
+        $contentRepository->method('getContentGraph')->willReturn($contentGraph);
+        $contentRepository->method('getDimensionSpacePoints')
+            ->willReturn(new DimensionSpacePointSet([DimensionSpacePoint::fromArray(['language' => 'de'])]));
+
+        return $contentRepository;
+    }
+
+    private function createSubject(ContentRepositoryFacade $contentRepository): NodeReadService
+    {
+        return new NodeReadService($contentRepository, WorkspaceName::fromString('test-workspace'));
+    }
+
+    private function createSubjectWithContentGraph(ContentGraphInterface $contentGraph): NodeReadService
+    {
+        return $this->createSubject($this->createContentRepository($contentGraph));
+    }
+
+    private function createSubjectWithSubgraph(ContentSubgraphInterface $subgraph): NodeReadService
+    {
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+
+        return $this->createSubjectWithContentGraph($contentGraph);
     }
 
     #[Test]
     public function getContentRepositoryInfoReturnsDimensionsAndWorkspaces(): void
     {
-        $dimensionSource = $this->createMock(ContentDimensionSourceInterface::class);
+        $dimensionSource = self::createStub(ContentDimensionSourceInterface::class);
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $this->contentRepository->method('getContentDimensionSource')->willReturn($dimensionSource);
 
@@ -301,25 +323,29 @@ class NodeReadServiceTest extends UnitTestCase
     #[Test]
     public function getSubgraphUsesExcludeRemovedConstraintsByDefault(): void
     {
-        $this->contentGraph->expects(self::once())
-            ->method('getSubgraph')
-            ->with(self::anything(), self::equalTo(NeosVisibilityConstraints::excludeRemoved()));
-
         $this->subgraph->method('findNodeById')->willReturn(null);
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $contentGraph->expects(self::once())
+            ->method('getSubgraph')
+            ->with(self::anything(), self::equalTo(NeosVisibilityConstraints::excludeRemoved()))
+            ->willReturn($this->subgraph);
+        $subject = $this->createSubjectWithContentGraph($contentGraph);
 
-        $this->subject->getNode('any-id');
+        $subject->getNode('any-id');
     }
 
     #[Test]
     public function getSubgraphUsesEmptyConstraintsWhenIncludeRemovedIsTrue(): void
     {
-        $this->contentGraph->expects(self::once())
-            ->method('getSubgraph')
-            ->with(self::anything(), self::equalTo(VisibilityConstraints::createEmpty()));
-
         $this->subgraph->method('findNodeById')->willReturn(null);
+        $contentGraph = $this->createMock(ContentGraphInterface::class);
+        $contentGraph->expects(self::once())
+            ->method('getSubgraph')
+            ->with(self::anything(), self::equalTo(VisibilityConstraints::createEmpty()))
+            ->willReturn($this->subgraph);
+        $subject = $this->createSubjectWithContentGraph($contentGraph);
 
-        $this->subject->getNode('any-id', includeRemoved: true);
+        $subject->getNode('any-id', includeRemoved: true);
     }
 
     // ── Hidden Field Tests ──────────────────────────────────────────
@@ -523,7 +549,8 @@ class NodeReadServiceTest extends UnitTestCase
     #[Test]
     public function findReferencesAppliesReferenceNameFilter(): void
     {
-        $this->subgraph->expects(self::once())
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $subgraph->expects(self::once())
             ->method('findReferences')
             ->with(
                 self::callback(static fn (mixed $id): bool => $id instanceof NodeAggregateId && $id->value === 'source-id'),
@@ -532,8 +559,9 @@ class NodeReadServiceTest extends UnitTestCase
                     && $filter->referenceName->value === 'authors'),
             )
             ->willReturn(References::fromArray([]));
+        $subject = $this->createSubjectWithSubgraph($subgraph);
 
-        $this->subject->findReferences('source-id', 'authors');
+        $subject->findReferences('source-id', 'authors');
     }
 
     #[Test]
@@ -556,7 +584,8 @@ class NodeReadServiceTest extends UnitTestCase
     #[Test]
     public function findBackReferencesAppliesReferenceNameFilter(): void
     {
-        $this->subgraph->expects(self::once())
+        $subgraph = $this->createMock(ContentSubgraphInterface::class);
+        $subgraph->expects(self::once())
             ->method('findBackReferences')
             ->with(
                 self::callback(static fn (mixed $id): bool => $id instanceof NodeAggregateId && $id->value === 'target-id'),
@@ -565,8 +594,9 @@ class NodeReadServiceTest extends UnitTestCase
                     && $filter->referenceName->value === 'relatedTo'),
             )
             ->willReturn(References::fromArray([]));
+        $subject = $this->createSubjectWithSubgraph($subgraph);
 
-        $this->subject->findBackReferences('target-id', 'relatedTo');
+        $subject->findBackReferences('target-id', 'relatedTo');
     }
 
     // ── Stub Helpers ────────────────────────────────────────────────

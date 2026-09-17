@@ -6,22 +6,22 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Controller;
 
 use GesagtGetan\NeosMcp\OAuth\Controller\OAuthMetadataController;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
-use Neos\Flow\Tests\UnitTestCase;
+use GesagtGetan\NeosMcp\Tests\Unit\AbstractUnitTest;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Http\Message\ResponseInterface;
 
-class OAuthMetadataControllerTest extends UnitTestCase
+class OAuthMetadataControllerTest extends AbstractUnitTest
 {
     private OAuthMetadataController $subject;
-    private OAuthServerFactory&MockObject $oauthServerFactory;
+    private OAuthServerFactory&Stub $oauthServerFactory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->subject = new OAuthMetadataController();
-        $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
+        $this->oauthServerFactory = self::createStub(OAuthServerFactory::class);
         $this->inject($this->subject, 'oauthServerFactory', $this->oauthServerFactory);
     }
 

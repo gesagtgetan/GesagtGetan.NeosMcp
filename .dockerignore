@@ -1,0 +1,3 @@
+# The test-php image only installs PHP extensions and composer; it needs
+# nothing from the build context (the package is mounted as a volume)
+*

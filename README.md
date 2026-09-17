@@ -268,24 +268,28 @@ If your tools need per-request workspace/CR state, build a small handler from `M
 All commands run from the package directory (`DistributionPackages/GesagtGetan.NeosMcp/`). Requires [Just](https://just.systems/) >= 1.38.0.
 
 ```bash
-just check            # Run all static analysis (phpcs + php-cs-fixer + phpstan)
-just fix              # Auto-fix code style issues
-just test             # Run all tests (unit + functional)
-just test-unit        # Run unit tests only
-just test-functional  # Run functional tests only
+just check                    # Run all static analysis (phpcs + php-cs-fixer + phpstan)
+just fix                      # Auto-fix code style issues
+just test                     # Run unit tests (plain PHPUnit, no Neos or database needed)
+just build-test-distribution  # One-time: build the Dockerized Neos distribution for functional tests
+just test-functional          # Run functional tests inside that distribution
 ```
 
 ### Dev Dependencies
 
 Dev tools are declared in `require-dev` in this package's `composer.json`.
 
-### Functional Test Prerequisites
+### Unit Tests
 
-Functional tests need a MySQL/MariaDB test database (configured in the host project's `Configuration/Testing/Settings.yaml`). The Content Repository's own tables (event store, projections) are created automatically by the test base class.
+Unit tests run against `vendor/autoload.php` with no Flow bootstrap. They extend PHPUnit's `TestCase` directly, or `Tests/Unit/AbstractUnitTest` when a subject has `#[Flow\Inject]` properties that need to be populated by reflection. Prefer `self::createStub()` for collaborators; use `$this->createMock()` only when the test asserts how the collaborator is called (`expects()`).
+
+### Functional Tests
+
+Functional tests need a booted Neos instance and a MariaDB database, so they run in Docker. `just build-test-distribution` assembles a throwaway Neos distribution in `.test-distribution/` from `Tests/TestDistribution/` and installs this package into it. `just test-functional` then runs PHPUnit inside the container using `Tests/TestDistribution/phpunit-functional.xml`, which bootstraps Flow's `FunctionalTestBootstrap`. The Content Repository's own tables (event store, projections) are created automatically by the test base class.
 
 ### FAQ
 
-**Why two PHPUnit configs?** Flow ships a global `FunctionalTests.xml` in `Build/BuildEssentials/PhpUnit/`, but it uses the PHPUnit 9 XML schema. This project runs PHPUnit 10, which changes `<exclude>` handling and causes symlinked packages to be discovered twice. Our own `phpunit-functional.xml.dist` uses the PHPUnit 10 schema and scans only this package, avoiding the double execution and deprecation warnings.
+**Why two PHPUnit configs?** The two suites have different runtime needs. `phpunit.xml.dist` covers the unit tests and only needs Composer's autoloader. The functional tests need Flow's test bootstrap and a database, so they get their own config in the test distribution rather than dragging Flow's build essentials into the package itself. Flow's own global `FunctionalTests.xml` is not used because it still targets the PHPUnit 9 schema.
 
 **Why not SQLite?** The Neos Content Repository's DoctrineDbal adapter uses MySQL-specific SQL (e.g. `INSERT IGNORE`) that SQLite does not support. A real MySQL/MariaDB database is required.
 

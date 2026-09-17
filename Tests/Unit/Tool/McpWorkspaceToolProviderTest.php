@@ -14,16 +14,16 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\ContentStreamId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
-use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 
-class McpWorkspaceToolProviderTest extends UnitTestCase
+class McpWorkspaceToolProviderTest extends TestCase
 {
     private McpWorkspaceToolProvider $subject;
-    private ContentRepositoryFacade&MockObject $contentRepository;
+    private ContentRepositoryFacade&Stub $contentRepository;
 
     /** @var list<object> */
     private array $handledCommands = [];
@@ -31,7 +31,7 @@ class McpWorkspaceToolProviderTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->contentRepository = self::createStub(ContentRepositoryFacade::class);
         $this->handledCommands = [];
 
         $this->contentRepository->method('handle')->willReturnCallback(

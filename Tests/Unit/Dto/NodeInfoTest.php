@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Dto;
 
 use GesagtGetan\NeosMcp\Dto\NodeInfo;
-use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
-class NodeInfoTest extends UnitTestCase
+class NodeInfoTest extends TestCase
 {
     #[Test]
     public function displayTitleCombinesTypeAndTitleWhenTitlePropertyExists(): void

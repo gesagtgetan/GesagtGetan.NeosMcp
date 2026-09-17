@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Runs the functional tests inside the throwaway test distribution
+    (.test-distribution/), where this package is installed under
+    Packages/Plugins/GesagtGetan.NeosMcp. Use `just test-functional`.
+
+    The database comes from Configuration/Testing/Settings.yaml (MariaDB via
+    compose.yaml). The recipe and the CI job run `./flow doctrine:migrate` first
+    for the Flow/Neos ORM tables; the Content Repository tables are created by
+    the test base class.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/13.0/phpunit.xsd"
+         bootstrap="Build/BuildEssentials/PhpUnit/FunctionalTestBootstrap.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Functional">
+            <directory>Packages/Plugins/GesagtGetan.NeosMcp/Tests/Functional</directory>
+            <!-- PHPUnit warns about abstract classes found during directory scanning
+                 and treats warnings as a failure. Exclude the base class explicitly. -->
+            <exclude>Packages/Plugins/GesagtGetan.NeosMcp/Tests/Functional/AbstractFunctionalTest.php</exclude>
+        </testsuite>
+    </testsuites>
+    <php>
+        <ini name="date.timezone" value="Europe/Vienna"/>
+        <env name="FLOW_REWRITEURLS" value="1"/>
+    </php>
+</phpunit>

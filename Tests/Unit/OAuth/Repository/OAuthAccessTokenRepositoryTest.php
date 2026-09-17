@@ -23,7 +23,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
     #[Test]
     public function getNewTokenAssemblesTokenWithClientAndScopes(): void
     {
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
         $client->method('getIdentifier')->willReturn('test-client');
 
         $scopes = [new OAuthScope('mcp')];
@@ -40,7 +40,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
     #[Test]
     public function getNewTokenHandlesNullUserIdentifier(): void
     {
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
 
         $token = $this->subject->getNewToken($client, []);
 
@@ -50,7 +50,7 @@ class OAuthAccessTokenRepositoryTest extends TestCase
     #[Test]
     public function persistIsNoOp(): void
     {
-        $token = $this->createMock(OAuthAccessToken::class);
+        $token = self::createStub(OAuthAccessToken::class);
 
         // Should not throw.
         $this->subject->persistNewAccessToken($token);

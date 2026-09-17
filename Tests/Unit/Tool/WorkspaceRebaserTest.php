@@ -10,28 +10,30 @@ use GesagtGetan\NeosMcp\Tool\WorkspaceRebaser;
 use Neos\ContentRepository\Core\Feature\WorkspaceCommandSkipped;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
-use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 
-class WorkspaceRebaserTest extends UnitTestCase
+class WorkspaceRebaserTest extends TestCase
 {
-    private ContentRepositoryFacade&MockObject $contentRepository;
+    private ContentRepositoryFacade&Stub $contentRepository;
     private WorkspaceRebaser $subject;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->contentRepository = self::createStub(ContentRepositoryFacade::class);
         $this->subject = new WorkspaceRebaser($this->contentRepository, WorkspaceName::fromString('test-ws'));
     }
 
     #[Test]
     public function rebaseReturnsNullWhenSuccessful(): void
     {
-        $this->contentRepository->expects(self::once())->method('handle')->with(self::isInstanceOf(RebaseWorkspace::class));
+        $contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $contentRepository->expects(self::once())->method('handle')->with(self::isInstanceOf(RebaseWorkspace::class));
+        $subject = new WorkspaceRebaser($contentRepository, WorkspaceName::fromString('test-ws'));
 
-        self::assertNull($this->subject->rebase());
+        self::assertNull($subject->rebase());
     }
 
     #[Test]

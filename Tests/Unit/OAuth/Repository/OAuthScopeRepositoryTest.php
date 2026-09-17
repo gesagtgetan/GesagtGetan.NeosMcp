@@ -39,7 +39,7 @@ class OAuthScopeRepositoryTest extends TestCase
     #[Test]
     public function finalizeScopesAlwaysReturnsMcpScope(): void
     {
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
 
         // Even when empty scopes are passed, mcp scope is returned.
         $result = $this->subject->finalizeScopes([], 'authorization_code', $client);
@@ -51,7 +51,7 @@ class OAuthScopeRepositoryTest extends TestCase
     #[Test]
     public function finalizeScopesIgnoresRequestedScopes(): void
     {
-        $client = $this->createMock(ClientEntityInterface::class);
+        $client = self::createStub(ClientEntityInterface::class);
 
         // Even when random scopes are passed, only mcp is returned.
         $result = $this->subject->finalizeScopes(

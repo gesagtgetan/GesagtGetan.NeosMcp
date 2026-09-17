@@ -1,58 +1,82 @@
-# Binaries live at the project root. This path works from DistributionPackages/.
-root := '../..'
 php-bin := if env('CI', 'false') == 'true' { 'php' } else { 'php8.4' }
+compose := 'docker compose'
+compose-run := compose + ' run --rm --user "' + `id -u` + ':' + `id -g` + '" test-php'
 
 [private]
 default:
     just --list --unsorted
 
-# ── Static Analysis ──────────────────────────────────────────────
+[group('Static Analysis')]
+[doc('Run static checks')]
+check: php-cs-fixer-check phpcs phpstan
 
 [group('Static Analysis')]
-[doc('Run all static analysis checks')]
-check: phpcs cs-fixer phpstan
+[doc('Fix problems found by static checks')]
+fix: php-cs-fixer-fix phpcbf
 
 [group('Static Analysis')]
-[doc('Fix code style')]
-fix: phpcbf cs-fixer-fix
+[doc('Run php-cs-fixer check')]
+php-cs-fixer-check:
+    {{php-bin}} ./vendor/bin/php-cs-fixer check -v
 
 [group('Static Analysis')]
-[doc('Run PHP Code Sniffer')]
-phpcs:
-	{{php-bin}} {{root}}/bin/phpcs --standard=phpcs.xml.dist
+[doc('Run php-cs-fixer fix')]
+php-cs-fixer-fix:
+    {{php-bin}} ./vendor/bin/php-cs-fixer fix -v
 
 [group('Static Analysis')]
-[doc('Run PHP Code Sniffer Fixer')]
-phpcbf:
-	{{php-bin}} {{root}}/bin/phpcbf --standard=phpcs.xml.dist
-
-[group('Static Analysis')]
-[doc('Run PHP CS Fixer (dry-run)')]
-cs-fixer:
-    {{php-bin}} {{root}}/bin/php-cs-fixer fix --dry-run --config=.php-cs-fixer.dist.php
-
-[group('Static Analysis')]
-[doc('Fix PHP CS Fixer issues')]
-cs-fixer-fix:
-    {{php-bin}} {{root}}/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php
-
-[group('Static Analysis')]
-[doc('Run PHPStan')]
+[doc('Run phpstan')]
 phpstan:
-	{{php-bin}} {{root}}/bin/phpstan analyse
+    {{php-bin}} ./vendor/bin/phpstan analyse
 
-# ── Tests ────────────────────────────────────────────────────────
+[group('Static Analysis')]
+[doc('Generate phpstan baseline')]
+phpstan-baseline:
+    {{php-bin}} ./vendor/bin/phpstan analyse --generate-baseline
 
-[group('Tests')]
-[doc('Run unit tests')]
-test-unit *args:
-    {{php-bin}} {{root}}/bin/phpunit -c phpunit.xml.dist {{args}}
+[group('Static Analysis')]
+[doc('Run phpcs')]
+phpcs:
+    {{php-bin}} ./vendor/bin/phpcs
 
-[group('Tests')]
-[doc('Run functional tests')]
-test-functional *args:
-    {{php-bin}} {{root}}/bin/phpunit -c phpunit-functional.xml.dist {{args}}
+[group('Static Analysis')]
+[doc('Run phpcbf')]
+phpcbf:
+    {{php-bin}} ./vendor/bin/phpcbf
 
-[group('Tests')]
-[doc('Run all tests (unit + functional)')]
-test: test-unit test-functional
+[group('Test')]
+[doc('Run phpunit')]
+test *ARGS:
+    {{php-bin}} ./vendor/bin/phpunit {{ ARGS }}
+
+[group('Test')]
+[doc('Run functional tests in a self-contained Neos test distribution with MariaDB. Requires build-test-distribution.')]
+test-functional *ARGS:
+    {{compose-run}} sh -c 'cd .test-distribution && ./flow doctrine:migrate --quiet && php Packages/Libraries/bin/phpunit -c phpunit-functional.xml {{ ARGS }}'
+
+[group('Test')]
+[doc('Build the throwaway Neos distribution used by the functional tests (no-op if present)')]
+build-test-distribution:
+    mkdir -p .test-distribution/Configuration/Testing
+    cp Tests/TestDistribution/composer.json Tests/TestDistribution/phpunit-functional.xml .test-distribution/
+    cp Tests/TestDistribution/Configuration/Testing/Settings.yaml .test-distribution/Configuration/Testing/
+    {{compose}} build test-php
+    {{compose-run}} composer install --working-dir=.test-distribution --no-interaction --no-progress
+
+[group('Test')]
+[doc('Delete and rebuild the functional test distribution')]
+rebuild-test-distribution: clean-test-distribution build-test-distribution
+
+[group('Test')]
+[doc('Start the containers of the functional test setup')]
+test-distribution-up:
+    {{compose}} up -d
+
+[group('Test')]
+[doc('Stop the containers of the functional test setup')]
+test-distribution-down:
+    {{compose}} down
+
+[private]
+clean-test-distribution:
+    rm -rf .test-distribution

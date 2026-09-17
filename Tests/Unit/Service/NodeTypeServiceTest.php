@@ -7,19 +7,19 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\Service;
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
-use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 
-class NodeTypeServiceTest extends UnitTestCase
+class NodeTypeServiceTest extends TestCase
 {
     private NodeTypeService $subject;
-    private ContentRepositoryFacade&MockObject $contentRepository;
+    private ContentRepositoryFacade&Stub $contentRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->contentRepository = $this->createMock(ContentRepositoryFacade::class);
+        $this->contentRepository = self::createStub(ContentRepositoryFacade::class);
         $this->subject = new NodeTypeService($this->contentRepository);
     }
 

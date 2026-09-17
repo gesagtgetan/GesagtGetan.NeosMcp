@@ -9,6 +9,7 @@ use GesagtGetan\NeosMcp\Controller\McpHttpController;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GesagtGetan\NeosMcp\Security\McpUserContext;
 use GesagtGetan\NeosMcp\Service\VersionCheckService;
+use GesagtGetan\NeosMcp\Tests\Unit\AbstractUnitTest;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
 use GesagtGetan\NeosMcp\Tool\McpWorkspaceToolProvider;
@@ -25,21 +26,20 @@ use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Context as SecurityContext;
-use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-class McpHttpControllerTest extends UnitTestCase
+class McpHttpControllerTest extends AbstractUnitTest
 {
     private McpHttpController $subject;
-    private SecurityContext&MockObject $securityContext;
-    private OAuthServerFactory&MockObject $oauthServerFactory;
-    private ResourceServer&MockObject $resourceServer;
+    private SecurityContext&Stub $securityContext;
+    private OAuthServerFactory&Stub $oauthServerFactory;
+    private ResourceServer&Stub $resourceServer;
 
     protected function setUp(): void
     {
@@ -55,18 +55,18 @@ class McpHttpControllerTest extends UnitTestCase
             }
         };
 
-        $this->securityContext = $this->createMock(SecurityContext::class);
+        $this->securityContext = self::createStub(SecurityContext::class);
         $this->securityContext->method('withoutAuthorizationChecks')->willReturnCallback(
             static fn (\Closure $callback): mixed => $callback(),
         );
 
-        $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
+        $this->oauthServerFactory = self::createStub(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
         $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
             ->willReturnCallback(static fn (bool $tokenRejected): string => 'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"'
                 . ($tokenRejected ? ', error="invalid_token"' : ''));
 
-        $this->resourceServer = $this->createMock(ResourceServer::class);
+        $this->resourceServer = self::createStub(ResourceServer::class);
         $this->oauthServerFactory->method('createResourceServer')->willReturn($this->resourceServer);
 
         $this->inject($this->subject, 'securityContext', $this->securityContext);
@@ -77,7 +77,7 @@ class McpHttpControllerTest extends UnitTestCase
     #[Test]
     public function disabledEndpointReturns503(): void
     {
-        $factory = $this->createMock(OAuthServerFactory::class);
+        $factory = self::createStub(OAuthServerFactory::class);
         $factory->method('isEnabled')->willReturn(false);
         $this->inject($this->subject, 'oauthServerFactory', $factory);
         $this->injectRequest('{}', 'Bearer some-jwt');
@@ -91,7 +91,9 @@ class McpHttpControllerTest extends UnitTestCase
     #[DataProvider('nonPostMethods')]
     public function nonPostRequestReturns405WithAllowHeaderBeforeAnyTokenCheck(string $method): void
     {
-        $this->oauthServerFactory->expects(self::never())->method('createResourceServer');
+        $factory = $this->createMock(OAuthServerFactory::class);
+        $factory->expects(self::never())->method('createResourceServer');
+        $this->inject($this->subject, 'oauthServerFactory', $factory);
         $this->injectRequest('', '', $method);
 
         $response = $this->subject->handleAction();
@@ -236,7 +238,7 @@ class McpHttpControllerTest extends UnitTestCase
             $httpRequest = $httpRequest->withHeader('Authorization', $authorizationHeader);
         }
 
-        $actionRequest = $this->createMock(ActionRequest::class);
+        $actionRequest = self::createStub(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
 
         $this->inject($controller, 'request', $actionRequest);
@@ -249,9 +251,9 @@ class McpHttpControllerTest extends UnitTestCase
     private function disabledVersionCheck(): VersionCheckService
     {
         return new VersionCheckService(
-            $this->createMock(ClientInterface::class),
-            $this->createMock(CacheManager::class),
-            $this->createMock(ConfigurationManager::class),
+            self::createStub(ClientInterface::class),
+            self::createStub(CacheManager::class),
+            self::createStub(ConfigurationManager::class),
         );
     }
 
@@ -261,13 +263,13 @@ class McpHttpControllerTest extends UnitTestCase
      */
     private function createControllerWithMockServer(): McpHttpController
     {
-        $facade = $this->createMock(ContentRepositoryFacade::class);
+        $facade = self::createStub(ContentRepositoryFacade::class);
         $facade->method('getDimensionSpacePoints')
             ->willReturn(new DimensionSpacePointSet([DimensionSpacePoint::fromArray(['language' => 'de'])]));
         $facade->method('getNodeTypeManager')
             ->willReturn(NodeTypeManager::createFromArrayConfiguration([]));
 
-        $dimensionSource = $this->createMock(ContentDimensionSourceInterface::class);
+        $dimensionSource = self::createStub(ContentDimensionSourceInterface::class);
         $dimensionSource->method('getContentDimensionsOrderedByPriority')->willReturn([]);
         $facade->method('getContentDimensionSource')->willReturn($dimensionSource);
 

@@ -1,0 +1,24 @@
+#                                                                          #
+# Testing settings for the functional test distribution.                   #
+#                                                                          #
+# Copied into .test-distribution/Configuration/Testing/ by                 #
+# `just build-test-distribution`. The environment variables are provided   #
+# by compose.yaml (local) and .circleci/config.yml (CI).                   #
+#                                                                          #
+
+Neos:
+  Flow:
+    persistence:
+      backendOptions:
+        driver: 'pdo_mysql'
+        charset: 'utf8mb4'
+        host: '%env:NEOS_MCP_TEST_DB_HOST%'
+        dbname: '%env:NEOS_MCP_TEST_DB_NAME%'
+        user: '%env:NEOS_MCP_TEST_DB_USER%'
+        password: '%env:NEOS_MCP_TEST_DB_PASSWORD%'
+        # Must stay null. A non-null path (inherited from the SQLite defaults) switches on
+        # Flow's testable persistence, whose tearDown() drops the whole database after every
+        # test, including the Content Repository tables the test base class creates only once.
+        # The Flow/Neos ORM tables come from `./flow doctrine:migrate` instead, which
+        # `just test-functional` and the CI job run before PHPUnit.
+        path: ~

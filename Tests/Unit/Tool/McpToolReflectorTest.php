@@ -7,11 +7,11 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpToolReflector;
 use GesagtGetan\NeosMcp\Tool\McpWorkspaceToolProvider;
-use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
-class McpToolReflectorTest extends UnitTestCase
+class McpToolReflectorTest extends TestCase
 {
     #[Test]
     public function forwardsAttributeDescriptionsAndAnnotationsFromNodeProvider(): void

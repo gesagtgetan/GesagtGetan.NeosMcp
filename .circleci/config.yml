@@ -1,95 +1,68 @@
 version: 2.1
 
-commands:
-  install-just:
-    steps:
-      - run:
-          name: Install casey/just
-          command: |
-            wget -q https://github.com/casey/just/releases/download/1.43.1/just-1.43.1-x86_64-unknown-linux-musl.tar.gz
-            echo '6a3003f68fa4d86ada8afe33830a88ffdb6c2fcaff4e5a840b1cb90eaf6f46fc  just-1.43.1-x86_64-unknown-linux-musl.tar.gz' | sha256sum -c
-            tar -xzf just-1.43.1-x86_64-unknown-linux-musl.tar.gz
-            sudo mv just /usr/local/bin/just
-
-  setup-neos-project:
-    description: Create a minimal Neos project and install dependencies
-    steps:
-      - run:
-          name: Create Neos project
-          command: cp .circleci/composer.json ~/neos/composer.json
-      - restore_cache:
-          keys:
-            - composer-cache-v1-{{ checksum ".circleci/composer.json" }}
-            - composer-cache-v1-
-      - run:
-          name: Install dependencies
-          working_directory: ~/neos
-          command: composer install --no-interaction --no-ansi --no-progress --prefer-dist
-      - save_cache:
-          key: composer-cache-v1-{{ checksum ".circleci/composer.json" }}
-          paths:
-            - ~/.composer/cache
-
+orbs:
+  php: circleci/php@1.1.0
 jobs:
-  static-and-unit:
+  check:
     docker:
-      - image: cimg/php:8.4
-    working_directory: ~/neos/DistributionPackages/GesagtGetan.NeosMcp
+      - image: cimg/php:8.4-node
     steps:
       - checkout
-      - install-just
-      - setup-neos-project
+      - php/install-packages:
+          install-flags: '--no-interaction --no-ansi --optimize-autoloader --no-progress --prefer-dist'
       - run:
-          name: PHP Code Sniffer
-          command: just phpcs
+          name: PHP CodeSniffer
+          command: vendor/bin/phpcs
       - run:
           name: PHP CS Fixer
-          command: just cs-fixer
+          command: vendor/bin/php-cs-fixer check -v
       - run:
           name: PHPStan
-          command: just phpstan
+          command: vendor/bin/phpstan analyse
       - run:
-          name: Unit tests
-          command: just test-unit
-
-  functional:
+          name: PHPUnit
+          command: vendor/bin/phpunit
+  functional-tests:
     docker:
-      - image: cimg/php:8.4
-      - image: cimg/mariadb:11.4
+      - image: cimg/php:8.4-node
         environment:
-          MYSQL_ROOT_PASSWORD: ci
+          FLOW_CONTEXT: Testing
+          NEOS_MCP_TEST_DB_HOST: 127.0.0.1
+          NEOS_MCP_TEST_DB_NAME: neos_mcp_test
+          NEOS_MCP_TEST_DB_USER: neos-mcp-user
+          NEOS_MCP_TEST_DB_PASSWORD: neos-mcp-pw
+      - image: mariadb:11.4
+        environment:
           MARIADB_DATABASE: neos_mcp_test
-    working_directory: ~/neos/DistributionPackages/GesagtGetan.NeosMcp
+          MARIADB_USER: neos-mcp-user
+          MARIADB_PASSWORD: neos-mcp-pw
+          MARIADB_ROOT_PASSWORD: root
     steps:
       - checkout
-      - install-just
-      - setup-neos-project
       - run:
-          name: Create testing database configuration
-          command: cp -r .circleci/Configuration/Testing ~/neos/Configuration/
-      - run:
-          name: Wait for MariaDB
+          name: Scaffold test distribution
           command: |
-            for i in $(seq 1 30); do
-              if php -r "new PDO('mysql:host=127.0.0.1;port=3306', 'root', 'ci');" 2>/dev/null; then
-                echo "MariaDB is ready"
-                exit 0
-              fi
-              echo "Waiting for MariaDB... ($i/30)"
-              sleep 2
-            done
-            echo "MariaDB did not start in time"
-            exit 1
+            mkdir -p .test-distribution/Configuration/Testing
+            cp Tests/TestDistribution/composer.json Tests/TestDistribution/phpunit-functional.xml .test-distribution/
+            cp Tests/TestDistribution/Configuration/Testing/Settings.yaml .test-distribution/Configuration/Testing/
+      - php/install-packages:
+          app-dir: .test-distribution
+          # There is no composer.lock in the scaffolded distribution, and the
+          # Neos composer plugin installs into Packages/Libraries
+          cache-key: composer.json
+          vendor-dir: Packages/Libraries
+          install-flags: '--no-interaction --no-ansi --no-progress --prefer-dist'
       - run:
-          name: Run database migrations
-          working_directory: ~/neos
-          command: FLOW_CONTEXT=Testing ./flow doctrine:migrate
+          name: Doctrine migrations
+          # Creates the Flow/Neos ORM tables (e.g. neos_asset_usage) that the Content
+          # Repository's catch-up hooks write to. The CR's own tables are created by the
+          # test base class.
+          command: cd .test-distribution && ./flow doctrine:migrate --quiet
       - run:
-          name: Functional tests
-          command: just test-functional
-
+          name: PHPUnit (functional)
+          command: cd .test-distribution && php Packages/Libraries/bin/phpunit -c phpunit-functional.xml
 workflows:
-  check-and-test:
+  check:
     jobs:
-      - static-and-unit
-      - functional
+      - check
+      - functional-tests

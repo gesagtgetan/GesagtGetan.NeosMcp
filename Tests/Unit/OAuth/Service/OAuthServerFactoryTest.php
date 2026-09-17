@@ -6,10 +6,10 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\OAuth\Service;
 
 use GesagtGetan\NeosMcp\OAuth\Exception\OAuthSetupException;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
-use Neos\Flow\Tests\UnitTestCase;
+use GesagtGetan\NeosMcp\Tests\Unit\AbstractUnitTest;
 use PHPUnit\Framework\Attributes\Test;
 
-class OAuthServerFactoryTest extends UnitTestCase
+class OAuthServerFactoryTest extends AbstractUnitTest
 {
     private OAuthServerFactory $subject;
 

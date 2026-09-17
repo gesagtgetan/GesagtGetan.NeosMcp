@@ -12,10 +12,10 @@ use GuzzleHttp\Psr7\Response;
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
-class VersionCheckServiceTest extends UnitTestCase
+class VersionCheckServiceTest extends TestCase
 {
     #[Test]
     public function buildNoticeReportsAvailableUpdateWithBothVersions(): void
@@ -161,13 +161,13 @@ class VersionCheckServiceTest extends UnitTestCase
     {
         $client = new Client(['handler' => HandlerStack::create($handler ?? new MockHandler([]))]);
 
-        $cache = $this->createMock(VariableFrontend::class);
+        $cache = self::createStub(VariableFrontend::class);
         $cache->method('get')->willReturn(false);
-        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager = self::createStub(CacheManager::class);
         $cacheManager->method('getCache')->willReturn($cache);
 
         $type = ConfigurationManager::CONFIGURATION_TYPE_SETTINGS;
-        $configurationManager = $this->createMock(ConfigurationManager::class);
+        $configurationManager = self::createStub(ConfigurationManager::class);
         $configurationManager->method('getConfiguration')->willReturnMap([
             [$type, 'GesagtGetan.NeosMcp.versionCheck.enabled', $enabled],
             [$type, 'GesagtGetan.NeosMcp.versionCheck.repositoryUrl', 'https://repo.packagist.org'],

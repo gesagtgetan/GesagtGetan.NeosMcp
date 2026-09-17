@@ -23,14 +23,14 @@ This lets you:
 All commands run from this directory (`DistributionPackages/GesagtGetan.NeosMcp/`):
 
 ```bash
-just check            # phpcs + php-cs-fixer + phpstan
-just fix              # Auto-fix code style
-just test-unit        # Unit tests (no DB needed)
-just test-functional  # Functional tests (needs test DB)
-just test             # Both
+just check                    # phpcs + php-cs-fixer + phpstan
+just fix                      # Auto-fix code style
+just test                     # Unit tests (plain PHPUnit, no Neos or DB needed)
+just build-test-distribution  # One-time: build the Dockerized Neos distribution for functional tests
+just test-functional          # Functional tests (run in Docker against MariaDB)
 ```
 
-Functional tests need a reachable MySQL/MariaDB test database (see host project's `Configuration/Testing/Settings.yaml`).
+Unit tests extend PHPUnit's `TestCase`, or `Tests/Unit/AbstractUnitTest` when they need `inject()` for `#[Flow\Inject]` properties. Use `self::createStub()` unless the test sets `expects()` on the collaborator.
 
 ## Architecture
 
@@ -57,7 +57,7 @@ OAuth architecture: see [`Documentation/oauth.md`](Documentation/oauth.md)
 - **Service/Controller logic** → unit tests are usually sufficient.
 - **Always run `just check`** (phpcs + php-cs-fixer + phpstan) before considering work finished.
 - **Validate tests catch failures** — after writing non-trivial tests, temporarily break the implementation and verify the tests actually fail. This catches false positives (tests that always pass regardless of implementation).
-- If the test DB hasn't had migrations: `FLOW_CONTEXT=Testing ./flow doctrine:migrate`.
+- `just test-functional` runs `./flow doctrine:migrate` in the test distribution before PHPUnit; without it every functional test errors with a missing `neos_asset_usage` table.
 
 Testing gotchas and dev dependencies: see [`Documentation/testing.md`](Documentation/testing.md)
 

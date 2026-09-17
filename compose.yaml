@@ -1,0 +1,50 @@
+services:
+  test-php:
+    container_name: neos-mcp-test-php
+    restart: 'no'
+    build:
+      context: .
+      dockerfile: .docker/test-php/Dockerfile
+    volumes:
+      - ./:/app
+    working_dir: /app
+    environment:
+      FLOW_CONTEXT: Testing
+      HOME: /tmp
+      COMPOSER_HOME: /tmp/composer
+      COMPOSER_CACHE_DIR: /app/.test-distribution/.composer-cache
+      NEOS_MCP_TEST_DB_HOST: test-db
+      NEOS_MCP_TEST_DB_NAME: neos_mcp_test
+      NEOS_MCP_TEST_DB_USER: neos-mcp-db-user
+      NEOS_MCP_TEST_DB_PASSWORD: neos-mcp-db-pw
+    depends_on:
+      test-db:
+        condition: service_healthy
+    networks:
+      - neos-mcp
+
+  test-db:
+    image: mariadb:11.4
+    container_name: neos-mcp-test-db
+    restart: 'no'
+    ports:
+      - '44201:3306'
+    environment:
+      MARIADB_DATABASE: 'neos_mcp_test'
+      MARIADB_USER: 'neos-mcp-db-user'
+      MARIADB_PASSWORD: 'neos-mcp-db-pw'
+      MARIADB_ROOT_PASSWORD: 'root'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 2s
+      timeout: 2s
+      retries: 60
+    networks:
+      - neos-mcp
+
+networks:
+  neos-mcp:
+    name: neos-mcp
+    driver: bridge

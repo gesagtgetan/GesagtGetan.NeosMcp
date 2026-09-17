@@ -15,13 +15,13 @@ use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Reflection\ReflectionService;
-use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PhpMcp\Server\ServerBuilder;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
-class McpToolProviderRegistryTest extends UnitTestCase
+class McpToolProviderRegistryTest extends TestCase
 {
     #[Test]
     public function registerAllInvokesEveryDiscoveredProviderInOrder(): void
@@ -58,10 +58,10 @@ class McpToolProviderRegistryTest extends UnitTestCase
             }
         };
 
-        $reflectionService = $this->createMock(ReflectionService::class);
+        $reflectionService = self::createStub(ReflectionService::class);
         $reflectionService->method('getAllImplementationClassNamesForInterface')->willReturn(['A', 'B']);
 
-        $objectManager = $this->createMock(ObjectManagerInterface::class);
+        $objectManager = self::createStub(ObjectManagerInterface::class);
         $objectManager->method('get')->willReturnCallback(static fn (string $name): object => match ($name) {
             'A' => $providerA,
             'B' => $providerB,
@@ -70,7 +70,7 @@ class McpToolProviderRegistryTest extends UnitTestCase
 
         $registry = new McpToolProviderRegistry($reflectionService, $objectManager, $this->versionCheckService());
 
-        $facade = $this->createMock(ContentRepositoryFacade::class);
+        $facade = self::createStub(ContentRepositoryFacade::class);
         $context = new McpRequestContext($facade, WorkspaceName::fromString('ws'));
 
         $registry->registerAll(
@@ -85,16 +85,16 @@ class McpToolProviderRegistryTest extends UnitTestCase
     #[Test]
     public function nonImplementingClassesAreSilentlySkipped(): void
     {
-        $reflectionService = $this->createMock(ReflectionService::class);
+        $reflectionService = self::createStub(ReflectionService::class);
         $reflectionService->method('getAllImplementationClassNamesForInterface')
             ->willReturn(['SomeClass']);
 
-        $objectManager = $this->createMock(ObjectManagerInterface::class);
+        $objectManager = self::createStub(ObjectManagerInterface::class);
         $objectManager->method('get')->willReturn(new \stdClass());
 
         $registry = new McpToolProviderRegistry($reflectionService, $objectManager, $this->versionCheckService());
 
-        $facade = $this->createMock(ContentRepositoryFacade::class);
+        $facade = self::createStub(ContentRepositoryFacade::class);
         $builder = Server::make()->withServerInfo('t', '0.0.0');
 
         $result = $registry->registerAll(
@@ -115,8 +115,8 @@ class McpToolProviderRegistryTest extends UnitTestCase
     {
         return new VersionCheckService(
             new Client(),
-            $this->createMock(CacheManager::class),
-            $this->createMock(ConfigurationManager::class),
+            self::createStub(CacheManager::class),
+            self::createStub(ConfigurationManager::class),
         );
     }
 }

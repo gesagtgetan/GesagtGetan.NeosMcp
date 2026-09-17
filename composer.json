@@ -10,14 +10,15 @@
     "guzzlehttp/guzzle": "^7.4",
     "league/oauth2-server": "^8.5",
     "neos/neos": "^9.1",
-    "php-mcp/server": "^3.3"
+    "php-mcp/server": "^3.3",
+    "neos/contentgraph-doctrinedbaladapter": "*"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.86",
     "phpstan/phpstan": "^2.1",
     "phpstan/phpstan-phpunit": "^2.0",
     "phpstan/phpstan-strict-rules": "^2.0",
-    "phpunit/phpunit": "^10.5",
+    "phpunit/phpunit": "^13.0",
     "squizlabs/php_codesniffer": "^4.0"
   },
   "suggest": {
@@ -36,6 +37,11 @@
   "extra": {
     "neos": {
       "package-key": "GesagtGetan.NeosMcp"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "neos/composer-plugin": true
     }
   }
 }
