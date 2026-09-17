@@ -9,7 +9,7 @@
   },
   "require": {
     "php": "^8.3",
-    "neos/neos": "^9.1",
+    "neos/neos": "^9.1, <9.1.9",
     "neos/neos-ui": "^9.0",
     "neos/contentgraph-doctrinedbaladapter": "^9.0",
     "gesagtgetan/neos-mcp": "@dev"
