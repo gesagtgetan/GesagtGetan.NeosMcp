@@ -64,10 +64,18 @@ class OAuthServerFactory
      * WWW-Authenticate value for 401 responses. MCP clients use the resource_metadata
      * pointer to discover that OAuth is required and where the authorization server lives,
      * see https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/authorization.
+     *
+     * The metadata lives at the path-suffixed well-known URL RFC 9728 derives for the
+     * resource /api/mcp, so the pointer matches what a client would compute on its own.
+     *
+     * RFC 6750 section 3.1: when the request carried a token that was rejected, the challenge
+     * names the error; a request without any token gets the bare challenge.
      */
-    public function getWwwAuthenticateChallenge(): string
+    public function getWwwAuthenticateChallenge(bool $tokenRejected = false): string
     {
-        return 'Bearer realm="mcp", resource_metadata="' . $this->getIssuer() . '/.well-known/oauth-protected-resource"';
+        $challenge = 'Bearer realm="mcp", resource_metadata="' . $this->getIssuer() . '/.well-known/oauth-protected-resource/api/mcp"';
+
+        return $tokenRejected ? $challenge . ', error="invalid_token"' : $challenge;
     }
 
     public function getConfiguredClientId(): string
@@ -153,7 +161,7 @@ class OAuthServerFactory
         $refreshTokenGrant->setRefreshTokenTTL($refreshTokenTtl);
         $server->enableGrantType($refreshTokenGrant, $accessTokenTtl);
 
-        $server->setDefaultScope('mcp');
+        $server->setDefaultScope(OAuthScopeRepository::SCOPE_MCP);
 
         return $server;
     }

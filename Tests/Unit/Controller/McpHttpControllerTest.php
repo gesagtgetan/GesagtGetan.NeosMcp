@@ -28,6 +28,7 @@ use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Flow\Tests\UnitTestCase;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ResponseInterface;
@@ -62,7 +63,8 @@ class McpHttpControllerTest extends UnitTestCase
         $this->oauthServerFactory = $this->createMock(OAuthServerFactory::class);
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
         $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
-            ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"');
+            ->willReturnCallback(static fn (bool $tokenRejected): string => 'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"'
+                . ($tokenRejected ? ', error="invalid_token"' : ''));
 
         $this->resourceServer = $this->createMock(ResourceServer::class);
         $this->oauthServerFactory->method('createResourceServer')->willReturn($this->resourceServer);
@@ -86,7 +88,43 @@ class McpHttpControllerTest extends UnitTestCase
     }
 
     #[Test]
-    public function failedJwtValidationReturns401WithDiscoveryHeader(): void
+    #[DataProvider('nonPostMethods')]
+    public function nonPostRequestReturns405WithAllowHeaderBeforeAnyTokenCheck(string $method): void
+    {
+        $this->oauthServerFactory->expects(self::never())->method('createResourceServer');
+        $this->injectRequest('', '', $method);
+
+        $response = $this->subject->handleAction();
+
+        self::assertSame(405, $response->getStatusCode());
+        self::assertSame('POST', $response->getHeaderLine('Allow'));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function nonPostMethods(): iterable
+    {
+        yield 'GET (no SSE stream offered)' => ['GET'];
+        yield 'DELETE (no sessions to terminate)' => ['DELETE'];
+    }
+
+    #[Test]
+    public function missingTokenReturns401WithBareDiscoveryChallenge(): void
+    {
+        $this->resourceServer->method('validateAuthenticatedRequest')
+            ->willThrowException(OAuthServerException::accessDenied('Missing "Authorization" header'));
+        $this->injectRequest('{}', '');
+
+        $response = $this->subject->handleAction();
+
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame(
+            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"',
+            $response->getHeaderLine('WWW-Authenticate'),
+        );
+    }
+
+    #[Test]
+    public function rejectedTokenReturns401WithInvalidTokenError(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
             ->willThrowException(OAuthServerException::accessDenied('token validation failed'));
@@ -98,7 +136,7 @@ class McpHttpControllerTest extends UnitTestCase
         $body = $this->decodeJsonBody((string) $response->getBody());
         self::assertSame('Unauthorized', $body['error']);
         self::assertSame(
-            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
+            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp", error="invalid_token"',
             $response->getHeaderLine('WWW-Authenticate'),
         );
     }
@@ -142,7 +180,7 @@ class McpHttpControllerTest extends UnitTestCase
     }
 
     #[Test]
-    public function notificationReturns204(): void
+    public function notificationReturns202Accepted(): void
     {
         $this->resourceServer->method('validateAuthenticatedRequest')
             ->willReturnArgument(0);
@@ -150,7 +188,7 @@ class McpHttpControllerTest extends UnitTestCase
 
         $response = $this->subject->handleAction();
 
-        self::assertSame(204, $response->getStatusCode());
+        self::assertSame(202, $response->getStatusCode());
         self::assertSame('', (string) $response->getBody());
     }
 
@@ -186,14 +224,14 @@ class McpHttpControllerTest extends UnitTestCase
         self::assertContains('findNodes', $toolNames);
     }
 
-    private function injectRequest(string $body, string $authorizationHeader): void
+    private function injectRequest(string $body, string $authorizationHeader, string $method = 'POST'): void
     {
-        $this->injectRequestInto($this->subject, $body, $authorizationHeader);
+        $this->injectRequestInto($this->subject, $body, $authorizationHeader, $method);
     }
 
-    private function injectRequestInto(McpHttpController $controller, string $body, string $authorizationHeader): void
+    private function injectRequestInto(McpHttpController $controller, string $body, string $authorizationHeader, string $method = 'POST'): void
     {
-        $httpRequest = new ServerRequest('POST', 'http://localhost/api/mcp', [], $body);
+        $httpRequest = new ServerRequest($method, 'http://localhost/api/mcp', [], $body);
         if ($authorizationHeader !== '') {
             $httpRequest = $httpRequest->withHeader('Authorization', $authorizationHeader);
         }

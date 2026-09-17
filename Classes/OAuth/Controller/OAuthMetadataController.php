@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
+use GesagtGetan\NeosMcp\OAuth\Repository\OAuthScopeRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use Neos\Flow\Annotations as Flow;
@@ -34,6 +35,7 @@ class OAuthMetadataController extends ActionController
             'resource' => $issuer . '/api/mcp',
             'authorization_servers' => [$issuer],
             'bearer_methods_supported' => ['header'],
+            'scopes_supported' => [OAuthScopeRepository::SCOPE_MCP],
         ]);
     }
 
@@ -47,13 +49,13 @@ class OAuthMetadataController extends ActionController
 
         return $this->jsonResponse(200, [
             'issuer' => $issuer,
-            'authorization_endpoint' => $issuer . '/api/mcp',
+            'authorization_endpoint' => $issuer . '/oauth/authorize',
             'token_endpoint' => $issuer . '/oauth/token',
             'response_types_supported' => ['code'],
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
             'code_challenge_methods_supported' => ['S256'],
-            'token_endpoint_auth_methods_supported' => ['client_secret_post'],
-            'scopes_supported' => ['mcp'],
+            'token_endpoint_auth_methods_supported' => ['client_secret_post', 'client_secret_basic'],
+            'scopes_supported' => [OAuthScopeRepository::SCOPE_MCP],
         ]);
     }
 

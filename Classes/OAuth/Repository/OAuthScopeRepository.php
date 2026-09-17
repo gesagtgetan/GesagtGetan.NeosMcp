@@ -18,7 +18,7 @@ use Neos\Flow\Annotations as Flow;
 #[Flow\Proxy(false)]
 class OAuthScopeRepository implements ScopeRepositoryInterface
 {
-    private const string SCOPE_MCP = 'mcp';
+    public const string SCOPE_MCP = 'mcp';
 
     /** @param string $identifier */
     public function getScopeEntityByIdentifier($identifier): ?ScopeEntityInterface

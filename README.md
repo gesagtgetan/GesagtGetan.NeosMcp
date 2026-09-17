@@ -52,7 +52,9 @@ Each authenticated user has their own personal workspace (the same one they use 
                      controllerObjectNamePattern: 'GesagtGetan\NeosMcp\OAuth\Controller\OAuthAuthorizeController'
    ```
 
-7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. The authorization endpoint (`GET /api/mcp`) is also exempted but requires a Neos session, so there is no security gap.
+7. Ensure the following endpoints are publicly accessible (no basic auth, no firewall restrictions): `/.well-known/oauth-protected-resource/api/mcp`, `/.well-known/oauth-authorization-server`, `/oauth/authorize`, `/oauth/grant`, `/oauth/token`, `/api/mcp`. If your server uses basic auth or IP restrictions, exempt these routes. The authorization endpoint (`GET /oauth/authorize`) and the consent form (`POST /oauth/grant`) are exempted too but require a Neos session, so there is no security gap.
+
+   > ⚠️ Upgrading from a version that served the authorization endpoint at `GET /api/mcp`: add the `/oauth/authorize` and `/oauth/grant` paths to your existing exemptions, otherwise the browser step of the OAuth flow runs into basic auth.
 
    How you exempt them depends on your server (for example a conditional in your virtual host or `Web/.htaccess`). Match these paths precisely so you do not unintentionally widen public access beyond them.
 

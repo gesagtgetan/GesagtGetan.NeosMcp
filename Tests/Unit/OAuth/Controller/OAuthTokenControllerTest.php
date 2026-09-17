@@ -72,16 +72,20 @@ class OAuthTokenControllerTest extends UnitTestCase
     }
 
     #[Test]
-    public function tokenReturnsLeagueErrorOnFailure(): void
+    public function tokenReturnsLeagueErrorAsRfc6749JsonResponse(): void
     {
         $this->authorizationServer->method('respondToAccessTokenRequest')
             ->willThrowException(OAuthServerException::invalidGrant('Invalid auth code'));
 
         $this->injectRequest('grant_type=authorization_code&code=expired');
 
-        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
+        $response = $this->subject->tokenAction();
 
-        $this->subject->tokenAction();
+        self::assertSame(400, $response->getStatusCode());
+        $body = json_decode($response->getBody()->getContents(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_grant', $body['error']);
+        self::assertSame('Invalid auth code', $body['hint']);
     }
 
     private function injectRequest(string $body): void

@@ -81,11 +81,16 @@ class McpHttpController extends ActionController
 
     public function handleAction(): ResponseInterface
     {
+        $httpRequest = $this->request->getHttpRequest();
+
+        if ($httpRequest->getMethod() !== 'POST') {
+            return $this->methodNotAllowedResponse();
+        }
+
         if (!$this->oauthServerFactory->isEnabled()) {
             return $this->jsonResponse(503, ['error' => 'MCP HTTP transport is disabled. Set GesagtGetan.NeosMcp.oauth.enabled to true in Settings.yaml and run ./flow mcp:setup.']);
         }
 
-        $httpRequest = $this->request->getHttpRequest();
         $body = (string) $httpRequest->getBody();
 
         $resourceServer = $this->oauthServerFactory->createResourceServer();
@@ -93,7 +98,7 @@ class McpHttpController extends ActionController
         try {
             $validatedRequest = $resourceServer->validateAuthenticatedRequest($httpRequest);
         } catch (OAuthServerException) {
-            return $this->unauthorizedResponse();
+            return $this->unauthorizedResponse(tokenRejected: $httpRequest->hasHeader('Authorization'));
         }
 
         $result = $this->resolveWorkspaceName($validatedRequest);
@@ -118,8 +123,9 @@ class McpHttpController extends ActionController
                 return $this->jsonResponse(400, JsonRpcError::forParseError('Invalid JSON-RPC request')->toArray());
             }
 
+            // Streamable HTTP: notifications are acknowledged with 202 Accepted and no body.
             if ($message instanceof Notification) {
-                return new Response(204);
+                return new Response(202);
             }
 
             if (!$message instanceof Request) {
@@ -144,13 +150,29 @@ class McpHttpController extends ActionController
         }
     }
 
-    private function unauthorizedResponse(): ResponseInterface
+    /**
+     * The MCP Streamable HTTP transport requires 405 for GET when the server offers
+     * no server-initiated SSE stream, see https://modelcontextprotocol.io/specification/2025-06-18/basic/transports.
+     */
+    private function methodNotAllowedResponse(): ResponseInterface
+    {
+        return new Response(
+            status: 405,
+            headers: [
+                'Content-Type' => 'application/json',
+                'Allow' => 'POST',
+            ],
+            body: json_encode(['error' => 'Method Not Allowed. The MCP endpoint accepts JSON-RPC via POST only.'], JSON_THROW_ON_ERROR),
+        );
+    }
+
+    private function unauthorizedResponse(bool $tokenRejected): ResponseInterface
     {
         return new Response(
             status: 401,
             headers: [
                 'Content-Type' => 'application/json',
-                'WWW-Authenticate' => $this->oauthServerFactory->getWwwAuthenticateChallenge(),
+                'WWW-Authenticate' => $this->oauthServerFactory->getWwwAuthenticateChallenge($tokenRejected),
             ],
             body: json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR),
         );

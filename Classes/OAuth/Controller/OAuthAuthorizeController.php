@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
 use GesagtGetan\NeosMcp\OAuth\Entity\OAuthUser;
-use GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException as McpOAuthServerException;
 use GesagtGetan\NeosMcp\OAuth\Repository\OAuthClientRepository;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
+use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
 use Neos\Flow\Annotations as Flow;
@@ -24,8 +24,8 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization endpoint — validates the OAuth request, shows consent screen,
  * and completes the authorization with a redirect containing the auth code.
  *
- * GET /api/mcp (with response_type=code) → authorize (requires Neos session)
- * POST /api/mcp/grant → grant (processes consent form)
+ * GET /oauth/authorize (with response_type=code) → authorize (requires Neos session)
+ * POST /oauth/grant → grant (processes consent form)
  */
 class OAuthAuthorizeController extends ActionController
 {
@@ -50,7 +50,7 @@ class OAuthAuthorizeController extends ActionController
     protected SessionInterface $session;
 
     /**
-     * GET /api/mcp?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
+     * GET /oauth/authorize?response_type=code&client_id=…&redirect_uri=…&code_challenge=…&code_challenge_method=S256&state=….
      *
      * Requires Neos session (McpUser role). Auto-grants for the configured client,
      * shows consent screen for any other client.
@@ -92,14 +92,15 @@ class OAuthAuthorizeController extends ActionController
         $server = $this->oauthServerFactory->createAuthorizationServer();
 
         try {
-            $authRequest = $server->validateAuthorizationRequest($psrRequest);
+            $authRequest = $this->validateAuthorizationRequest($server, $psrRequest);
         } catch (OAuthServerException $e) {
+            $message = $this->enrichOAuthErrorMessage($e, $psrRequest);
             $this->logger->warning('OAuth authorization request validation failed', [
                 'account' => $account->getAccountIdentifier(),
-                'error' => $e->getMessage(),
-                'hint' => $e->getHint(),
+                'error' => $message,
             ]);
-            throw new McpOAuthServerException('OAuth authorization request failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000020, $e);
+
+            return $this->oauthErrorResponse($e, $message);
         }
 
         $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
@@ -113,13 +114,13 @@ class OAuthAuthorizeController extends ActionController
         ]);
 
         // Render consent screen (or auto-submitting form for auto-grant).
-        // Authorization always completes via POST to /api/mcp/grant because Flow
+        // Authorization always completes via POST to /oauth/grant because Flow
         // blocks database writes during GET requests ("safe request" protection).
         return $this->renderConsentScreen($authRequest, $account->getAccountIdentifier(), $isAutoGrant);
     }
 
     /**
-     * POST /api/mcp/grant — processes consent form submission.
+     * POST /oauth/grant — processes consent form submission.
      */
     public function grantAction(): ResponseInterface
     {
@@ -169,14 +170,15 @@ class OAuthAuthorizeController extends ActionController
         $server = $this->oauthServerFactory->createAuthorizationServer();
 
         try {
-            $authRequest = $server->validateAuthorizationRequest($psrRequest);
+            $authRequest = $this->validateAuthorizationRequest($server, $psrRequest);
         } catch (OAuthServerException $e) {
+            $message = $this->enrichOAuthErrorMessage($e, $psrRequest);
             $this->logger->warning('OAuth grant validation failed', [
                 'account' => $account->getAccountIdentifier(),
-                'error' => $e->getMessage(),
-                'hint' => $e->getHint(),
+                'error' => $message,
             ]);
-            throw new McpOAuthServerException('OAuth grant validation failed: ' . $this->enrichOAuthErrorMessage($e, $psrRequest), 1740000021, $e);
+
+            return $this->oauthErrorResponse($e, $message);
         }
 
         $authRequest->setUser(new OAuthUser($this->resolveUserId($account)));
@@ -189,8 +191,56 @@ class OAuthAuthorizeController extends ActionController
         return $this->completeAuthorization($server, $authRequest, $approved);
     }
 
+    /**
+     * League only demands PKCE from public clients. MCP requires it from every client,
+     * so a request without code_challenge is rejected even for the confidential configured client.
+     *
+     * @throws OAuthServerException
+     */
+    private function validateAuthorizationRequest(AuthorizationServer $server, ServerRequestInterface $psrRequest): AuthorizationRequest
+    {
+        $authRequest = $server->validateAuthorizationRequest($psrRequest);
+
+        if ($authRequest->getCodeChallenge() === null) {
+            $redirectUri = $authRequest->getRedirectUri();
+
+            throw new OAuthServerException('The authorization request is missing the PKCE code challenge', 3, 'invalid_request', 400, 'Add code_challenge and code_challenge_method=S256 to the authorization request.', $redirectUri === null ? null : $this->withState($redirectUri, $authRequest->getState()));
+        }
+
+        return $authRequest;
+    }
+
+    /**
+     * RFC 6749 section 4.1.2.1: once the client and its redirect URI are verified, errors go back
+     * to the client via redirect. Errors about the client or redirect URI itself must not redirect;
+     * the browser gets an HTML page with actionable diagnostics instead.
+     */
+    private function oauthErrorResponse(OAuthServerException $e, string $message): ResponseInterface
+    {
+        if ($e->hasRedirect()) {
+            return $e->generateHttpResponse(new Response());
+        }
+
+        $escapedMessage = htmlspecialchars($message, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return $this->htmlErrorResponse($e->getHttpStatusCode(), 'Authorization Request Rejected', '<p>' . $escapedMessage . '</p>');
+    }
+
+    /**
+     * League appends its error payload to the redirect URI but not the client's state,
+     * which RFC 6749 requires on error redirects whenever the request carried one.
+     */
+    private function withState(string $redirectUri, ?string $state): string
+    {
+        if ($state === null) {
+            return $redirectUri;
+        }
+
+        return $redirectUri . (str_contains($redirectUri, '?') ? '&' : '?') . http_build_query(['state' => $state]);
+    }
+
     private function completeAuthorization(
-        \League\OAuth2\Server\AuthorizationServer $server,
+        AuthorizationServer $server,
         AuthorizationRequest $authRequest,
         bool $approved,
     ): ResponseInterface {
@@ -290,7 +340,7 @@ class OAuthAuthorizeController extends ActionController
         <p>This application is requesting access to:</p>
         <div class="scopes">{$scopeDisplay}</div>
     </div>
-    <form id="consent-form" method="POST" action="/api/mcp/grant"{$formStyle}>
+    <form id="consent-form" method="POST" action="/oauth/grant"{$formStyle}>
         {$hiddenFields}
         <input type="hidden" name="approve" value="1">
         <div class="actions"{$formStyle}>
@@ -318,9 +368,9 @@ HTML;
     }
 
     /**
-     * Shares the URI with the MCP transport (GET vs. POST /api/mcp), so an MCP client probing
-     * the endpoint may land here. The WWW-Authenticate challenge lets it discover OAuth the
-     * same way as on the transport's 401, while a browser still gets the HTML login hint.
+     * A 401 must carry a WWW-Authenticate header (RFC 9110 section 15.5.2). Reusing the OAuth
+     * challenge keeps discovery consistent for any client that lands here, while a browser
+     * still gets the HTML login hint.
      */
     private function loginRequiredResponse(): ResponseInterface
     {

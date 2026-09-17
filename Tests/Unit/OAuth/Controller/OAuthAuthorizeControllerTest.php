@@ -41,7 +41,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $this->oauthServerFactory->method('isEnabled')->willReturn(true);
         $this->oauthServerFactory->method('isClientRegistered')->willReturn(true);
         $this->oauthServerFactory->method('getWwwAuthenticateChallenge')
-            ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"');
+            ->willReturn('Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"');
 
         $this->authorizationServer = $this->createMock(AuthorizationServer::class);
         $this->oauthServerFactory->method('createAuthorizationServer')->willReturn($this->authorizationServer);
@@ -84,7 +84,11 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         self::assertSame(401, $response->getStatusCode());
         self::assertStringContainsString('text/html', $response->getHeaderLine('Content-Type'));
-        self::assertStringContainsString('Neos Login Required', (string) $response->getBody());
+
+        $html = (string) $response->getBody();
+        self::assertStringContainsString('Neos Login Required', $html);
+        self::assertStringContainsString('href="/neos/"', $html);
+        self::assertStringContainsString('href="http://localhost/oauth/authorize"', $html);
     }
 
     #[Test]
@@ -96,7 +100,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $response = $this->subject->authorizeAction();
 
         self::assertSame(
-            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource"',
+            'Bearer realm="mcp", resource_metadata="https://example.com/.well-known/oauth-protected-resource/api/mcp"',
             $response->getHeaderLine('WWW-Authenticate'),
         );
     }
@@ -114,9 +118,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $client->method('getName')->willReturn('Unknown App');
         $client->method('getIdentifier')->willReturn('abc123');
 
-        $authRequest = new AuthorizationRequest();
-        $authRequest->setGrantTypeId('authorization_code');
-        $authRequest->setClient($client);
+        $authRequest = $this->createAuthorizationRequest($client);
         $authRequest->setRedirectUri('https://example.com/callback');
         $authRequest->setState('some-state');
 
@@ -140,6 +142,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         self::assertStringContainsString('Deny', $html);
         self::assertStringContainsString('name="client_id" value="abc123"', $html);
         self::assertStringContainsString('name="csrf_token"', $html);
+        self::assertStringContainsString('action="/oauth/grant"', $html);
     }
 
     #[Test]
@@ -154,9 +157,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $client->method('getIdentifier')->willReturn('configured-id');
         $client->method('getName')->willReturn('Test Client');
 
-        $authRequest = new AuthorizationRequest();
-        $authRequest->setGrantTypeId('authorization_code');
-        $authRequest->setClient($client);
+        $authRequest = $this->createAuthorizationRequest($client);
 
         $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
 
@@ -164,7 +165,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         $response = $this->subject->authorizeAction();
 
-        // Auto-grant renders a hidden form with auto-submit JS (POST to /api/mcp/grant).
+        // Auto-grant renders a hidden form with auto-submit JS (POST to /oauth/grant).
         self::assertSame(200, $response->getStatusCode());
         $html = (string) $response->getBody();
         self::assertStringContainsString('consent-form', $html);
@@ -233,9 +234,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $client = $this->createMock(ClientEntityInterface::class);
         $client->method('getName')->willReturn('Test');
 
-        $authRequest = new AuthorizationRequest();
-        $authRequest->setGrantTypeId('authorization_code');
-        $authRequest->setClient($client);
+        $authRequest = $this->createAuthorizationRequest($client);
 
         $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
         $this->authorizationServer->method('completeAuthorizationRequest')
@@ -261,9 +260,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
         $client = $this->createMock(ClientEntityInterface::class);
         $client->method('getName')->willReturn('Test');
 
-        $authRequest = new AuthorizationRequest();
-        $authRequest->setGrantTypeId('authorization_code');
-        $authRequest->setClient($client);
+        $authRequest = $this->createAuthorizationRequest($client);
 
         $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
         $this->authorizationServer->method('completeAuthorizationRequest')
@@ -281,7 +278,7 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
     }
 
     #[Test]
-    public function authorizeForwardsLeagueValidationError(): void
+    public function authorizeRendersClientErrorsAsHtmlPageWithLeagueStatusCode(): void
     {
         $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
         $this->securityContext->method('hasRole')->willReturn(true);
@@ -290,9 +287,92 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
         $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'nonexistent']);
 
-        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
+        $response = $this->subject->authorizeAction();
 
-        $this->subject->authorizeAction();
+        self::assertSame(401, $response->getStatusCode());
+        self::assertStringContainsString('text/html', $response->getHeaderLine('Content-Type'));
+        self::assertStringContainsString('Client authentication failed', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function authorizeRedirectsErrorsToTheVerifiedRedirectUri(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+        $this->authorizationServer->method('validateAuthorizationRequest')
+            ->willThrowException(OAuthServerException::invalidScope('admin', 'https://example.com/callback?state=xyz'));
+
+        $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'abc123', 'scope' => 'admin']);
+
+        $response = $this->subject->authorizeAction();
+
+        self::assertSame(302, $response->getStatusCode());
+        self::assertStringStartsWith('https://example.com/callback?state=xyz&error=invalid_scope&', $response->getHeaderLine('Location'));
+    }
+
+    #[Test]
+    public function authorizeRejectsMissingPkceCodeChallengeByRedirectingWithState(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+
+        $client = $this->createMock(ClientEntityInterface::class);
+        $client->method('getIdentifier')->willReturn('abc123');
+
+        $authRequest = new AuthorizationRequest();
+        $authRequest->setGrantTypeId('authorization_code');
+        $authRequest->setClient($client);
+        $authRequest->setRedirectUri('https://example.com/callback');
+        $authRequest->setState('some-state');
+
+        $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
+        $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'abc123']);
+
+        $response = $this->subject->authorizeAction();
+
+        self::assertSame(302, $response->getStatusCode());
+        $location = $response->getHeaderLine('Location');
+        self::assertStringStartsWith('https://example.com/callback?state=some-state&error=invalid_request&', $location);
+        self::assertStringContainsString('code_challenge', $location);
+    }
+
+    #[Test]
+    public function authorizeRejectsMissingPkceCodeChallengeAsHtmlPageWithoutRedirectUri(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->securityContext->method('hasRole')->willReturn(true);
+
+        $client = $this->createMock(ClientEntityInterface::class);
+        $client->method('getIdentifier')->willReturn('abc123');
+
+        $authRequest = new AuthorizationRequest();
+        $authRequest->setGrantTypeId('authorization_code');
+        $authRequest->setClient($client);
+
+        $this->authorizationServer->method('validateAuthorizationRequest')->willReturn($authRequest);
+        $this->injectGetRequest(['response_type' => 'code', 'client_id' => 'abc123']);
+
+        $response = $this->subject->authorizeAction();
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertStringContainsString('text/html', $response->getHeaderLine('Content-Type'));
+        self::assertStringContainsString('PKCE code challenge', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function grantReturnsLeagueValidationErrorAsResponse(): void
+    {
+        $this->securityContext->method('getAccount')->willReturn($this->createAccount('admin@example.com'));
+        $this->session->method('getData')->willReturn('valid-csrf-token');
+        $this->authorizationServer->method('validateAuthorizationRequest')
+            ->willThrowException(OAuthServerException::invalidClient(new ServerRequest('POST', '/')));
+
+        $this->injectPostRequest('approve=1&csrf_token=valid-csrf-token&response_type=code&client_id=gone');
+
+        $response = $this->subject->grantAction();
+
+        self::assertSame(401, $response->getStatusCode());
+        self::assertStringContainsString('Client authentication failed', (string) $response->getBody());
     }
 
     #[Test]
@@ -315,19 +395,24 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
             'redirect_uri' => 'https://example.org/other-callback',
         ]);
 
-        $this->expectException(\GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException::class);
-        $this->expectExceptionMessage(
-            'The redirect URI "https://example.org/other-callback" provided for client "known-client" does not match any registered URI'
-            . ' (registered: https://example.com/callback, http://localhost:3000/callback).'
-        );
+        $response = $this->subject->authorizeAction();
 
-        $this->subject->authorizeAction();
+        self::assertSame(401, $response->getStatusCode());
+        self::assertStringContainsString(
+            htmlspecialchars(
+                'The redirect URI "https://example.org/other-callback" provided for client "known-client" does not match any registered URI'
+                . ' (registered: https://example.com/callback, http://localhost:3000/callback).',
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8',
+            ),
+            (string) $response->getBody(),
+        );
     }
 
     /** @param array<string, string> $queryParams */
     private function injectGetRequest(array $queryParams): void
     {
-        $httpRequest = new ServerRequest('GET', 'http://localhost/api/mcp');
+        $httpRequest = new ServerRequest('GET', 'http://localhost/oauth/authorize');
         $httpRequest = $httpRequest->withQueryParams($queryParams);
         $actionRequest = $this->createMock(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
@@ -336,10 +421,21 @@ class OAuthAuthorizeControllerTest extends UnitTestCase
 
     private function injectPostRequest(string $body): void
     {
-        $httpRequest = new ServerRequest('POST', 'http://localhost/api/mcp/grant', [], $body);
+        $httpRequest = new ServerRequest('POST', 'http://localhost/oauth/grant', [], $body);
         $actionRequest = $this->createMock(ActionRequest::class);
         $actionRequest->method('getHttpRequest')->willReturn($httpRequest);
         $this->inject($this->subject, 'request', $actionRequest);
+    }
+
+    private function createAuthorizationRequest(ClientEntityInterface $client): AuthorizationRequest
+    {
+        $authRequest = new AuthorizationRequest();
+        $authRequest->setGrantTypeId('authorization_code');
+        $authRequest->setClient($client);
+        $authRequest->setCodeChallenge('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+        $authRequest->setCodeChallengeMethod('S256');
+
+        return $authRequest;
     }
 
     private function createAccount(string $identifier): Account&MockObject

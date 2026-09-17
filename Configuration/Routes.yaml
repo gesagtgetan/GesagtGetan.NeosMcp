@@ -1,6 +1,6 @@
 -
   name: 'OAuth Protected Resource Metadata'
-  uriPattern: '.well-known/oauth-protected-resource'
+  uriPattern: '.well-known/oauth-protected-resource/api/mcp'
   httpMethods: ['GET']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -33,7 +33,7 @@
 
 -
   name: 'OAuth Authorize'
-  uriPattern: 'api/mcp'
+  uriPattern: 'oauth/authorize'
   httpMethods: ['GET']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -43,7 +43,7 @@
 
 -
   name: 'OAuth Grant (consent form)'
-  uriPattern: 'api/mcp/grant'
+  uriPattern: 'oauth/grant'
   httpMethods: ['POST']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
@@ -54,7 +54,7 @@
 -
   name: 'MCP HTTP Transport'
   uriPattern: 'api/mcp'
-  httpMethods: ['POST']
+  httpMethods: ['GET', 'POST', 'DELETE']
   defaults:
     '@package': 'GesagtGetan.NeosMcp'
     '@controller': 'McpHttp'

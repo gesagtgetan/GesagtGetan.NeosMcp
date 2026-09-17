@@ -51,6 +51,7 @@ class OAuthMetadataControllerTest extends UnitTestCase
         self::assertSame('https://example.com/api/mcp', $body['resource']);
         self::assertSame(['https://example.com'], $body['authorization_servers']);
         self::assertSame(['header'], $body['bearer_methods_supported']);
+        self::assertSame(['mcp'], $body['scopes_supported']);
     }
 
     #[Test]
@@ -75,13 +76,13 @@ class OAuthMetadataControllerTest extends UnitTestCase
 
         $body = $this->decodeBody($response);
         self::assertSame('https://example.com', $body['issuer']);
-        self::assertSame('https://example.com/api/mcp', $body['authorization_endpoint']);
+        self::assertSame('https://example.com/oauth/authorize', $body['authorization_endpoint']);
         self::assertSame('https://example.com/oauth/token', $body['token_endpoint']);
         self::assertArrayNotHasKey('registration_endpoint', $body);
         self::assertSame(['code'], $body['response_types_supported']);
         self::assertSame(['authorization_code', 'refresh_token'], $body['grant_types_supported']);
         self::assertSame(['S256'], $body['code_challenge_methods_supported']);
-        self::assertSame(['client_secret_post'], $body['token_endpoint_auth_methods_supported']);
+        self::assertSame(['client_secret_post', 'client_secret_basic'], $body['token_endpoint_auth_methods_supported']);
         self::assertSame(['mcp'], $body['scopes_supported']);
     }
 

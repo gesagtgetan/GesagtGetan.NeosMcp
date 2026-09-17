@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace GesagtGetan\NeosMcp\OAuth\Controller;
 
-use GesagtGetan\NeosMcp\OAuth\Exception\OAuthServerException as McpOAuthServerException;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
@@ -50,17 +49,11 @@ class OAuthTokenController extends ActionController
 
         try {
             $response = $server->respondToAccessTokenRequest($psrRequest, $psrResponse);
-            // League writes the JSON body via $stream->write(), which advances the
-            // pointer to the end. Without rewind, Flow's emitter reads an empty
-            // body and clients receive Content-Length: 0.
-            $response->getBody()->rewind();
 
             $this->logger->info('OAuth token exchange succeeded', [
                 'client_id' => $parsedBody['client_id'] ?? 'unknown',
                 'grant_type' => $parsedBody['grant_type'] ?? 'unknown',
             ]);
-
-            return $response;
         } catch (OAuthServerException $e) {
             $this->logger->warning('OAuth token exchange failed', [
                 'client_id' => $parsedBody['client_id'] ?? 'unknown',
@@ -68,8 +61,18 @@ class OAuthTokenController extends ActionController
                 'error' => $e->getMessage(),
                 'hint' => $e->getHint(),
             ]);
-            throw new McpOAuthServerException('OAuth token exchange failed: ' . $e->getMessage() . ($e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''), 1740000022, $e);
+
+            // RFC 6749 section 5.2: errors are a 400/401 JSON body such as
+            // {"error":"invalid_grant"}, which clients use to decide whether to re-authorize.
+            $response = $e->generateHttpResponse(new Response());
         }
+
+        // League writes the JSON body via $stream->write(), which advances the
+        // pointer to the end. Without rewind, Flow's emitter reads an empty
+        // body and clients receive Content-Length: 0.
+        $response->getBody()->rewind();
+
+        return $response;
     }
 
     /** @param array<mixed> $data */
