@@ -1,7 +1,7 @@
 {
   "name": "gesagtgetan/neos-mcp",
   "description": "MCP (Model Context Protocol) server for Neos Content Repository — gives LLMs structured access to content",
-  "type": "neos-package",
+  "type": "neos-plugin",
   "license": "GPL-3.0-or-later",
   "require": {
     "php": "^8.3",
