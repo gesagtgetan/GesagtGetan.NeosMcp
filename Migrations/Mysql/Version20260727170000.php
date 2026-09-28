@@ -26,8 +26,8 @@ final class Version20260727170000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->abortIf(
-            !$this->connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\MySqlPlatform,
-            "Migration can only be executed safely on '\Doctrine\DBAL\Platforms\MySqlPlatform'.",
+            !$this->connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\MySQLPlatform,
+            "Migration can only be executed safely on '\Doctrine\DBAL\Platforms\MySQLPlatform'.",
         );
 
         $this->addSql('ALTER TABLE gesagtgetan_neosmcp_oauth_client RENAME INDEX uniq_oauth_client_clientid TO UNIQ_79BAA9DD7F98CD1C');
@@ -38,8 +38,8 @@ final class Version20260727170000 extends AbstractMigration
     public function down(Schema $schema): void
     {
         $this->abortIf(
-            !$this->connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\MySqlPlatform,
-            "Migration can only be executed safely on '\Doctrine\DBAL\Platforms\MySqlPlatform'.",
+            !$this->connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\MySQLPlatform,
+            "Migration can only be executed safely on '\Doctrine\DBAL\Platforms\MySQLPlatform'.",
         );
 
         $this->addSql('ALTER TABLE gesagtgetan_neosmcp_oauth_refresh_token RENAME INDEX uniq_d39d50a55f37a13b TO UNIQ_oauth_refresh_token_token');
