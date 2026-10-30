@@ -13,7 +13,8 @@
     ],
     "require": {
         "gesagtgetan/neos-mcp": "@dev",
-        "neos/neos-ui": "~9.1"
+        "neos/neos": "~9.1.0",
+        "neos/neos-ui": "~9.1.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^13.0",
