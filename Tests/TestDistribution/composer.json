@@ -12,7 +12,6 @@
         }
     ],
     "require": {
-        "php": "^8.4",
         "gesagtgetan/neos-mcp": "@dev",
         "neos/neos-ui": "~9.1"
     },
