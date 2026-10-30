@@ -12,4 +12,3 @@ Packages
 /.phpunit.result.cache
 /.phpcs-cache
 /phpcs.xml
-/composer.lock
