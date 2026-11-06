@@ -201,6 +201,20 @@ class NodeWriteServiceTest extends TestCase
     }
 
     #[Test]
+    public function restoreNodeCallsHandleWithUntagSubtreeCommandForRemovedTag(): void
+    {
+        $result = $this->subject->restoreNode('node-id');
+
+        self::assertCount(1, $this->handledCommands);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(UntagSubtree::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertTrue($command->tag->equals(NeosSubtreeTag::removed()));
+        self::assertSame('node-id', $result->nodeAggregateId);
+    }
+
+    #[Test]
     public function findAndReplaceDryRunDoesNotCallHandle(): void
     {
         $contentGraph = self::createStub(ContentGraphInterface::class);

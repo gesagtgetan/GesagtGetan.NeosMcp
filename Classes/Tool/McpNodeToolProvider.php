@@ -518,6 +518,28 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
+     * @param string $nodeAggregateId The node aggregate ID of the soft-removed node to restore
+     * @param array<string, string>|null $dimensionSpacePoint A dimension space point the node is removed in, e.g. {"language":"de"}. When omitted, the first configured dimension space point is used as default.
+     */
+    #[McpTool(description: <<<'MCP'
+        Restore a soft-removed (trashed) node, including its descendants, in all dimension variants. Same as restoring it from the trash bin in the Neos workspace module.
+
+        Use findNodes, getNode or getChildren with includeRemoved: true to find trashed nodes. Fails if the node is not soft-removed.
+        MCP)]
+    public function restoreNode(
+        string $nodeAggregateId,
+        #[Schema(type: 'object', additionalProperties: ['type' => 'string'])]
+        ?array $dimensionSpacePoint = null,
+    ): WriteResult {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeWriteService->restoreNode($nodeAggregateId, $dimensionSpacePoint),
+            $warning,
+        );
+    }
+
+    /**
      * @param string $search The string to search for
      * @param string $replace The replacement string
      * @param string|null $nodeTypeName Optional filter: restrict to this node type (e.g. 'Neos.Neos:Document'). Omit to search all node types.

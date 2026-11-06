@@ -12,6 +12,7 @@ use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
+use Neos\ContentRepository\Core\Feature\SubtreeTagging\Exception\SubtreeIsNotTagged;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
@@ -88,6 +89,36 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $trashedNode = $this->nodeReadService->getNode($createResult->nodeAggregateId, includeRemoved: true);
         self::assertNotNull($trashedNode, 'Soft-removed node must still be accessible with includeRemoved: true');
         self::assertSame('To Remove', $trashedNode->properties['title']);
+    }
+
+    #[Test]
+    public function restoreNodeBringsSoftRemovedNodeBack(): void
+    {
+        $createResult = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'To Restore'],
+        );
+        $this->nodeWriteService->removeNode($createResult->nodeAggregateId);
+
+        $this->nodeWriteService->restoreNode($createResult->nodeAggregateId);
+
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
+        self::assertNotNull($node, 'Restored node must be returned without includeRemoved');
+        self::assertSame('To Restore', $node->properties['title']);
+    }
+
+    #[Test]
+    public function restoreNodeFailsForNodeThatIsNotRemoved(): void
+    {
+        $createResult = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Not removed'],
+        );
+
+        $this->expectException(SubtreeIsNotTagged::class);
+        $this->nodeWriteService->restoreNode($createResult->nodeAggregateId);
     }
 
     #[Test]

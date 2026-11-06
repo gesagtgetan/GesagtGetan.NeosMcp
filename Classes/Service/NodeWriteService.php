@@ -254,6 +254,31 @@ final readonly class NodeWriteService
     }
 
     /**
+     * Restores a soft-removed (trashed) node in all its variants, like the restore button in the
+     * Neos workspace module. Fails if the node is not soft-removed.
+     *
+     * @param array<string, string>|null $dimensionSpacePoint
+     */
+    public function restoreNode(
+        string $nodeAggregateId,
+        ?array $dimensionSpacePoint = null,
+    ): WriteResult {
+        $dsp = $this->resolveDimensionSpacePoint($dimensionSpacePoint);
+
+        $command = UntagSubtree::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            $dsp,
+            NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
+            NeosSubtreeTag::removed(),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
+    }
+
+    /**
      * Replaces all outgoing references for a single reference name on the source
      * node. The CR's `SetNodeReferences` command treats per-name writes as
      * full replacements — passing an empty `$targets` array deletes every

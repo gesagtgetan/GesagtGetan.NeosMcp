@@ -145,6 +145,7 @@ GesagtGetan:
 - `unhideNode` — unhide a previously hidden node
 - `findAndReplace` — batch find/replace across the content tree
 - `removeNode` — soft-delete a node (can be restored)
+- `restoreNode` — restore a soft-deleted node in all variants
 
 ### Workspace
 
