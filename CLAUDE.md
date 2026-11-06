@@ -8,6 +8,18 @@ Repo: `git@github.com:gesagtgetan/GesagtGetan.NeosMcp.git` (separate git repo in
 
 The agent can drive the MCP tools end-to-end by piping JSON-RPC into `./flow mcp:server` directly — the stdio transport accepts the standard MCP handshake (`initialize` → `notifications/initialized` → `tools/call`) and returns each tool's raw `TextContent` JSON. **This is the preferred dev loop**: every invocation reads the current PHP files, so there is no reconnect dance after a code change, and the agent can script a batch of tool calls in one go (byte-shape parity checks after a refactor, or `findNodes` → `getNode` → `setNodeProperties` → `getNode` to verify a write round-trip).
 
+Keep stdin open until all responses are written: the server stops at end of input and drops requests it has not answered yet, so a plain `printf ... | ./flow mcp:server` returns nothing. Hold the pipe open with a trailing `sleep` (raise it for slow calls):
+
+```bash
+(printf '%s\n' \
+  '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"cli","version":"1"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"getWorkspaceStatus","arguments":{}}}'; \
+  sleep 5) | ./flow mcp:server
+```
+
+For longer batches, a small script that writes one request and waits for the response with the same `id` before sending the next is more reliable than guessing the `sleep`.
+
 For interactive exploration, the dev can also connect the stdio MCP server as a regular client in Claude Code — but every PHP change requires a `/mcp` reconnect before the client picks up the new code, so this path is best for one-off exploration rather than tight iteration.
 
 Writes from either path land in the shared stdio workspace (see README "CLI Transport" for details). Use `getWorkspaceStatus` to see what has accumulated and `discardWorkspaceChanges` to reset between iterations so test runs don't pollute each other.
