@@ -23,6 +23,8 @@ use Neos\ContentRepository\Core\Feature\NodeReferencing\Command\SetNodeReference
 use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferencesForName;
 use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferencesToWrite;
 use Neos\ContentRepository\Core\Feature\NodeReferencing\Dto\NodeReferenceToWrite;
+use Neos\ContentRepository\Core\Feature\NodeTypeChange\Command\ChangeNodeAggregateType;
+use Neos\ContentRepository\Core\Feature\NodeTypeChange\Dto\NodeAggregateTypeChangeChildConstraintConflictResolutionStrategy;
 use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
@@ -271,6 +273,27 @@ final readonly class NodeWriteService
             $dsp,
             NodeVariantSelectionStrategy::STRATEGY_ALL_VARIANTS,
             NeosSubtreeTag::removed(),
+        );
+
+        $this->contentRepository->handle($command);
+
+        return new WriteResult(nodeAggregateId: $nodeAggregateId);
+    }
+
+    /**
+     * Changes the node type of the whole node aggregate, i.e. in every dimension (Neos 9 allows only
+     * one node type per aggregate). Fails without changing anything if the new type would violate a
+     * constraint of its parent or of existing child nodes; no child node is ever deleted.
+     */
+    public function changeNodeType(
+        string $nodeAggregateId,
+        string $newNodeTypeName,
+    ): WriteResult {
+        $command = ChangeNodeAggregateType::create(
+            $this->workspaceName,
+            NodeAggregateId::fromString($nodeAggregateId),
+            NodeTypeName::fromString($newNodeTypeName),
+            NodeAggregateTypeChangeChildConstraintConflictResolutionStrategy::STRATEGY_HAPPY_PATH,
         );
 
         $this->contentRepository->handle($command);

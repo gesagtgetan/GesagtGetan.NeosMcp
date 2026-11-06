@@ -15,6 +15,7 @@ use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Exception\SubtreeIsNotTagged;
 use Neos\ContentRepository\Core\Feature\WorkspacePublication\Command\PublishWorkspace;
 use Neos\ContentRepository\Core\Feature\WorkspaceRebase\Command\RebaseWorkspace;
+use Neos\ContentRepository\Core\SharedModel\Exception\NodeConstraintException;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -119,6 +120,60 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
 
         $this->expectException(SubtreeIsNotTagged::class);
         $this->nodeWriteService->restoreNode($createResult->nodeAggregateId);
+    }
+
+    #[Test]
+    public function changeNodeTypeKeepsPropertiesAndCreatesChildNodesDeclaredByTheNewType(): void
+    {
+        $createResult = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document.WithoutContent',
+            ['title' => 'Type changes'],
+        );
+
+        $this->nodeWriteService->changeNodeType(
+            $createResult->nodeAggregateId,
+            'GesagtGetan.NeosMcp:Testing.Document',
+        );
+
+        $node = $this->nodeReadService->getNode($createResult->nodeAggregateId);
+        self::assertNotNull($node);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Document', $node->nodeTypeName);
+        self::assertSame('Type changes', $node->properties['title']);
+        self::assertNotNull(
+            self::findContentCollectionChild($this->nodeReadService->getChildren($createResult->nodeAggregateId)),
+            'The "main" ContentCollection declared by the new type must be created',
+        );
+    }
+
+    #[Test]
+    public function changeNodeTypeFailsWithoutChangesWhenTheParentDoesNotAllowTheNewType(): void
+    {
+        $document = $this->nodeWriteService->createNode(
+            self::$siteNodeId->value,
+            'GesagtGetan.NeosMcp:Testing.Document',
+            ['title' => 'Page'],
+        );
+        $mainCollection = self::findContentCollectionChild(
+            $this->nodeReadService->getChildren($document->nodeAggregateId),
+        );
+        self::assertNotNull($mainCollection);
+        $text = $this->nodeWriteService->createNode(
+            $mainCollection->nodeAggregateId,
+            'GesagtGetan.NeosMcp:Testing.Content.Text',
+            ['text' => 'Stays text'],
+        );
+
+        try {
+            // Neos.Neos:ContentCollection does not allow documents
+            $this->nodeWriteService->changeNodeType($text->nodeAggregateId, 'GesagtGetan.NeosMcp:Testing.Document');
+            self::fail('Changing to a type the parent does not allow must fail');
+        } catch (NodeConstraintException) {
+        }
+
+        $node = $this->nodeReadService->getNode($text->nodeAggregateId);
+        self::assertNotNull($node);
+        self::assertSame('GesagtGetan.NeosMcp:Testing.Content.Text', $node->nodeTypeName);
     }
 
     #[Test]

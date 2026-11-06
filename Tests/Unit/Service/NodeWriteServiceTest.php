@@ -16,6 +16,8 @@ use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyV
 use Neos\ContentRepository\Core\Feature\NodeModification\Dto\SerializedPropertyValues;
 use Neos\ContentRepository\Core\Feature\NodeMove\Command\MoveNodeAggregate;
 use Neos\ContentRepository\Core\Feature\NodeReferencing\Command\SetNodeReferences;
+use Neos\ContentRepository\Core\Feature\NodeTypeChange\Command\ChangeNodeAggregateType;
+use Neos\ContentRepository\Core\Feature\NodeTypeChange\Dto\NodeAggregateTypeChangeChildConstraintConflictResolutionStrategy;
 use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
@@ -211,6 +213,21 @@ class NodeWriteServiceTest extends TestCase
         self::assertSame('test-workspace', $command->workspaceName->value);
         self::assertSame('node-id', $command->nodeAggregateId->value);
         self::assertTrue($command->tag->equals(NeosSubtreeTag::removed()));
+        self::assertSame('node-id', $result->nodeAggregateId);
+    }
+
+    #[Test]
+    public function changeNodeTypeCallsHandleWithChangeNodeAggregateTypeCommandThatNeverDeletesChildren(): void
+    {
+        $result = $this->subject->changeNodeType('node-id', 'Vendor.Site:Document.Other');
+
+        self::assertCount(1, $this->handledCommands);
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(ChangeNodeAggregateType::class, $command);
+        self::assertSame('test-workspace', $command->workspaceName->value);
+        self::assertSame('node-id', $command->nodeAggregateId->value);
+        self::assertSame('Vendor.Site:Document.Other', $command->newNodeTypeName->value);
+        self::assertSame(NodeAggregateTypeChangeChildConstraintConflictResolutionStrategy::STRATEGY_HAPPY_PATH, $command->strategy);
         self::assertSame('node-id', $result->nodeAggregateId);
     }
 

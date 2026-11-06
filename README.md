@@ -143,6 +143,7 @@ GesagtGetan:
 - `moveNode` — move to new parent
 - `hideNode` — hide a node from the public site (reversible)
 - `unhideNode` — unhide a previously hidden node
+- `changeNodeType` — change the node type (always in every dimension; refuses if a parent or child constraint would break)
 - `findAndReplace` — batch find/replace across the content tree
 - `removeNode` — soft-delete a node (can be restored)
 - `restoreNode` — restore a soft-deleted node in all variants

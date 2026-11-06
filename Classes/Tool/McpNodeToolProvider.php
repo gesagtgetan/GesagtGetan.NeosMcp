@@ -540,6 +540,32 @@ final class McpNodeToolProvider implements McpToolProvider
     }
 
     /**
+     * @param string $nodeAggregateId The node aggregate ID whose node type to change
+     * @param string $newNodeTypeName The new node type, e.g. 'Vendor.Site:Document.Page'. Must be a non-abstract node type, see listNodeTypes.
+     */
+    #[McpTool(
+        description: <<<'MCP'
+            Change the node type of a node. This always applies to ALL dimension variants (e.g. every language) at once: Neos 9 allows only one node type per node.
+
+            Property values are kept. Child nodes the new type declares (e.g. content collections) are created if missing. Fails without changing anything if the new type is not allowed below the parent, or if an existing child node is not allowed below the new type; no node is deleted.
+
+            Compare both types with getNodeTypeSchema first.
+            MCP,
+        annotations: new ToolAnnotations(destructiveHint: true),
+    )]
+    public function changeNodeType(
+        string $nodeAggregateId,
+        string $newNodeTypeName,
+    ): WriteResult {
+        $warning = $this->rebaser->rebase();
+
+        return $this->rebaser->withWarning(
+            $this->nodeWriteService->changeNodeType($nodeAggregateId, $newNodeTypeName),
+            $warning,
+        );
+    }
+
+    /**
      * @param string $search The string to search for
      * @param string $replace The replacement string
      * @param string|null $nodeTypeName Optional filter: restrict to this node type (e.g. 'Neos.Neos:Document'). Omit to search all node types.

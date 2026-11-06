@@ -14,6 +14,14 @@
     text:
       type: string
 
+# A document without tethered child nodes, e.g. to change its type to Testing.Document
+'GesagtGetan.NeosMcp:Testing.Document.WithoutContent':
+  superTypes:
+    'Neos.Neos:Document': true
+  properties:
+    title:
+      type: string
+
 'GesagtGetan.NeosMcp:Testing.Content.Text':
   superTypes:
     'Neos.Neos:Content': true
