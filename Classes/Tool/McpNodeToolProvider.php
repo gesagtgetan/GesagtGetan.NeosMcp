@@ -321,6 +321,8 @@ final class McpNodeToolProvider implements McpToolProvider
         3. Only call createNode() when a genuinely new node is needed.
 
         To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
+
+        DateTime properties take an ISO 8601 string with offset, the format getNode() returns, e.g. "2026-11-25T00:00:00+01:00". Pass null to clear one.
         MCP)]
     public function createNode(
         string $parentNodeAggregateId,
@@ -347,6 +349,8 @@ final class McpNodeToolProvider implements McpToolProvider
         Update properties on an existing node. This is a partial update — only the provided properties are changed, all other properties remain unchanged.
 
         To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
+
+        DateTime properties take an ISO 8601 string with offset, the format getNode() returns, e.g. "2026-11-25T00:00:00+01:00". Pass null to clear one.
         MCP)]
     public function setNodeProperties(
         string $nodeAggregateId,

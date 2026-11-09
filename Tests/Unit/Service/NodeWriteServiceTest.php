@@ -22,6 +22,7 @@ use Neos\ContentRepository\Core\Feature\NodeVariation\Command\CreateNodeVariant;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\TagSubtree;
 use Neos\ContentRepository\Core\Feature\SubtreeTagging\Command\UntagSubtree;
 use Neos\ContentRepository\Core\Infrastructure\Property\PropertyConverter;
+use Neos\ContentRepository\Core\NodeType\NodeTypeManager;
 use Neos\ContentRepository\Core\NodeType\NodeTypeName;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentGraphInterface;
 use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface;
@@ -65,6 +66,15 @@ class NodeWriteServiceTest extends TestCase
         $dsp = DimensionSpacePoint::fromArray(['language' => 'de']);
         $this->contentRepository->method('getDimensionSpacePoints')
             ->willReturn(new DimensionSpacePointSet([$dsp]));
+
+        $this->contentRepository->method('getNodeTypeManager')->willReturn(NodeTypeManager::createFromArrayConfiguration([
+            'Vendor:Content.Text' => [
+                'properties' => ['text' => ['type' => 'string'], 'title' => ['type' => 'string']],
+            ],
+            'Vendor:Content.Event' => [
+                'properties' => ['title' => ['type' => 'string'], 'startDate' => ['type' => 'DateTime']],
+            ],
+        ]));
 
         $serializer = self::createStub(Serializer::class);
         $serializer->method('denormalize')->willReturnCallback(
@@ -122,6 +132,69 @@ class NodeWriteServiceTest extends TestCase
         self::assertSame('test-workspace', $command->workspaceName->value);
         self::assertSame('node-id', $command->nodeAggregateId->value);
         self::assertSame('node-id', $result->nodeAggregateId);
+    }
+
+    #[Test]
+    public function createNodeTurnsIsoStringsOfDateTimePropertiesIntoDateTimeImmutable(): void
+    {
+        $this->subject->createNode('parent-id', 'Vendor:Content.Event', [
+            'title' => 'Advent market',
+            'startDate' => '2026-11-25T00:00:00+01:00',
+        ]);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        $startDate = $command->initialPropertyValues->values['startDate'];
+        self::assertInstanceOf(\DateTimeImmutable::class, $startDate);
+        self::assertSame('2026-11-25T00:00:00+01:00', $startDate->format(\DateTimeInterface::ATOM));
+        self::assertSame('Advent market', $command->initialPropertyValues->values['title']);
+    }
+
+    #[Test]
+    public function createNodeKeepsNullForDateTimePropertiesSoTheyCanBeCleared(): void
+    {
+        $this->subject->createNode('parent-id', 'Vendor:Content.Event', ['startDate' => null]);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        self::assertNull($command->initialPropertyValues->values['startDate']);
+    }
+
+    #[Test]
+    public function createNodeRejectsDateTimeValuesThatAreNotIso8601WithOffset(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1794300001);
+
+        $this->subject->createNode('parent-id', 'Vendor:Content.Event', ['startDate' => '25.11.2026']);
+    }
+
+    #[Test]
+    public function createNodePassesPropertiesOfUnknownNodeTypesThroughUnchanged(): void
+    {
+        $this->subject->createNode('parent-id', 'Vendor:Content.Unknown', ['startDate' => '25.11.2026']);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        self::assertSame('25.11.2026', $command->initialPropertyValues->values['startDate']);
+    }
+
+    #[Test]
+    public function setNodePropertiesTurnsIsoStringsIntoDateTimeImmutableForTheExistingNodesType(): void
+    {
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
+        $subgraph->method('findNodeById')->willReturn($this->createStubNode('event-id', 'Vendor:Content.Event'));
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+
+        $this->subject->setNodeProperties('event-id', ['startDate' => '2026-12-11T17:30:00+01:00']);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeProperties::class, $command);
+        $startDate = $command->propertyValues->values['startDate'];
+        self::assertInstanceOf(\DateTimeImmutable::class, $startDate);
+        self::assertSame('2026-12-11T17:30:00+01:00', $startDate->format(\DateTimeInterface::ATOM));
     }
 
     #[Test]

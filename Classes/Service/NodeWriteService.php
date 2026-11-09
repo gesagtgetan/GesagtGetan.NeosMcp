@@ -41,6 +41,8 @@ use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 #[Flow\Proxy(false)]
 final readonly class NodeWriteService
 {
+    private const DATE_TIME_PROPERTY_TYPES = ['DateTime', 'DateTimeImmutable', 'DateTimeInterface'];
+
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
@@ -60,17 +62,20 @@ final readonly class NodeWriteService
     ): WriteResult {
         $nodeAggregateId = NodeAggregateId::create();
         $originDimensionSpacePoint = $this->resolveOriginDimensionSpacePoint($dimensionSpacePoint);
+        $typedNodeTypeName = NodeTypeName::fromString($nodeTypeName);
 
         $command = CreateNodeAggregateWithNode::create(
             $this->workspaceName,
             $nodeAggregateId,
-            NodeTypeName::fromString($nodeTypeName),
+            $typedNodeTypeName,
             $originDimensionSpacePoint,
             NodeAggregateId::fromString($parentNodeAggregateId),
         );
 
         if ($properties !== []) {
-            $command = $command->withInitialPropertyValues(PropertyValuesToWrite::fromArray($properties));
+            $command = $command->withInitialPropertyValues(
+                PropertyValuesToWrite::fromArray($this->convertPropertyValues($typedNodeTypeName, $properties)),
+            );
         }
 
         $this->contentRepository->handle($command);
@@ -88,12 +93,20 @@ final readonly class NodeWriteService
         ?array $dimensionSpacePoint = null,
     ): WriteResult {
         $originDimensionSpacePoint = $this->resolveOriginDimensionSpacePoint($dimensionSpacePoint);
+        $typedNodeAggregateId = NodeAggregateId::fromString($nodeAggregateId);
+
+        // An unknown node is left to the command handler, which rejects it with its own message
+        $node = $this->contentRepository->getContentGraph($this->workspaceName)
+            ->getSubgraph($originDimensionSpacePoint->toDimensionSpacePoint(), NeosVisibilityConstraints::excludeRemoved())
+            ->findNodeById($typedNodeAggregateId);
 
         $command = SetNodeProperties::create(
             $this->workspaceName,
-            NodeAggregateId::fromString($nodeAggregateId),
+            $typedNodeAggregateId,
             $originDimensionSpacePoint,
-            PropertyValuesToWrite::fromArray($properties),
+            PropertyValuesToWrite::fromArray(
+                $node === null ? $properties : $this->convertPropertyValues($node->nodeTypeName, $properties),
+            ),
         );
 
         $this->contentRepository->handle($command);
@@ -444,6 +457,44 @@ final readonly class NodeWriteService
             matches: new FindAndReplaceMatchCollection(...$matches),
             dryRun: $request->dryRun,
         );
+    }
+
+    /**
+     * JSON cannot carry PHP objects, so values for DateTime-typed properties arrive as ISO 8601
+     * strings (the format getNode() returns) and are turned into DateTimeImmutable here. Values of
+     * undeclared properties or unknown node types pass through for the command handler to reject.
+     *
+     * @param array<string, mixed> $properties
+     *
+     * @return array<string, mixed>
+     */
+    private function convertPropertyValues(NodeTypeName $nodeTypeName, array $properties): array
+    {
+        $nodeType = $this->contentRepository->getNodeTypeManager()->getNodeType($nodeTypeName);
+        if ($nodeType === null) {
+            return $properties;
+        }
+
+        $convertedProperties = [];
+        foreach ($properties as $propertyName => $value) {
+            $isDateTimeProperty = $nodeType->hasProperty($propertyName)
+                && in_array(ltrim($nodeType->getPropertyType($propertyName), '\\'), self::DATE_TIME_PROPERTY_TYPES, true);
+            $convertedProperties[$propertyName] = $isDateTimeProperty && $value !== null
+                ? self::parseDateTime($propertyName, $value)
+                : $value;
+        }
+
+        return $convertedProperties;
+    }
+
+    private static function parseDateTime(string $propertyName, mixed $value): \DateTimeImmutable
+    {
+        $dateTime = is_string($value) ? \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $value) : false;
+        if ($dateTime === false) {
+            throw new \InvalidArgumentException(sprintf('Property "%s" is a DateTime and needs an ISO 8601 string with offset, e.g. "2026-11-25T00:00:00+01:00", got %s.', $propertyName, is_string($value) ? '"' . $value . '"' : get_debug_type($value)), 1794300001);
+        }
+
+        return $dateTime;
     }
 
     private static function truncateString(string $value, ?int $maxLength): string
