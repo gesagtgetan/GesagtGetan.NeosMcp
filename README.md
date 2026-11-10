@@ -58,6 +58,20 @@ Each authenticated user has their own personal workspace (the same one they use 
 
    How you exempt them depends on your server (for example a conditional in your virtual host or `Web/.htaccess`). Match these paths precisely so you do not unintentionally widen public access beyond them.
 
+   For Apache basic auth in `Web/.htaccess`, add the exemption to the condition that enables basic auth:
+   ```apache
+   # Exempt the OAuth/MCP endpoints from basic auth so the MCP client can reach them without credentials.
+   # /oauth/authorize and /oauth/grant still require a Neos backend session.
+   <If "%{HTTP_HOST} =~ /^stage\.example\.com$/ && %{THE_REQUEST} !~ m#^(GET|POST|OPTIONS) /(\.well-known/oauth-(authorization-server|protected-resource/api/mcp)|oauth/(authorize|grant|token)|api/mcp)[ ?]#">
+       AuthType Basic
+       AuthName "Restricted"
+       AuthUserFile /path/to/.htpasswd
+       Require valid-user
+   </If>
+   ```
+   - Match on `%{THE_REQUEST}` (the original request line), not `%{REQUEST_URI}`. Flow rewrites every request to `index.php`, and a `REQUEST_URI` condition does not exempt the endpoints (they still answer `401`).
+   - `[ ?]` anchors the end of each path, so only the exact endpoints (with or without a query string) are exempt, not `/api/mcpfoo` or `/oauth/tokens`.
+
 8. Apache with `mod_proxy_fcgi` strips the `Authorization` header before it reaches PHP, causing all bearer token requests to fail silently with `401`. Add the following lines to `Web/.htaccess` inside the `<IfModule mod_rewrite.c>` block, right after `RewriteBase /`:
    ```apache
    # Forward the Authorization header to PHP — Apache mod_proxy_fcgi strips it otherwise.
