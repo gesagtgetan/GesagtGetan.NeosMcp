@@ -31,6 +31,7 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\VisibilityConstraints;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Media\Domain\Model\Asset;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
@@ -285,6 +286,10 @@ final readonly class NodeReadService
 
         if ($value instanceof \DateTimeInterface) {
             return $value->format(\DateTimeInterface::ATOM);
+        }
+
+        if ($value instanceof Asset) {
+            return AssetPropertyConverter::toReference($value);
         }
 
         if ($value instanceof \JsonSerializable) {

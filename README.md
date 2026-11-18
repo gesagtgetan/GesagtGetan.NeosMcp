@@ -153,6 +153,8 @@ GesagtGetan:
 
 - `findAssets`: search assets (PDFs and other documents, images, video, audio) by title, filename or caption, optionally limited to one asset kind or asset collection. Returns each asset's identifier, filename, media type, file size, tags and collections. Link to a result with `asset://<assetIdentifier>`.
 
+Asset-typed node properties (`Neos\Media\Domain\Model\Asset`, `ImageInterface`, or an `array<...>` of them) use the same reference: `getNode` and `findNodes` return `asset://<assetIdentifier>`, and `createNode` and `setNodeProperties` accept it (a list of references for an `array<...>` type, `null` to clear).
+
 ### Write (staged in workspace, requires human publishing)
 
 - `createNode` — create a node under a parent (ID auto-generated)
@@ -231,6 +233,7 @@ Classes/
   ContentRepositoryFacade.php        # Interface for testability
   DefaultContentRepositoryFacade.php # Wraps real ContentRepository
   Service/
+    AssetPropertyConverter.php       # asset:// references <-> assets in node properties
     AssetReadService.php             # Media library search
     NodeReadService.php              # Read operations (find, get, children)
     NodeTypeService.php              # Node type listing and schema

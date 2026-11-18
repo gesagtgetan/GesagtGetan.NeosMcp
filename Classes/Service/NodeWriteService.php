@@ -46,6 +46,7 @@ final readonly class NodeWriteService
     public function __construct(
         private ContentRepositoryFacade $contentRepository,
         private WorkspaceName $workspaceName,
+        private AssetPropertyConverter $assetPropertyConverter,
         private ?int $propertyTruncateLength = null,
     ) {
     }
@@ -461,7 +462,8 @@ final readonly class NodeWriteService
 
     /**
      * JSON cannot carry PHP objects, so values for DateTime-typed properties arrive as ISO 8601
-     * strings (the format getNode() returns) and are turned into DateTimeImmutable here. Values of
+     * strings and values for asset-typed properties as `asset://<assetIdentifier>` references (the
+     * formats getNode() returns), and are turned into the objects the property holds here. Values of
      * undeclared properties or unknown node types pass through for the command handler to reject.
      *
      * @param array<string, mixed> $properties
@@ -477,14 +479,21 @@ final readonly class NodeWriteService
 
         $convertedProperties = [];
         foreach ($properties as $propertyName => $value) {
-            $isDateTimeProperty = $nodeType->hasProperty($propertyName)
-                && in_array(ltrim($nodeType->getPropertyType($propertyName), '\\'), self::DATE_TIME_PROPERTY_TYPES, true);
-            $convertedProperties[$propertyName] = $isDateTimeProperty && $value !== null
-                ? self::parseDateTime($propertyName, $value)
-                : $value;
+            $convertedProperties[$propertyName] = $value === null || !$nodeType->hasProperty($propertyName)
+                ? $value
+                : $this->convertPropertyValue($propertyName, ltrim($nodeType->getPropertyType($propertyName), '\\'), $value);
         }
 
         return $convertedProperties;
+    }
+
+    private function convertPropertyValue(string $propertyName, string $propertyType, mixed $value): mixed
+    {
+        return match (true) {
+            in_array($propertyType, self::DATE_TIME_PROPERTY_TYPES, true) => self::parseDateTime($propertyName, $value),
+            AssetPropertyConverter::isAssetPropertyType($propertyType) => $this->assetPropertyConverter->toAssets($propertyName, $propertyType, $value),
+            default => $value,
+        };
     }
 
     private static function parseDateTime(string $propertyName, mixed $value): \DateTimeImmutable

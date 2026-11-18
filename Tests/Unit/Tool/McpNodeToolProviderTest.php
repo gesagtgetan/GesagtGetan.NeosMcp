@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Unit\Tool;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
 use GesagtGetan\NeosMcp\Tool\McpRequestContext;
@@ -20,6 +21,7 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\ContentSubgraphInterface
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\Media\Domain\Repository\AssetRepository;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,7 +66,10 @@ class McpNodeToolProviderTest extends TestCase
             self::createStub(CacheManager::class),
             self::createStub(ConfigurationManager::class),
         );
-        $this->subject = new McpNodeToolProvider($versionCheck);
+        $this->subject = new McpNodeToolProvider(
+            $versionCheck,
+            new AssetPropertyConverter(self::createStub(AssetRepository::class)),
+        );
         $this->subject->registerTools(
             Server::make()->withServerInfo('test', '0.0.0'),
             new BasicContainer(),

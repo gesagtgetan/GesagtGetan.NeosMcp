@@ -6,6 +6,7 @@ namespace GesagtGetan\NeosMcp\Tests\Unit\Service;
 
 use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePointSet;
@@ -36,6 +37,9 @@ use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryI
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
+use Neos\Media\Domain\Model\Asset;
+use Neos\Media\Domain\Model\Document;
+use Neos\Media\Domain\Repository\AssetRepository;
 use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
@@ -44,7 +48,11 @@ use Symfony\Component\Serializer\Serializer;
 
 class NodeWriteServiceTest extends TestCase
 {
+    private const PDF_IDENTIFIER = '11111111-1111-4111-8111-111111111111';
+
     private NodeWriteService $subject;
+    private AssetPropertyConverter $assetPropertyConverter;
+    private Document $pdf;
     private ContentRepositoryFacade&Stub $contentRepository;
     private PropertyConverter $propertyConverter;
 
@@ -74,6 +82,12 @@ class NodeWriteServiceTest extends TestCase
             'Vendor:Content.Event' => [
                 'properties' => ['title' => ['type' => 'string'], 'startDate' => ['type' => 'DateTime']],
             ],
+            'Vendor:Content.Download' => [
+                'properties' => [
+                    'pdf' => ['type' => Asset::class],
+                    'attachments' => ['type' => 'array<' . Asset::class . '>'],
+                ],
+            ],
         ]));
 
         $serializer = self::createStub(Serializer::class);
@@ -82,9 +96,17 @@ class NodeWriteServiceTest extends TestCase
         );
         $this->propertyConverter = new PropertyConverter($serializer);
 
+        $this->pdf = self::createStub(Document::class);
+        $assetRepository = self::createStub(AssetRepository::class);
+        $assetRepository->method('findByIdentifier')->willReturnCallback(
+            fn (mixed $assetIdentifier): ?Document => $assetIdentifier === self::PDF_IDENTIFIER ? $this->pdf : null,
+        );
+        $this->assetPropertyConverter = new AssetPropertyConverter($assetRepository);
+
         $this->subject = new NodeWriteService(
             $this->contentRepository,
             WorkspaceName::fromString('test-workspace'),
+            $this->assetPropertyConverter,
         );
     }
 
@@ -167,6 +189,55 @@ class NodeWriteServiceTest extends TestCase
         $this->expectExceptionCode(1794300001);
 
         $this->subject->createNode('parent-id', 'Vendor:Content.Event', ['startDate' => '25.11.2026']);
+    }
+
+    #[Test]
+    public function createNodeTurnsAssetReferencesOfAssetPropertiesIntoTheAssets(): void
+    {
+        $this->subject->createNode('parent-id', 'Vendor:Content.Download', [
+            'pdf' => 'asset://' . self::PDF_IDENTIFIER,
+            'attachments' => ['asset://' . self::PDF_IDENTIFIER],
+        ]);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        self::assertSame($this->pdf, $command->initialPropertyValues->values['pdf']);
+        self::assertSame([$this->pdf], $command->initialPropertyValues->values['attachments']);
+    }
+
+    #[Test]
+    public function createNodeKeepsNullForAssetPropertiesSoTheyCanBeCleared(): void
+    {
+        $this->subject->createNode('parent-id', 'Vendor:Content.Download', ['pdf' => null]);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(CreateNodeAggregateWithNode::class, $command);
+        self::assertNull($command->initialPropertyValues->values['pdf']);
+    }
+
+    #[Test]
+    public function createNodeRejectsAReferenceToAnAssetThatDoesNotExist(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1795100004);
+
+        $this->subject->createNode('parent-id', 'Vendor:Content.Download', ['pdf' => 'asset://33333333-3333-4333-8333-333333333333']);
+    }
+
+    #[Test]
+    public function setNodePropertiesTurnsAssetReferencesIntoTheAssetsForTheExistingNodesType(): void
+    {
+        $subgraph = self::createStub(ContentSubgraphInterface::class);
+        $subgraph->method('findNodeById')->willReturn($this->createStubNode('download-id', 'Vendor:Content.Download'));
+        $contentGraph = self::createStub(ContentGraphInterface::class);
+        $contentGraph->method('getSubgraph')->willReturn($subgraph);
+        $this->contentRepository->method('getContentGraph')->willReturn($contentGraph);
+
+        $this->subject->setNodeProperties('download-id', ['pdf' => 'asset://' . self::PDF_IDENTIFIER]);
+
+        $command = $this->handledCommands[0];
+        self::assertInstanceOf(SetNodeProperties::class, $command);
+        self::assertSame($this->pdf, $command->propertyValues->values['pdf']);
     }
 
     #[Test]
@@ -520,6 +591,7 @@ class NodeWriteServiceTest extends TestCase
         $service = new NodeWriteService(
             $this->contentRepository,
             WorkspaceName::fromString('test-workspace'),
+            $this->assetPropertyConverter,
             propertyTruncateLength: 30,
         );
 

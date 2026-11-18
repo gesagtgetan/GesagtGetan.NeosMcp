@@ -9,6 +9,7 @@ use GesagtGetan\NeosMcp\Dto\FindAndReplaceRequest;
 use GesagtGetan\NeosMcp\Dto\FindNodesRequest;
 use GesagtGetan\NeosMcp\Dto\NodeInfo;
 use GesagtGetan\NeosMcp\Dto\NodeInfoCollection;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
@@ -31,7 +32,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         $workspaceName = WorkspaceName::fromString('test-workspace');
         $this->createTestWorkspace($workspaceName);
 
-        $this->nodeWriteService = new NodeWriteService($this->facade, $workspaceName);
+        $this->nodeWriteService = new NodeWriteService($this->facade, $workspaceName, $this->objectManager->get(AssetPropertyConverter::class));
         $this->nodeReadService = new NodeReadService($this->facade, $workspaceName);
     }
 
@@ -492,7 +493,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         );
 
         // Delete the node in live.
-        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive(), $this->objectManager->get(AssetPropertyConverter::class));
         $liveWriteService->removeNode($nodeId);
 
         // Without rebase, the shared workspace still shows the deleted node.
@@ -519,7 +520,7 @@ class NodeWriteServiceTest extends AbstractFunctionalTest
         );
 
         // Delete the node in live.
-        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive(), $this->objectManager->get(AssetPropertyConverter::class));
         $liveWriteService->removeNode($nodeId);
 
         // Rebase the shared workspace to pick up live changes.

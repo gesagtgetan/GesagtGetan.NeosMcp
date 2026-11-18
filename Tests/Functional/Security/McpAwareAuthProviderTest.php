@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Functional\Security;
 
 use GesagtGetan\NeosMcp\Security\McpUserContext;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Tests\Functional\AbstractFunctionalTest;
 use Neos\ContentRepository\Core\EventStore\InitiatingEventMetadata;
@@ -43,7 +44,7 @@ class McpAwareAuthProviderTest extends AbstractFunctionalTest
         $workspaceName = WorkspaceName::fromString('test-workspace');
         $this->createTestWorkspace($workspaceName);
 
-        $writeService = new NodeWriteService($this->facade, $workspaceName);
+        $writeService = new NodeWriteService($this->facade, $workspaceName, $this->objectManager->get(AssetPropertyConverter::class));
         $writeService->createNode(
             self::$siteNodeId->value,
             'GesagtGetan.NeosMcp:Testing.Document',
@@ -70,7 +71,7 @@ class McpAwareAuthProviderTest extends AbstractFunctionalTest
         $workspaceName = WorkspaceName::fromString('test-workspace');
         $this->createTestWorkspace($workspaceName);
 
-        $writeService = new NodeWriteService($this->facade, $workspaceName);
+        $writeService = new NodeWriteService($this->facade, $workspaceName, $this->objectManager->get(AssetPropertyConverter::class));
         $writeService->createNode(
             self::$siteNodeId->value,
             'GesagtGetan.NeosMcp:Testing.Document',

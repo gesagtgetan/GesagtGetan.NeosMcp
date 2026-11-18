@@ -52,7 +52,7 @@ final readonly class McpAssetToolProvider implements McpToolProvider
 
             Editors often encode what a file is about in its filename (e.g. `acme-x200-manual.pdf`), so search for a distinctive part such as a brand or model name rather than a whole phrase. An unknown `collectionTitle` fails with the list of available collections.
 
-            To link to an asset from rich text, use `<a href="asset://<assetIdentifier>">`, not a literal URL. A string "link" property takes the same `asset://...` value.
+            To link to an asset from rich text, use `<a href="asset://<assetIdentifier>">`, not a literal URL. A string "link" property and an asset-typed property (e.g. a PDF or image property) take the same `asset://...` value via createNode() or setNodeProperties().
 
             Results are ordered by filename; `fileSize` is in bytes. Paginate with `limit` and `offset`: `total` and `hasMore` tell you when to stop.
             MCP,

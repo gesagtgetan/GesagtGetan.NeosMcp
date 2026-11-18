@@ -13,6 +13,12 @@
       type: string
     text:
       type: string
+    pdf:
+      type: Neos\Media\Domain\Model\Asset
+    image:
+      type: Neos\Media\Domain\Model\ImageInterface
+    attachments:
+      type: array<Neos\Media\Domain\Model\Asset>
 
 # A document without tethered child nodes, e.g. to change its type to Testing.Document
 'GesagtGetan.NeosMcp:Testing.Document.WithoutContent':

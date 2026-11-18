@@ -38,6 +38,8 @@ use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName;
 use Neos\ContentRepository\Core\SharedModel\Workspace\Workspaces;
 use Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceStatus;
+use Neos\Media\Domain\Model\Asset;
+use Neos\Media\Domain\Model\Document;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
@@ -92,6 +94,12 @@ class NodeReadServiceTest extends TestCase
                 }
                 if ($type === 'PlainObject') {
                     return new \stdClass();
+                }
+                if ($type === Asset::class && is_string($data)) {
+                    $asset = self::createStub(Document::class);
+                    $asset->method('getIdentifier')->willReturn($data);
+
+                    return $asset;
                 }
                 if ($type === 'DateTimeArray' && is_array($data)) {
                     $result = [];
@@ -246,6 +254,23 @@ class NodeReadServiceTest extends TestCase
 
         self::assertNotNull($result);
         self::assertSame('2024-01-15T10:30:00+00:00', $result->properties['createdAt']);
+    }
+
+    #[Test]
+    public function getNodeSerializesAnAssetAsAssetUri(): void
+    {
+        $node = $this->createStubNodeWithTypedProperty(
+            'download-node',
+            'pdf',
+            '11111111-1111-4111-8111-111111111111',
+            Asset::class,
+        );
+        $this->subgraph->method('findNodeById')->willReturn($node);
+
+        $result = $this->subject->getNode('download-node');
+
+        self::assertNotNull($result);
+        self::assertSame('asset://11111111-1111-4111-8111-111111111111', $result->properties['pdf']);
     }
 
     #[Test]

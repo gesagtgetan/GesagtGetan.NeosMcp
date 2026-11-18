@@ -16,6 +16,7 @@ use GesagtGetan\NeosMcp\Dto\NodeTypeSummaryCollection;
 use GesagtGetan\NeosMcp\Dto\ReferenceInfoCollection;
 use GesagtGetan\NeosMcp\Dto\ReorderNodeRequest;
 use GesagtGetan\NeosMcp\Dto\WriteResult;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\NodeReadService;
 use GesagtGetan\NeosMcp\Service\NodeTypeService;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
@@ -49,12 +50,13 @@ final class McpNodeToolProvider implements McpToolProvider
     private WorkspaceRebaser $rebaser;
 
     /**
-     * The version check is a singleton with a request-independent result, so it is
-     * constructor-injected rather than built from the request context like the
-     * services above.
+     * The version check and the asset property converter are singletons that do not depend
+     * on the request, so they are constructor-injected rather than built from the request
+     * context like the services above.
      */
     public function __construct(
         private readonly VersionCheckService $versionCheckService,
+        private readonly AssetPropertyConverter $assetPropertyConverter,
     ) {
     }
 
@@ -71,6 +73,7 @@ final class McpNodeToolProvider implements McpToolProvider
         $this->nodeWriteService = new NodeWriteService(
             $context->contentRepository,
             $context->workspaceName,
+            $this->assetPropertyConverter,
             $context->propertyTruncateLength,
         );
         $this->nodeTypeService = new NodeTypeService($context->contentRepository);
@@ -323,6 +326,8 @@ final class McpNodeToolProvider implements McpToolProvider
         To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
 
         DateTime properties take an ISO 8601 string with offset, the format getNode() returns, e.g. "2026-11-25T00:00:00+01:00". Pass null to clear one.
+
+        Asset properties (type `Neos\Media\Domain\Model\Asset` or `...\ImageInterface` in getNodeTypeSchema) take "asset://<assetIdentifier>", the format getNode() returns; look up identifiers with findAssets. An `array<...>` of assets takes a list of them. Pass null to clear one.
         MCP)]
     public function createNode(
         string $parentNodeAggregateId,
@@ -351,6 +356,8 @@ final class McpNodeToolProvider implements McpToolProvider
         To link to another node from rich text, use `<a href="node://<nodeAggregateId>">`, not a literal URL. A string "link" property takes the same `node://...` value. Typed references are different: set those via setNodeReference() with the bare aggregateId.
 
         DateTime properties take an ISO 8601 string with offset, the format getNode() returns, e.g. "2026-11-25T00:00:00+01:00". Pass null to clear one.
+
+        Asset properties (type `Neos\Media\Domain\Model\Asset` or `...\ImageInterface` in getNodeTypeSchema) take "asset://<assetIdentifier>", the format getNode() returns; look up identifiers with findAssets. An `array<...>` of assets takes a list of them. Pass null to clear one.
         MCP)]
     public function setNodeProperties(
         string $nodeAggregateId,

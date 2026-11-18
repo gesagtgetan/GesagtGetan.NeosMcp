@@ -8,6 +8,7 @@ use GesagtGetan\NeosMcp\ContentRepositoryFacade;
 use GesagtGetan\NeosMcp\Controller\McpHttpController;
 use GesagtGetan\NeosMcp\OAuth\Service\OAuthServerFactory;
 use GesagtGetan\NeosMcp\Security\McpUserContext;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tests\Unit\AbstractUnitTest;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
@@ -26,6 +27,7 @@ use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Security\Context as SecurityContext;
+use Neos\Media\Domain\Repository\AssetRepository;
 use PhpMcp\Server\Defaults\BasicContainer;
 use PhpMcp\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -281,7 +283,11 @@ class McpHttpControllerTest extends AbstractUnitTest
             ->withContainer($container)
             ->withServerInfo('GesagtGetan.NeosMcp', '1.0.0');
 
-        $builder = (new McpNodeToolProvider($this->disabledVersionCheck()))->registerTools($builder, $container, $context);
+        $nodeToolProvider = new McpNodeToolProvider(
+            $this->disabledVersionCheck(),
+            new AssetPropertyConverter(self::createStub(AssetRepository::class)),
+        );
+        $builder = $nodeToolProvider->registerTools($builder, $container, $context);
         $builder = (new McpWorkspaceToolProvider())->registerTools($builder, $container, $context);
 
         $server = $builder->build();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GesagtGetan\NeosMcp\Tests\Functional;
 
 use GesagtGetan\NeosMcp\Dto\NodeInfo;
+use GesagtGetan\NeosMcp\Service\AssetPropertyConverter;
 use GesagtGetan\NeosMcp\Service\NodeWriteService;
 use GesagtGetan\NeosMcp\Service\VersionCheckService;
 use GesagtGetan\NeosMcp\Tool\McpNodeToolProvider;
@@ -33,7 +34,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         $this->workspaceName = WorkspaceName::fromString('test-mcp-workspace');
         $this->createTestWorkspace($this->workspaceName);
 
-        $this->provider = new McpNodeToolProvider($this->objectManager->get(VersionCheckService::class));
+        $this->provider = new McpNodeToolProvider($this->objectManager->get(VersionCheckService::class), $this->objectManager->get(AssetPropertyConverter::class));
         $this->provider->registerTools(
             Server::make()->withServerInfo('test', '0.0.0'),
             new BasicContainer(),
@@ -49,7 +50,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
     public function toolCallRebasesWorkspaceToReflectLiveChanges(): void
     {
         // Create a node in the MCP workspace and publish it to live.
-        $writeService = new NodeWriteService($this->facade, $this->workspaceName);
+        $writeService = new NodeWriteService($this->facade, $this->workspaceName, $this->objectManager->get(AssetPropertyConverter::class));
         $created = $writeService->createNode(
             self::$siteNodeId->value,
             'GesagtGetan.NeosMcp:Testing.Document',
@@ -62,7 +63,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         );
 
         // Delete the node in live — the workspace doesn't know about this yet.
-        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive(), $this->objectManager->get(AssetPropertyConverter::class));
         $liveWriteService->removeNode($nodeId);
 
         // A tool call should trigger a rebase, making the deleted node invisible.
@@ -82,7 +83,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
     public function toolCallReturnsRebaseWarningOnConflict(): void
     {
         // Create a node in live.
-        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive());
+        $liveWriteService = new NodeWriteService($this->facade, WorkspaceName::forLive(), $this->objectManager->get(AssetPropertyConverter::class));
         $created = $liveWriteService->createNode(
             self::$siteNodeId->value,
             'GesagtGetan.NeosMcp:Testing.Document',
@@ -96,7 +97,7 @@ class McpToolProviderRebaseTest extends AbstractFunctionalTest
         );
 
         // Modify the node in the MCP workspace (unpublished change).
-        $writeService = new NodeWriteService($this->facade, $this->workspaceName);
+        $writeService = new NodeWriteService($this->facade, $this->workspaceName, $this->objectManager->get(AssetPropertyConverter::class));
         $writeService->setNodeProperties($nodeId, ['title' => 'Modified in workspace']);
 
         // Hard-delete the same node in live — this creates a conflict because
