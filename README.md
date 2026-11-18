@@ -149,6 +149,10 @@ GesagtGetan:
 - `getNodeBackReferences` — incoming references (which nodes point at this one?). Useful for impact analysis before deletes/moves.
 - `getWorkspaceStatus` — workspace status including pending change count
 
+### Media library
+
+- `findAssets`: search assets (PDFs and other documents, images, video, audio) by title, filename or caption, optionally limited to one asset kind or asset collection. Returns each asset's identifier, filename, media type, file size, tags and collections. Link to a result with `asset://<assetIdentifier>`.
+
 ### Write (staged in workspace, requires human publishing)
 
 - `createNode` — create a node under a parent (ID auto-generated)
@@ -227,6 +231,7 @@ Classes/
   ContentRepositoryFacade.php        # Interface for testability
   DefaultContentRepositoryFacade.php # Wraps real ContentRepository
   Service/
+    AssetReadService.php             # Media library search
     NodeReadService.php              # Read operations (find, get, children)
     NodeTypeService.php              # Node type listing and schema
     NodeWriteService.php             # Write operations (create, update, move, remove)
@@ -238,6 +243,7 @@ Classes/
     WorkspaceRebaser.php             # Pre-call rebase + conflict warning
     McpNodeToolProvider.php          # Built-in: node tools (read/write/type)
     McpWorkspaceToolProvider.php     # Built-in: workspace tools
+    McpAssetToolProvider.php         # Built-in: media library tools
 ```
 
 ## Extending with Custom Tools

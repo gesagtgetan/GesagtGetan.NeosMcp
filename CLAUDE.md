@@ -52,6 +52,7 @@ Unit tests extend PHPUnit's `TestCase`, or `Tests/Unit/AbstractUnitTest` when th
 - `Tool\McpToolProviderRegistry` — Flow singleton. Uses `ReflectionService` to auto-discover every `McpToolProvider` implementation in the application; controllers call `registerAll()` per request. No Settings.yaml needed.
 - `Tool\McpNodeToolProvider` — built-in node tools (read, write, node-type). Prototype-scoped; `registerTools()` initializes its service dependencies from the request context, then the `#[McpTool]` methods on the same instance handle the calls.
 - `Tool\McpWorkspaceToolProvider` — built-in workspace tools (status, discard). Same lifecycle as the node provider.
+- `Tool\McpAssetToolProvider`: built-in media library tools (`findAssets`). Singleton without request state, because assets live outside the Content Repository: no workspace, no rebase. Delegates to `Service\AssetReadService`, which queries the Neos Media repositories.
 - `Tool\WorkspaceRebaser` — extracted helper; rebases before every tool call and produces the `_rebaseWarning` payload on conflict.
 - `Tool\McpToolReflector` — static helper that scans a handler class for `#[McpTool]` methods and forwards them to `ServerBuilder::withTool()`. Use it from any provider.
 - `McpCommandController` — CLI entry points: `./flow mcp:server` (stdio transport) and `./flow mcp:setup` (creates shared workspace with Neos UI metadata via `WorkspaceService::createSharedWorkspace`).
