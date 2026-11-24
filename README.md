@@ -155,6 +155,12 @@ GesagtGetan:
 
 Asset-typed node properties (`Neos\Media\Domain\Model\Asset`, `ImageInterface`, or an `array<...>` of them) use the same reference: `getNode` and `findNodes` return `asset://<assetIdentifier>`, and `createNode` and `setNodeProperties` accept it (a list of references for an `array<...>` type, `null` to clear).
 
+### Redirects
+
+- `findRedirects`: search the HTTP redirects of the Neos redirect handler by part of their source or target path, optionally limited to one host or to manual or generated redirects. Returns each redirect's paths, status code, host, type, comment, active period and hit count. Read-only: redirects are not created or changed through MCP.
+
+The redirect handler API (`neos/redirecthandler`) is a dependency of this package, but its storage is the project's choice: Composer refuses to install this package until a package that provides `neos/redirecthandler-storageimplementation` is required, usually `neos/redirecthandler-databasestorage`.
+
 ### Write (staged in workspace, requires human publishing)
 
 - `createNode` — create a node under a parent (ID auto-generated)
@@ -238,6 +244,7 @@ Classes/
     NodeReadService.php              # Read operations (find, get, children)
     NodeTypeService.php              # Node type listing and schema
     NodeWriteService.php             # Write operations (create, update, move, remove)
+    RedirectReadService.php          # Redirect search
   Tool/
     McpToolProvider.php              # Interface — implement to contribute tools
     McpToolProviderRegistry.php      # Auto-discovery + dispatch (Flow singleton)
@@ -247,6 +254,7 @@ Classes/
     McpNodeToolProvider.php          # Built-in: node tools (read/write/type)
     McpWorkspaceToolProvider.php     # Built-in: workspace tools
     McpAssetToolProvider.php         # Built-in: media library tools
+    McpRedirectToolProvider.php      # Built-in: redirect tools
 ```
 
 ## Extending with Custom Tools

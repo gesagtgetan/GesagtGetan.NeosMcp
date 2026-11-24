@@ -11,7 +11,8 @@
     "league/oauth2-server": "^8.5",
     "neos/neos": "^9.1",
     "php-mcp/server": "^3.3",
-    "neos/contentgraph-doctrinedbaladapter": "*"
+    "neos/contentgraph-doctrinedbaladapter": "*",
+    "neos/redirecthandler": "^6.0"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.86",
@@ -19,7 +20,8 @@
     "phpstan/phpstan-phpunit": "^2.0",
     "phpstan/phpstan-strict-rules": "^2.0",
     "phpunit/phpunit": "^13.0",
-    "squizlabs/php_codesniffer": "^4.0"
+    "squizlabs/php_codesniffer": "^4.0",
+    "neos/redirecthandler-databasestorage": "^6.0"
   },
   "autoload": {
     "psr-4": {

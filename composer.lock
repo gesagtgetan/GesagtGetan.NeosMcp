@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "adc5afe2eac0ee91ea28a63442af88c3",
+    "content-hash": "ca094ac419d67fa08a27ee202351347e",
     "packages": [
         {
             "name": "behat/transliterator",
@@ -2846,6 +2846,102 @@
             ],
             "time": "2026-10-10T09:42:14+00:00",
             "published-time": "2026-10-10T09:43:25+00:00"
+        },
+        {
+            "name": "league/csv",
+            "version": "9.29.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/thephpleague/csv.git",
+                "reference": "fb9ea14460001b62fcb54d8ac247cc501f60e6e0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/thephpleague/csv/zipball/fb9ea14460001b62fcb54d8ac247cc501f60e6e0",
+                "reference": "fb9ea14460001b62fcb54d8ac247cc501f60e6e0",
+                "shasum": ""
+            },
+            "require": {
+                "ext-filter": "*",
+                "php": "^8.2.0"
+            },
+            "require-dev": {
+                "ext-dom": "*",
+                "ext-xdebug": "*",
+                "friendsofphp/php-cs-fixer": "^3.92.3",
+                "phpbench/phpbench": "^1.4.3",
+                "phpstan/phpstan": "^2.2.8",
+                "phpstan/phpstan-deprecation-rules": "^2.0.5",
+                "phpstan/phpstan-phpunit": "^2.0.18",
+                "phpstan/phpstan-strict-rules": "^2.0.12",
+                "phpunit/phpunit": "^11.5.22 || ^12.5.4 || ^13.3.1",
+                "rector/rector": "^2.6.3",
+                "symfony/var-dumper": "^6.4.8 || ^7.4.0 || ^8.0"
+            },
+            "suggest": {
+                "ext-dom": "Required to use the XMLConverter and the HTMLConverter classes",
+                "ext-iconv": "Needed to ease transcoding CSV using iconv stream filters",
+                "ext-mbstring": "Needed to ease transcoding CSV using mb stream filters",
+                "ext-mysqli": "Requiered to use the package with the MySQLi extension",
+                "ext-pdo": "Required to use the package with the PDO extension",
+                "ext-pgsql": "Requiered to use the package with the PgSQL extension",
+                "ext-sqlite3": "Required to use the package with the SQLite3 extension"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "9.x-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/functions_include.php"
+                ],
+                "psr-4": {
+                    "League\\Csv\\": "src"
+                },
+                "classmap": [
+                    "polyfill"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ignace Nyamagana Butera",
+                    "email": "nyamsprod@gmail.com",
+                    "homepage": "https://github.com/nyamsprod/",
+                    "role": "Developer"
+                }
+            ],
+            "description": "CSV data manipulation made easy in PHP",
+            "homepage": "https://csv.thephpleague.com",
+            "keywords": [
+                "convert",
+                "csv",
+                "export",
+                "filter",
+                "import",
+                "read",
+                "transform",
+                "write"
+            ],
+            "support": {
+                "docs": "https://csv.thephpleague.com",
+                "issues": "https://github.com/thephpleague/csv/issues",
+                "rss": "https://github.com/thephpleague/csv/releases.atom",
+                "source": "https://github.com/thephpleague/csv"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/nyamsprod",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-11-22T13:51:45+00:00",
+            "published-time": "2026-11-22T13:59:35+00:00"
         },
         {
             "name": "league/event",
@@ -5760,6 +5856,170 @@
             ],
             "time": "2026-08-13T13:59:35+00:00",
             "published-time": "2026-08-13T14:01:38+00:00"
+        },
+        {
+            "name": "neos/redirecthandler",
+            "version": "6.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/neos/redirecthandler.git",
+                "reference": "63c1a7c5ad2e81afc868f14af75405e670b1e430"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/neos/redirecthandler/zipball/63c1a7c5ad2e81afc868f14af75405e670b1e430",
+                "reference": "63c1a7c5ad2e81afc868f14af75405e670b1e430",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "league/csv": "^9.2",
+                "neos/flow": "^9.0 || dev-master",
+                "neos/redirecthandler-storageimplementation": "~3.0 || dev-main",
+                "php": ">=8.2"
+            },
+            "suggest": {
+                "neos/redirecthandler-databasestorage": "Supports storing redirects in the database"
+            },
+            "type": "neos-package",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "6.0.x-dev"
+                },
+                "applied-flow-migrations": [
+                    "TYPO3.FLOW3-201209201112",
+                    "TYPO3.FLOW3-201201261636",
+                    "TYPO3.Fluid-201205031303",
+                    "TYPO3.FLOW3-201205292145",
+                    "TYPO3.FLOW3-201206271128",
+                    "TYPO3.Flow-201209251426",
+                    "TYPO3.Flow-201211151101",
+                    "TYPO3.Flow-201212051340",
+                    "TYPO3.Flow-201310031523",
+                    "TYPO3.Flow-201405111147",
+                    "TYPO3.Fluid-20141113120800",
+                    "TYPO3.Flow-20141113121400",
+                    "TYPO3.Fluid-20141121091700",
+                    "TYPO3.Fluid-20150214130800",
+                    "TYPO3.Flow-20151113161300",
+                    "TYPO3.Flow-20161115140400",
+                    "TYPO3.Flow-20161115140430",
+                    "Neos.Flow-20161124204700",
+                    "Neos.Flow-20161124204701",
+                    "Neos.Flow-20161124224015",
+                    "Neos.Eel-20161124230101",
+                    "Neos.Kickstart-20161124230102",
+                    "Neos.Kickstarter-20161125110814"
+                ]
+            },
+            "autoload": {
+                "psr-4": {
+                    "Neos\\RedirectHandler\\": "Classes"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Basic API to handle HTTP redirects with the Flow Framework",
+            "support": {
+                "issues": "https://github.com/neos/redirecthandler/issues",
+                "source": "https://github.com/neos/redirecthandler/tree/6.0.2"
+            },
+            "funding": [
+                {
+                    "url": "https://shop.neos.io/neosfunding/",
+                    "type": "custom"
+                }
+            ],
+            "time": "2025-06-02T21:04:47+00:00",
+            "published-time": "2025-06-02T21:05:35+00:00"
+        },
+        {
+            "name": "neos/redirecthandler-databasestorage",
+            "version": "6.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/neos/redirecthandler-databasestorage.git",
+                "reference": "d6a0e01d25a19c0152a326c35e69e964240dd210"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/neos/redirecthandler-databasestorage/zipball/d6a0e01d25a19c0152a326c35e69e964240dd210",
+                "reference": "d6a0e01d25a19c0152a326c35e69e964240dd210",
+                "shasum": ""
+            },
+            "require": {
+                "neos/flow": "~9.0 || dev-master",
+                "neos/redirecthandler": "~6.0 || dev-main",
+                "php": ">=8.2"
+            },
+            "provide": {
+                "neos/redirecthandler-storageimplementation": "3.0"
+            },
+            "type": "neos-package",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "6.0.x-dev"
+                },
+                "applied-flow-migrations": [
+                    "TYPO3.FLOW3-201209201112",
+                    "TYPO3.FLOW3-201201261636",
+                    "TYPO3.Fluid-201205031303",
+                    "TYPO3.FLOW3-201205292145",
+                    "TYPO3.FLOW3-201206271128",
+                    "TYPO3.Flow-201209251426",
+                    "TYPO3.Flow-201211151101",
+                    "TYPO3.Flow-201212051340",
+                    "TYPO3.Flow-201310031523",
+                    "TYPO3.Flow-201405111147",
+                    "TYPO3.Fluid-20141113120800",
+                    "TYPO3.Flow-20141113121400",
+                    "TYPO3.Fluid-20141121091700",
+                    "TYPO3.Fluid-20150214130800",
+                    "TYPO3.Flow-20151113161300",
+                    "TYPO3.Flow-20161115140400",
+                    "TYPO3.Flow-20161115140430",
+                    "Neos.Flow-20161124204700",
+                    "Neos.Flow-20161124204701",
+                    "Neos.Flow-20161124224015",
+                    "Neos.Eel-20161124230101",
+                    "Neos.Kickstart-20161124230102",
+                    "Neos.Kickstarter-20161125110814",
+                    "Neos.Flow-20161125124112",
+                    "Neos.Flow-20170125103800",
+                    "Neos.Flow-20170127183102",
+                    "Neos.Flow-20180415105700",
+                    "Neos.Flow-20190425144900",
+                    "Neos.Flow-20190515215000",
+                    "Neos.Flow-20200813181400",
+                    "Neos.Flow-20201003165200",
+                    "Neos.Flow-20201109224100",
+                    "Neos.Flow-20201205172733"
+                ]
+            },
+            "autoload": {
+                "psr-4": {
+                    "Neos\\RedirectHandler\\DatabaseStorage\\": "Classes"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A plugin for neos/redirecthandler to store redirects in the database",
+            "support": {
+                "issues": "https://github.com/neos/redirecthandler-databasestorage/issues",
+                "source": "https://github.com/neos/redirecthandler-databasestorage/tree/6.0.4"
+            },
+            "funding": [
+                {
+                    "url": "https://shop.neos.io/neosfunding/",
+                    "type": "custom"
+                }
+            ],
+            "time": "2025-06-02T20:54:25+00:00",
+            "published-time": "2025-06-02T21:01:08+00:00"
         },
         {
             "name": "neos/utility-arrays",
