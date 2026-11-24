@@ -292,8 +292,8 @@ All commands run from the package directory (`DistributionPackages/GesagtGetan.N
 just check                    # Run all static analysis (phpcs + php-cs-fixer + phpstan)
 just fix                      # Auto-fix code style issues
 just test                     # Run unit tests (plain PHPUnit, no Neos or database needed)
-just build-test-distribution  # One-time: build the Dockerized Neos distribution for functional tests
-just test-functional          # Run functional tests inside that distribution
+just build-test-distribution  # Build or refresh the Dockerized Neos distribution for functional tests
+just test-functional          # Run functional tests inside that distribution (builds it first when needed)
 ```
 
 ### Dev Dependencies
@@ -306,7 +306,7 @@ Unit tests run against `vendor/autoload.php` with no Flow bootstrap. They extend
 
 ### Functional Tests
 
-Functional tests need a booted Neos instance and a MariaDB database, so they run in Docker. `just build-test-distribution` assembles a throwaway Neos distribution in `.test-distribution/` from `Tests/TestDistribution/` and installs this package into it. `just test-functional` then runs PHPUnit inside the container using `Tests/TestDistribution/phpunit-functional.xml`, which bootstraps Flow's `FunctionalTestBootstrap`. The Content Repository's own tables (event store, projections) are created automatically by the test base class.
+Functional tests need a booted Neos instance and a MariaDB database, so they run in Docker. `just build-test-distribution` assembles a throwaway Neos distribution in `.test-distribution/` from `Tests/TestDistribution/` and installs this package into it. It resolves with `composer update`, like CI, so a dependency added to either `composer.json` reaches an existing distribution. `just test-functional` runs that build itself when `.test-distribution/` is missing or `Tests/TestDistribution/composer.json` changed since the last successful build, then runs PHPUnit inside the container using `Tests/TestDistribution/phpunit-functional.xml`, which bootstraps Flow's `FunctionalTestBootstrap`. The Content Repository's own tables (event store, projections) are created automatically by the test base class.
 
 ### FAQ
 

@@ -50,18 +50,23 @@ test *ARGS:
     {{php-bin}} ./vendor/bin/phpunit {{ ARGS }}
 
 [group('Test')]
-[doc('Run functional tests in a self-contained Neos test distribution with MariaDB. Requires build-test-distribution.')]
+[doc('Run functional tests in a self-contained Neos test distribution with MariaDB. Builds the distribution first when it is missing or its composer.json changed.')]
 test-functional *ARGS:
+    cmp -s Tests/TestDistribution/composer.json .test-distribution/.built-from-composer.json || just build-test-distribution
     {{compose-run}} sh -c 'cd .test-distribution && ./flow doctrine:migrate --quiet && php Packages/Libraries/bin/phpunit -c phpunit-functional.xml {{ ARGS }}'
 
 [group('Test')]
-[doc('Build the throwaway Neos distribution used by the functional tests (no-op if present)')]
+[doc('Build or refresh the throwaway Neos distribution used by the functional tests')]
 build-test-distribution:
     mkdir -p .test-distribution/Configuration/Testing
     cp Tests/TestDistribution/composer.json Tests/TestDistribution/phpunit-functional.xml .test-distribution/
     cp Tests/TestDistribution/Configuration/Testing/Settings.yaml .test-distribution/Configuration/Testing/
     {{compose}} build test-php
-    {{compose-run}} composer install --working-dir=.test-distribution --no-interaction --no-progress
+    # update, not install: like CI, resolve from composer.json, so a dependency added there
+    # (or to this package) reaches an existing distribution instead of failing on its stale lock
+    {{compose-run}} composer update --working-dir=.test-distribution --no-interaction --no-progress
+    # Written only after a successful update, so test-functional retries a build that failed
+    cp Tests/TestDistribution/composer.json .test-distribution/.built-from-composer.json
 
 [group('Test')]
 [doc('Delete and rebuild the functional test distribution')]

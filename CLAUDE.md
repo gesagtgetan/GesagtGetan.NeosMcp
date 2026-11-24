@@ -38,8 +38,8 @@ All commands run from this directory (`DistributionPackages/GesagtGetan.NeosMcp/
 just check                    # phpcs + php-cs-fixer + phpstan
 just fix                      # Auto-fix code style
 just test                     # Unit tests (plain PHPUnit, no Neos or DB needed)
-just build-test-distribution  # One-time: build the Dockerized Neos distribution for functional tests
-just test-functional          # Functional tests (run in Docker against MariaDB)
+just build-test-distribution  # Build or refresh the Dockerized Neos distribution for functional tests
+just test-functional          # Functional tests (run in Docker against MariaDB, builds the distribution first when needed)
 ```
 
 Unit tests extend PHPUnit's `TestCase`, or `Tests/Unit/AbstractUnitTest` when they need `inject()` for `#[Flow\Inject]` properties. Use `self::createStub()` unless the test sets `expects()` on the collaborator.
